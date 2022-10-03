@@ -478,7 +478,7 @@ public class Vardiya extends BaseObject {
 			Vardiya vardiyaCalisma = null;
 			if (vardiyaAySonuKontrolTarih != null && tarih.after(vardiyaAySonuKontrolTarih)) {
 				Personel personel = pdksVardiyaGun.getPersonel();
-				if (personel != null) {
+				if (personel != null && personel.getId() != null) {
 					vardiyaCalisma = pdksVardiyaGun.getIslemVardiya();
 					if (personel.getSskCikisTarihi() != null && personel.getSskCikisTarihi().getTime() <= tarih.getTime()) {
 						ayinSonGunDurum = vardiyaCalisma.isCalisma() == false || vardiyaCalisma.getBitSaat() > vardiyaCalisma.getBasSaat();
