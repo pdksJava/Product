@@ -7919,7 +7919,6 @@ public class OrtakIslemler implements Serializable {
 			TreeMap<String, BigDecimal> sureMap = planKatSayiOku ? getPlanKatSayiMap(personelIdler, basTarih, bitTarih, KatSayiTipi.HAREKET_BEKLEME_SURESI, session) : null;
 			TreeMap<String, BigDecimal> sureSuaMap = suaKatSayiOku ? getPlanKatSayiMap(personelIdler, basTarih, bitTarih, KatSayiTipi.SUA_GUNLUK_SAAT_SURESI, session) : null;
 			boolean kontrolEt = sureMap != null && !sureMap.isEmpty();
-			HashMap<Long, Date> tarihMap = new HashMap<Long, Date>();
 			HashMap<Long, Date> tarih1Map = new HashMap<Long, Date>(), tarih2Map = new HashMap<Long, Date>();
 			List<VardiyaGun> bosList = new ArrayList<VardiyaGun>();
 			for (Iterator iterator = vardiyaGunList.iterator(); iterator.hasNext();) {
@@ -7928,7 +7927,6 @@ public class OrtakIslemler implements Serializable {
 				if (sureSuaMap != null && sureSuaMap.containsKey(str))
 					vardiyaGun.setCalismaSuaSaati(sureSuaMap.get(str).doubleValue());
 				if (kontrolEt) {
-
 					if (sureMap.containsKey(str))
 						vardiyaGun.setBeklemeSuresi(sureMap.get(str).intValue());
 				}
