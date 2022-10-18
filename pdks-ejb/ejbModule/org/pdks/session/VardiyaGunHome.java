@@ -2456,10 +2456,10 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 	 * @param vardiyaIdList
 	 * @param tableName
 	 * @param columnName
-	 * @param table
+	 * @param tableClass
 	 * @return
 	 */
-	private List getVardiyaTable(List<Long> vardiyaIdList, String tableName, String columnName, Object table) {
+	private List getVardiyaTable(List<Long> vardiyaIdList, String tableName, String columnName, Class tableClass) {
 		List list = null;
 		try {
 			if (vardiyaIdList != null && !vardiyaIdList.isEmpty()) {
@@ -2470,7 +2470,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				map.put("id", vardiyaIdList);
 				if (session != null)
 					map.put(PdksEntityController.MAP_KEY_SESSION, session);
-				list = pdksEntityController.getObjectBySQLList(sb, map, table.getClass());
+				list = pdksEntityController.getObjectBySQLList(sb, map, tableClass);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
