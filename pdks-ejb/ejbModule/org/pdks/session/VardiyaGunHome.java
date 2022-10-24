@@ -5602,7 +5602,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				if (vardiyaCalisiyor)
 					aylikPuantajList.add(aylikPuantaj);
 			}
-			modelGoster = ortakIslemler.getModelGoster(denklestirmeAy, session);
+
 		}
 		setTatilMap(tatilGunleriMap);
 		if (flush) {
@@ -5766,6 +5766,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		aylikHareketKaydiVardiyaBul = Boolean.FALSE;
 		if (denklestirmeAyDurum)
 			aylikHareketKaydiVardiyalariBul();
+		if (!aylikPuantajList.isEmpty())
+			modelGoster = ortakIslemler.getModelGoster(denklestirmeAy, session);
 
 	}
 

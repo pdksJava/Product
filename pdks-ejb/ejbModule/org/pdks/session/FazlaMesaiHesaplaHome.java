@@ -1977,14 +1977,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 
 				else if (flush)
 					session.flush();
-				modelGoster = ortakIslemler.getModelGoster(denklestirmeAy, session);
-				if (!modelGoster) {
-					HashMap<Boolean, Long> sanalDurum = new HashMap<Boolean, Long>();
-					for (AylikPuantaj ap : aylikPuantajList) {
-						sanalDurum.put(ap.getPdksPersonel().getSanalPersonel(), ap.getPdksPersonel().getId());
-					}
-					modelGoster = sanalDurum.size() > 1;
-				}
+				
 			} else {
 				if (fazlaMesaiMap == null)
 					fazlaMesaiMap = new TreeMap<String, Tanim>();
@@ -2096,6 +2089,14 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 			for (String string : list)
 				PdksUtil.addMessageAvailableWarn(string);
 
+		}
+		modelGoster = ortakIslemler.getModelGoster(denklestirmeAy, session);
+		if (!modelGoster) {
+			HashMap<Boolean, Long> sanalDurum = new HashMap<Boolean, Long>();
+			if (puantajList != null)
+				for (AylikPuantaj ap : aylikPuantajList)  
+					sanalDurum.put(ap.getPdksPersonel().getSanalPersonel(), ap.getPdksPersonel().getId());
+			modelGoster = sanalDurum.size() > 1;
 		}
 		setAylikPuantajList(puantajList);
 	}
@@ -2760,7 +2761,6 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 		// if (haret)
 
 		boolean fazlaMesaiOnaylaDurum = vGun.isAyrikHareketVar() == false && girisHareketleri != null && cikisHareketleri != null && girisHareketleri.size() == cikisHareketleri.size();
-
 		if (fazlaMesaiOnaylaDurum || (vGun.isAyrikHareketVar() && vGun.getVardiya().isCalisma())) {
 			for (Iterator iterator = girisHareketleri.iterator(); iterator.hasNext();) {
 				HareketKGS hareketKGS = (HareketKGS) iterator.next();
@@ -2803,8 +2803,6 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 		Tatil tatil = vGun.getTatil() != null ? vGun.getTatil().getOrjTatil() : null;
 		PersonelIzin personelIzin = vGun.getIzin();
 		Boolean izinli = personelIzin != null || islemVardiya.isIzin();
-		if (key1.equals("20220423"))
-			logger.debug(vardiyaKey + " " + vGun.getHareketDurum() + " " + vGun.isAyrikHareketVar());
 
 		Personel personel = vGun.getPersonel();
 		vGun.setAksamVardiyaSaatSayisi(0d);
@@ -2920,8 +2918,32 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 
 						}
 						try {
+							if (vardiyaKey.equals("00002618_20221001"))
+								logger.debug(key1 + " " + vGun.getId());
 							girisHareketleri = vGun.getGirisHareketleri();
 							cikisHareketleri = vGun.getCikisHareketleri();
+							if (vGun.getFazlaMesailer() != null) {
+								List<HareketKGS> list = new ArrayList<HareketKGS>();
+								if (girisHareketleri != null && !girisHareketleri.isEmpty())
+									list.addAll(girisHareketleri);
+								if (cikisHareketleri != null && !cikisHareketleri.isEmpty())
+									list.addAll(cikisHareketleri);
+								if (!list.isEmpty()) {
+									HashMap<String, PersonelFazlaMesai> mesaiMap = new HashMap<String, PersonelFazlaMesai>();
+									for (PersonelFazlaMesai pfm : vGun.getFazlaMesailer())
+										mesaiMap.put(pfm.getHareketId(), pfm);
+									for (HareketKGS hareketKGS : list) {
+										if (hareketKGS.getId() != null && mesaiMap.containsKey(hareketKGS.getId()) && hareketKGS.getPersonelFazlaMesai() == null)
+											hareketKGS.setPersonelFazlaMesai(mesaiMap.get(hareketKGS.getId()));
+									}
+									mesaiMap = null;
+									 
+								}
+
+								list = null;
+
+							}
+
 							int girisAdet = girisHareketleri != null ? girisHareketleri.size() : -1, cikisAdet = cikisHareketleri != null ? cikisHareketleri.size() : -1;
 							if (girisAdet > 1 && cikisAdet == girisAdet && vGun.isHareketHatali() == false) {
 								for (int i = 0; i < girisAdet; i++) {
