@@ -1026,7 +1026,17 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 					logger.info("fillPersonelDenklestirmeDevam 4000 " + new Date());
 				try {
 					denklestirmeDonemi.setPersonelDenklestirmeDonemMap(personelDenklestirmeDonemMap);
+					denklestirmeDonemi.setDenklestirmeAyDurum(denklestirmeAyDurum);
 					list = ortakIslemler.personelDenklestir(denklestirmeDonemi, tatilGunleriMap, searchKey, perList, Boolean.TRUE, Boolean.FALSE, ayBitmedi, session);
+					if (list.isEmpty()) {
+						session.flush();
+						session.clear();
+						denklestirmeDonemi.setDurum(Boolean.FALSE);
+						tatilGunleriMap = ortakIslemler.getTatilGunleri(perListesi, PdksUtil.tariheGunEkleCikar(denklestirmeDonemi.getBaslangicTarih(), -1), PdksUtil.tariheGunEkleCikar(denklestirmeDonemi.getBitisTarih(), 1), session);
+						list = ortakIslemler.personelDenklestir(denklestirmeDonemi, tatilGunleriMap, searchKey, perList, Boolean.TRUE, Boolean.FALSE, ayBitmedi, session);
+
+					}
+
 				} catch (Exception ex) {
 					list = new ArrayList<PersonelDenklestirmeTasiyici>();
 					logger.equals(ex);
@@ -1968,6 +1978,13 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 				else if (flush)
 					session.flush();
 				modelGoster = ortakIslemler.getModelGoster(denklestirmeAy, session);
+				if (!modelGoster) {
+					HashMap<Boolean, Long> sanalDurum = new HashMap<Boolean, Long>();
+					for (AylikPuantaj ap : aylikPuantajList) {
+						sanalDurum.put(ap.getPdksPersonel().getSanalPersonel(), ap.getPdksPersonel().getId());
+					}
+					modelGoster = sanalDurum.size() > 1;
+				}
 			} else {
 				if (fazlaMesaiMap == null)
 					fazlaMesaiMap = new TreeMap<String, Tanim>();
@@ -2323,7 +2340,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 	}
 
 	/**
- 	 * @return
+	 * @return
 	 */
 	private Tanim ciftBolumTanimGetir() {
 		Tanim tanim = null;
