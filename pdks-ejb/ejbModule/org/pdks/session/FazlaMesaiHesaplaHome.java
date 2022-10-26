@@ -2108,6 +2108,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 	// TODO haftaTatilVardiyaGuncelle
 	private void haftaTatilVardiyaGuncelle(List<PersonelDenklestirmeTasiyici> list) {
 		for (PersonelDenklestirmeTasiyici personelDenklestirmeTasiyici : list) {
+			boolean flush=false;
 			TreeMap<String, VardiyaGun> vgMap = new TreeMap<String, VardiyaGun>();
 			TreeMap<Integer, List<VardiyaGun>> haftaMap = new TreeMap<Integer, List<VardiyaGun>>();
 			int hafta = 0;
@@ -2144,11 +2145,20 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 				for (String key : vgHaftaMap.keySet()) {
 					VardiyaGun vardiyaGun = vgMap.get(key);
 					hafta = vgHaftaMap.get(key);
-					if (vardiyaGun.getHareketler() != null && haftaMap.containsKey(hafta) && vardiyaGun.getHareketDurum()) {
+					if (vardiyaGun.getHareketler() != null && haftaMap.containsKey(hafta)) {
+						
 						List<VardiyaGun> vList = haftaMap.get(hafta);
 						if (vList.size() == 1) {
-							for (VardiyaGun vardiyaGun2 : vList) {
-								logger.info(vardiyaGun2.getVardiyaKeyStr() + " " + key);
+							Vardiya vardiyaHafta=vardiyaGun.getVardiya();
+							for (VardiyaGun vardiyaCalismaGun  : vList) {
+								Vardiya vardiyaCalisma=vardiyaCalismaGun.getVardiya();
+								logger.debug(vardiyaCalismaGun.getVardiyaKeyStr() + " " + key);
+								vardiyaGun.setVardiya(vardiyaCalisma);
+								vardiyaGun.setVersion(-1);
+								vardiyaCalismaGun.setVardiya(vardiyaHafta);
+								vardiyaCalismaGun.setVersion(0);
+								session.saveOrUpdate(vardiyaGun);
+								session.saveOrUpdate(vardiyaCalismaGun);
 								break;
 
 							}
@@ -2158,6 +2168,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 					}
 				}
 			}
+			if (flush)
+				session.flush();
 		}
 	}
 

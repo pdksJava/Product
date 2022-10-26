@@ -4324,8 +4324,18 @@ public class OrtakIslemler implements Serializable {
 
 					HashMap<Long, ArrayList<HareketKGS>> personelHareketMap = personelHareketleriGetir(kgsPerList, PdksUtil.tariheGunEkleCikar(tarih1, -1), PdksUtil.tariheGunEkleCikar(tarih2, 1), session);
 
-					if (!personelVardiyaBulMap.isEmpty() && !personelHareketMap.isEmpty())
+					if (!personelVardiyaBulMap.isEmpty() && !personelHareketMap.isEmpty()) {
 						yenidenCalistir = vardiyaHareketlerdenGuncelle(session, personelDenklestirmeMap, personelVardiyaBulMap, calismaPlaniMap, hareketKaydiVardiyaMap, departman, personelHareketMap);
+						TreeMap<String, VardiyaGun> vardiyalarMap = new TreeMap<String, VardiyaGun>();
+						for (Long key : calismaPlaniMap.keySet()) {
+							List<VardiyaGun> list = calismaPlaniMap.get(key);
+							for (VardiyaGun vardiyaGun : list) {
+								vardiyalarMap.put(vardiyaGun.getVardiyaKeyStr(), vardiyaGun);
+							}
+						}
+						fazlaMesaiSaatiAyarla(vardiyalarMap);
+						vardiyalarMap = null;
+					}
 
 					personelVardiyaBulMap = null;
 					List<YemekIzin> yemekList = getYemekList(session);
@@ -4361,6 +4371,7 @@ public class OrtakIslemler implements Serializable {
 						List<HareketKGS> perHareketList = personelHareketMap.containsKey(kgsId) ? personelHareketMap.get(kgsId) : new ArrayList<HareketKGS>();
 						// Denklestirme islemleri yapiliyor
 						ArrayList<PersonelIzin> izinler = izinMap.containsKey(perNoId) ? izinMap.get(perNoId) : null;
+
 						denklestirmeOlustur(gunMap, tarihHareketEkle, yemekAraliklari, girisView, personelDenklestirmeTasiyiciList, tatilGunleriMap, personelDenklestirmeMap, vardiyaNetCalismaSuresiMap, izinler, fazlaMesailer, calismaPlaniMap, perHareketList, perNoId, yemekList, session);
 						personelDenklestirme.setToplamCalisilacakZaman(0);
 						personelDenklestirme.setToplamCalisilanZaman(0);
@@ -8119,6 +8130,7 @@ public class OrtakIslemler implements Serializable {
 			VardiyaGun vardiyaGun = (VardiyaGun) iterator.next();
 			if (vardiyaGun.getVardiya() == null)
 				continue;
+
 			Boolean geceHaftaTatilMesaiParcala = null;
 			if (haftaTatilDurum.equals("1") && vardiyaGun.getVardiya().isHaftaTatil() && vardiyaGun.getCalismaModeli() != null) {
 				geceHaftaTatilMesaiParcala = vardiyaGun.getCalismaModeli().getGeceHaftaTatilMesaiParcala();
@@ -8164,11 +8176,13 @@ public class OrtakIslemler implements Serializable {
 					}
 
 				}
+
 				if (geceHaftaTatilMesaiParcala != null && !geceHaftaTatilMesaiParcala) {
 					VardiyaGun oncekiVardiya = vardiyaGun.getOncekiVardiyaGun();
 					if (oncekiVardiya != null) {
 						Vardiya vardiya = oncekiVardiya.getIslemVardiya();
 						Date vardiyaBitZaman = null;
+
 						if (vardiya != null && vardiya.isCalisma() && vardiya.getBasSaat() >= vardiya.getBitSaat()) {
 							vardiyaBitZaman = vardiya.getVardiyaTelorans2BitZaman();
 							vardiya.setVardiyaFazlaMesaiBitZaman(vardiyaBitZaman);
@@ -8181,12 +8195,22 @@ public class OrtakIslemler implements Serializable {
 
 					}
 				}
+
+				if (vardiyaGun.getVardiya().isCalisma() && islemVardiya.getBasSaat() <= islemVardiya.getBitSaat()) {
+					VardiyaGun sonrakiVardiyaGun = vardiyaGun.getSonrakiVardiyaGun();
+					if (sonrakiVardiyaGun != null) {
+						Vardiya vardiya = sonrakiVardiyaGun.getIslemVardiya();
+						if (vardiya != null && vardiya.isCalisma() == false) {
+							islemVardiya.setVardiyaTelorans2BitZaman(PdksUtil.addTarih(vardiya.getVardiyaFazlaMesaiBasZaman(), Calendar.MILLISECOND, -20));
+							islemVardiya.setVardiyaFazlaMesaiBitZaman(PdksUtil.addTarih(vardiya.getVardiyaFazlaMesaiBasZaman(), Calendar.MILLISECOND, -40));
+						}
+					}
+				}
 				if (islemVardiya.getVardiyaBitZaman().after(islemVardiya.getVardiyaFazlaMesaiBitZaman())) {
 					islemVardiya.setVardiyaTelorans2BitZaman(PdksUtil.addTarih(islemVardiya.getVardiyaFazlaMesaiBitZaman(), Calendar.MILLISECOND, -20));
 					islemVardiya.setVardiyaBitZaman(PdksUtil.addTarih(islemVardiya.getVardiyaFazlaMesaiBitZaman(), Calendar.MILLISECOND, -40));
 
 				}
-				// logger.info(vardiyaGun.getVardiyaKeyStr() + " " + islemVardiya.getVardiyaFazlaMesaiBitZaman());
 
 			} catch (Exception ex1) {
 				ex1.printStackTrace();

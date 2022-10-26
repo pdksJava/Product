@@ -628,8 +628,7 @@ public class PersonelFazlaMesaiHome extends EntityHome<PersonelFazlaMesai> imple
 				Date tarih4 = null;
 				TreeMap<String, VardiyaGun> vardiyaMap = null;
 				try {
-					vardiyaMap = ortakIslemler.getIslemVardiyalar((List<Personel>) personeller.clone(), date, PdksUtil.tariheGunEkleCikar(date, 1), yaz, session, Boolean.FALSE);
-
+					vardiyaMap = ortakIslemler.getIslemVardiyalar((List<Personel>) personeller.clone(), PdksUtil.tariheGunEkleCikar(date, -2), PdksUtil.tariheGunEkleCikar(date, 3), yaz, session, Boolean.FALSE);
 				} catch (Exception e) {
 					vardiyaMap = new TreeMap<String, VardiyaGun>();
 					e.printStackTrace();
@@ -652,7 +651,7 @@ public class PersonelFazlaMesaiHome extends EntityHome<PersonelFazlaMesai> imple
 					List<VardiyaGun> list = perVardiyaMap.get(key);
 					for (VardiyaGun vardiyaGun : list)
 						vardiyalarMap.put(vardiyaGun.getVardiyaKeyStr(), vardiyaGun);
-					// ortakIslemler.fazlaMesaiSaatiAyarla(vardiyalarMap);
+					ortakIslemler.fazlaMesaiSaatiAyarla(vardiyalarMap);
 					vardiyalarMap.clear();
 					list = null;
 				}
