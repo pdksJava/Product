@@ -1036,7 +1036,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 						list = ortakIslemler.personelDenklestir(denklestirmeDonemi, tatilGunleriMap, searchKey, perList, Boolean.TRUE, Boolean.FALSE, ayBitmedi, session);
 
 					}
-
+					if (denklestirmeAyDurum && !list.isEmpty())
+						haftaTatilVardiyaGuncelle(list);
 				} catch (Exception ex) {
 					list = new ArrayList<PersonelDenklestirmeTasiyici>();
 					logger.equals(ex);
@@ -1977,7 +1978,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 
 				else if (flush)
 					session.flush();
-				
+
 			} else {
 				if (fazlaMesaiMap == null)
 					fazlaMesaiMap = new TreeMap<String, Tanim>();
@@ -2094,11 +2095,70 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 		if (!modelGoster) {
 			HashMap<Boolean, Long> sanalDurum = new HashMap<Boolean, Long>();
 			if (puantajList != null)
-				for (AylikPuantaj ap : aylikPuantajList)  
+				for (AylikPuantaj ap : aylikPuantajList)
 					sanalDurum.put(ap.getPdksPersonel().getSanalPersonel(), ap.getPdksPersonel().getId());
 			modelGoster = sanalDurum.size() > 1;
 		}
 		setAylikPuantajList(puantajList);
+	}
+
+	/**
+	 * @param list
+	 */
+	// TODO haftaTatilVardiyaGuncelle
+	private void haftaTatilVardiyaGuncelle(List<PersonelDenklestirmeTasiyici> list) {
+		for (PersonelDenklestirmeTasiyici personelDenklestirmeTasiyici : list) {
+			TreeMap<String, VardiyaGun> vgMap = new TreeMap<String, VardiyaGun>();
+			TreeMap<Integer, List<VardiyaGun>> haftaMap = new TreeMap<Integer, List<VardiyaGun>>();
+			int hafta = 0;
+			TreeMap<String, Integer> vgHaftaMap = new TreeMap<String, Integer>();
+			List<PersonelDenklestirmeTasiyici> personelDenklestirmeleri = personelDenklestirmeTasiyici.getPersonelDenklestirmeleri();
+			Calendar cal1 = Calendar.getInstance();
+			for (PersonelDenklestirmeTasiyici personelDenklestirmeTasiyici2 : personelDenklestirmeleri) {
+				++hafta;
+				List<VardiyaGun> vardiyaGunList = personelDenklestirmeTasiyici2.getVardiyalar();
+				if (vardiyaGunList == null)
+					continue;
+				for (VardiyaGun vardiyaGun : vardiyaGunList) {
+					String key = PdksUtil.convertToDateString(vardiyaGun.getVardiyaDate(), "yyyyMMdd");
+					if (vardiyaGun.isAyinGunu() && vardiyaGun.getVardiya() != null) {
+						cal1.setTime(vardiyaGun.getVardiyaDate());
+						boolean haftaTatil = vardiyaGun.getVardiya().isHaftaTatil();
+						if (vardiyaGun.getVersion() < 0 || haftaTatil) {
+							if (haftaTatil)
+								vgHaftaMap.put(key, hafta);
+							else if (vardiyaGun.getHareketler() == null || vardiyaGun.getHareketler().isEmpty()) {
+								List<VardiyaGun> vList = haftaMap.containsKey(hafta) ? haftaMap.get(hafta) : new ArrayList<VardiyaGun>();
+								if (vList.isEmpty())
+									haftaMap.put(hafta, vList);
+								vList.add(vardiyaGun);
+							}
+							vgMap.put(key, vardiyaGun);
+						}
+
+					}
+
+				}
+			}
+			if (!haftaMap.isEmpty()) {
+				for (String key : vgHaftaMap.keySet()) {
+					VardiyaGun vardiyaGun = vgMap.get(key);
+					hafta = vgHaftaMap.get(key);
+					if (vardiyaGun.getHareketler() != null && haftaMap.containsKey(hafta) && vardiyaGun.getHareketDurum()) {
+						List<VardiyaGun> vList = haftaMap.get(hafta);
+						if (vList.size() == 1) {
+							for (VardiyaGun vardiyaGun2 : vList) {
+								logger.info(vardiyaGun2.getVardiyaKeyStr() + " " + key);
+								break;
+
+							}
+
+						}
+
+					}
+				}
+			}
+		}
 	}
 
 	/**
@@ -2937,7 +2997,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 											hareketKGS.setPersonelFazlaMesai(mesaiMap.get(hareketKGS.getId()));
 									}
 									mesaiMap = null;
-									 
+
 								}
 
 								list = null;

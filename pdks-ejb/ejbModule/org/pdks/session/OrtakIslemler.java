@@ -1315,7 +1315,7 @@ public class OrtakIslemler implements Serializable {
 		HashMap parametreMap = new HashMap();
 		parametreMap.put("status=", Boolean.TRUE);
 		if (!authenticatedUser.isAdmin())
-			parametreMap.put("rolename not ", Arrays.asList(Role.TIPI_ADMIN, Role.TIPI_SISTEM_YONETICI));
+			parametreMap.put("adminRole = ", Boolean.FALSE);
 		if (session != null)
 			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 		List<Role> allRoles = pdksEntityController.getObjectByInnerObjectListInLogic(parametreMap, Role.class);
@@ -4123,7 +4123,7 @@ public class OrtakIslemler implements Serializable {
 		boolean yenidenCalistir = false;
 		List<YemekIzin> yemekAraliklari = getYemekList(session);
 
-		List<PersonelDenklestirmeTasiyici> list = new ArrayList<PersonelDenklestirmeTasiyici>();
+		List<PersonelDenklestirmeTasiyici> personelDenklestirmeTasiyiciList = new ArrayList<PersonelDenklestirmeTasiyici>();
 		HashMap parametreMap = new HashMap();
 
 		List<PersonelView> perViewList = denklestirmePersonelBul(denklestirmeDonemi, searchKey, value, pdks, session);
@@ -4324,9 +4324,9 @@ public class OrtakIslemler implements Serializable {
 
 					HashMap<Long, ArrayList<HareketKGS>> personelHareketMap = personelHareketleriGetir(kgsPerList, PdksUtil.tariheGunEkleCikar(tarih1, -1), PdksUtil.tariheGunEkleCikar(tarih2, 1), session);
 
-					if (!personelVardiyaBulMap.isEmpty() && !personelHareketMap.isEmpty()) {
+					if (!personelVardiyaBulMap.isEmpty() && !personelHareketMap.isEmpty())
 						yenidenCalistir = vardiyaHareketlerdenGuncelle(session, personelDenklestirmeMap, personelVardiyaBulMap, calismaPlaniMap, hareketKaydiVardiyaMap, departman, personelHareketMap);
-					}
+
 					personelVardiyaBulMap = null;
 					List<YemekIzin> yemekList = getYemekList(session);
 					List<PersonelFazlaMesai> fazlaMesailer = denklestirmeFazlaMesaileriGetir(denklestirmeDonemi != null ? denklestirmeDonemi.getDenklestirmeAy() : null, vardiyalar, session);
@@ -4361,7 +4361,7 @@ public class OrtakIslemler implements Serializable {
 						List<HareketKGS> perHareketList = personelHareketMap.containsKey(kgsId) ? personelHareketMap.get(kgsId) : new ArrayList<HareketKGS>();
 						// Denklestirme islemleri yapiliyor
 						ArrayList<PersonelIzin> izinler = izinMap.containsKey(perNoId) ? izinMap.get(perNoId) : null;
-						denklestirmeOlustur(gunMap, tarihHareketEkle, yemekAraliklari, girisView, list, tatilGunleriMap, personelDenklestirmeMap, vardiyaNetCalismaSuresiMap, izinler, fazlaMesailer, calismaPlaniMap, perHareketList, perNoId, yemekList, session);
+						denklestirmeOlustur(gunMap, tarihHareketEkle, yemekAraliklari, girisView, personelDenklestirmeTasiyiciList, tatilGunleriMap, personelDenklestirmeMap, vardiyaNetCalismaSuresiMap, izinler, fazlaMesailer, calismaPlaniMap, perHareketList, perNoId, yemekList, session);
 						personelDenklestirme.setToplamCalisilacakZaman(0);
 						personelDenklestirme.setToplamCalisilanZaman(0);
 						for (Iterator<PersonelDenklestirmeTasiyici> iterator = personelDenklestirme.getPersonelDenklestirmeleri().iterator(); iterator.hasNext();) {
@@ -4378,15 +4378,13 @@ public class OrtakIslemler implements Serializable {
 				}
 			}
 		}
-
-		if (!list.isEmpty()) {
+		if (!personelDenklestirmeTasiyiciList.isEmpty()) {
 			boolean durum = Boolean.FALSE;
 			boolean hataYok = Boolean.TRUE;
 			// Bos kayitlar siliniyor hatali kayitlar set ediliyor
-			for (Iterator<PersonelDenklestirmeTasiyici> iterator = list.iterator(); iterator.hasNext();) {
+			for (Iterator<PersonelDenklestirmeTasiyici> iterator = personelDenklestirmeTasiyiciList.iterator(); iterator.hasNext();) {
 				PersonelDenklestirmeTasiyici personelDenklestirme = iterator.next();
 				double normalFazlaMesai = 0, resmiTatilMesai = 0;
-
 				personelDenklestirme.setCheckBoxDurum(Boolean.TRUE);
 				if (personelDenklestirme.getDurum())
 					personelDenklestirme.setTrClass(String.valueOf(durum));
@@ -4395,12 +4393,10 @@ public class OrtakIslemler implements Serializable {
 					if (!denklestirme.isCheckBoxDurum())
 						personelDenklestirme.setCheckBoxDurum(Boolean.FALSE);
 					else {
-
 						normalFazlaMesai += denklestirme.getCalisilanFark();
 						resmiTatilMesai += denklestirme.getResmiTatilMesai();
 					}
 				}
-
 				personelDenklestirme.setNormalFazlaMesai(PdksUtil.setSureDoubleRounded(normalFazlaMesai));
 				personelDenklestirme.setResmiTatilMesai(resmiTatilMesai);
 				durum = !durum;
@@ -4410,8 +4406,8 @@ public class OrtakIslemler implements Serializable {
 		}
 		gunMap = null;
 		if (yenidenCalistir && denklestirmeDonemi.getDurum())
-			list.clear();
-		return list;
+			personelDenklestirmeTasiyiciList.clear();
+		return personelDenklestirmeTasiyiciList;
 	}
 
 	/**
