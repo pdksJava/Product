@@ -6793,7 +6793,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				}
 				veriList = null;
 				list = null;
-				// TODO
 			}
 		}
 

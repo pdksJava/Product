@@ -1903,7 +1903,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 							}
 						}
 					} catch (Exception ex) {
-						// TODO: handle exception
+						logger.error(ex);
+						ex.printStackTrace();
 					}
 
 				}
@@ -2055,7 +2056,6 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 			Date toDay = cal.getTime();
 			if (toDay.after(tarih) && (toDay.before(denklestirmeAy.getOtomatikOnayIKTarih())) || (authenticatedUser.isTestLogin() && toDay.before(tarihLast))) {
 				onayla = Boolean.FALSE;
-				// TODO
 				for (AylikPuantaj puantaj : puantajList) {
 					PersonelDenklestirme pd = puantaj.getPersonelDenklestirmeAylik();
 					boolean kaydet = pd.getDurum();
