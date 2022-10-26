@@ -4509,14 +4509,14 @@ public class OrtakIslemler implements Serializable {
 							if (vardiyaGunNew.getHareketler() != null && vardiyaGunNew.getHareketDurum()) {
 								List<HareketKGS> girisler = vardiyaGunNew.getGirisHareketleri(), cikislar = vardiyaGunNew.getCikisHareketleri();
 								if (girisler != null && cikislar != null && cikislar.size() == girisler.size()) {
+									double sure = 0.0d;
 									for (int i = 0; i < girisler.size(); i++) {
 										HareketKGS giris = girisler.get(i), cikis = cikislar.get(i);
-										if (giris.getZaman().before(cikis.getZaman())) {
-											double sure = PdksUtil.setSureDoubleRounded(PdksUtil.getSaatFarki(cikis.getZaman(), giris.getZaman()).doubleValue());
-											Liste liste = new Liste(vardiyaGunNew, sure);
-											listeler.add(liste);
-										}
+										if (giris != null && cikis != null && giris.getZaman().before(cikis.getZaman()))
+											sure += PdksUtil.setSureDoubleRounded(PdksUtil.getSaatFarki(cikis.getZaman(), giris.getZaman()).doubleValue());
 									}
+									if (sure > 0.0d)
+										listeler.add(new Liste(vardiyaGunNew, sure));
 								}
 							}
 						}
