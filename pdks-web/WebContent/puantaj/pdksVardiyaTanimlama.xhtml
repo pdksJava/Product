@@ -155,7 +155,7 @@
 									<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin and vardiyaTanimlaHome.hareketKaydiVardiyaBul}">
 										<ui:define name="label">#{md.calismaModeli.aciklama} Hareket Kayıtlarından Vardiya Bul</ui:define>
 										<h:selectBooleanCheckbox value="#{md.hareketKaydiVardiyaBul}"
-											disabled="#{vardiyaTanimlaHome.denklestirmeAy.durum==false or (md.hareketKaydiVardiyaBul==false and md.calismaModeli.hareketKaydiVardiyaBul==false)}">
+											disabled="#{vardiyaTanimlaHome.denklestirmeAy.durum==false or (md.hareketKaydiVardiyaBulsunmu==false and md.calismaModeli.hareketKaydiVardiyaBulsunmu==false)}">
 										</h:selectBooleanCheckbox>
 									</s:decorate>
 
