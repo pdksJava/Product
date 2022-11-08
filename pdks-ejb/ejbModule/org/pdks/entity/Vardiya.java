@@ -579,7 +579,7 @@ public class Vardiya extends BaseObject {
 									vardiyaCalisma.setVardiyaTelorans2BitZaman((Date) cal.getTime().clone());
 								} else {
 									cal.setTime(sonrakiVardiya.getVardiyaTarih());
-									int bosluk = oncekiVardiya.isHaftaTatil() ? haftaTatiliFazlaMesaiBasDakika : offFazlaMesaiBasDakika;
+									int bosluk = sonrakiVardiya.isHaftaTatil() ? haftaTatiliFazlaMesaiBasDakika : offFazlaMesaiBasDakika;
 									cal.add(Calendar.MINUTE, bosluk);
 									sonrakiVardiya.setVardiyaTelorans1BasZaman((Date) cal.getTime().clone());
 									sonrakiVardiya.setVardiyaFazlaMesaiBasZaman((Date) cal.getTime().clone());
