@@ -551,7 +551,6 @@ public class Vardiya extends BaseObject {
 
 							}
 
-										vardiyaCalisma.setVardiyaFazlaMesaiBasZaman(PdksUtil.getDate(tarih));
 						}
 						if (sonrakiVardiya != null) {
 							if (sonrakiVardiya.isCalisma()) {
