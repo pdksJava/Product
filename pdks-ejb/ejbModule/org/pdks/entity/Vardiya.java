@@ -606,7 +606,7 @@ public class Vardiya extends BaseObject {
 									sonrakiVardiya.setVardiyaFazlaMesaiBasZaman((Date) cal.getTime().clone());
 									cal.add(Calendar.MILLISECOND, -100);
 									vardiyaCalisma.setVardiyaFazlaMesaiBitZaman((Date) cal.getTime().clone());
-									logger.info(vardiyaDateStr + " " + sureDakika);
+									logger.debug(vardiyaDateStr + " " + sureDakika);
 								}
 
 							}
@@ -639,7 +639,7 @@ public class Vardiya extends BaseObject {
 						sonrakiVardiya.setVardiyaFazlaMesaiBasZaman((Date) cal.getTime().clone());
 						if (sonrakiVardiya.isCalisma() && sonrakiVardiya.getVardiyaTelorans1BasZaman() != null && sonrakiVardiya.getVardiyaTelorans1BasZaman().before(sonrakiGun)) {
 							cal.setTime(sonrakiGun);
-							int bosluk = oncekiVardiya.isHaftaTatil() ? haftaTatiliFazlaMesaiBasDakika : offFazlaMesaiBasDakika;
+							int bosluk = sonrakiVardiya.isHaftaTatil() ? haftaTatiliFazlaMesaiBasDakika : offFazlaMesaiBasDakika;
 							cal.add(Calendar.MINUTE, bosluk);
 							sonrakiVardiya.setVardiyaTelorans1BasZaman((Date) cal.getTime().clone());
 							sonrakiVardiya.setVardiyaFazlaMesaiBasZaman((Date) cal.getTime().clone());
