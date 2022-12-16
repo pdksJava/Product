@@ -219,31 +219,32 @@ public class OrtakIslemler implements Serializable {
 	 * @return
 	 */
 	public Tanim getEkSaha4(Sirket sirket, Long sirketId, Session session) {
-		if (sirket == null && sirketId != null) {
-			HashMap parametreMap = new HashMap();
-			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			try {
-				parametreMap.put("id", sirketId);
-
-				sirket = (Sirket) pdksEntityController.getObjectByInnerObject(parametreMap, Sirket.class);
-			} catch (Exception e) {
-				logger.error(e);
-				e.printStackTrace();
-			}
-		}
 		Tanim tanim = null;
-		if (sirket != null && sirket.isErp() && PdksUtil.isPuantajSorguAltBolumGir() && !PdksUtil.getCanliSunucuDurum()) {
-			HashMap parametreMap = new HashMap();
-			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			try {
-				parametreMap.put("tipi", Tanim.TIPI_PERSONEL_EK_SAHA);
-				parametreMap.put("durum", Boolean.TRUE);
-				parametreMap.put("kodu", "ekSaha4");
+		if (PdksUtil.isPuantajSorguAltBolumGir()) {
+ 			if (sirket == null && sirketId != null) {
+				HashMap parametreMap = new HashMap();
+				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+				try {
+					parametreMap.put("id", sirketId);
 
-				tanim = (Tanim) pdksEntityController.getObjectByInnerObject(parametreMap, Tanim.class);
-			} catch (Exception e) {
-				logger.error(e);
-				e.printStackTrace();
+					sirket = (Sirket) pdksEntityController.getObjectByInnerObject(parametreMap, Sirket.class);
+				} catch (Exception e) {
+					logger.error(e);
+					e.printStackTrace();
+				}
+			}
+			if (sirket != null && sirket.isErp() && !PdksUtil.getCanliSunucuDurum()) {
+				HashMap parametreMap = new HashMap();
+				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+				try {
+					parametreMap.put("tipi", Tanim.TIPI_PERSONEL_EK_SAHA);
+					parametreMap.put("durum", Boolean.TRUE);
+					parametreMap.put("kodu", "ekSaha4");
+ 					tanim = (Tanim) pdksEntityController.getObjectByInnerObject(parametreMap, Tanim.class);
+				} catch (Exception e) {
+					logger.error(e);
+					e.printStackTrace();
+				}
 			}
 		}
 

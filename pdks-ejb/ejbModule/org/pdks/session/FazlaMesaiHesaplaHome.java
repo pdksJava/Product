@@ -4178,12 +4178,17 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 	 * @return
 	 */
 	private ByteArrayOutputStream fazlaMesaiExcelDevam(String gorevYeriAciklama, List<AylikPuantaj> list) {
-
+		boolean kimlikNoGoster = false;
 		TreeMap<String, String> sirketMap = new TreeMap<String, String>();
-
 		for (Iterator iter = list.iterator(); iter.hasNext();) {
 			AylikPuantaj aylikPuantaj = (AylikPuantaj) iter.next();
 			Personel personel = aylikPuantaj.getPdksPersonel();
+			if (!kimlikNoGoster && ikRole) {
+				PersonelKGS personelKGS = personel.getPersonelKGS();
+				if (personelKGS != null)
+					kimlikNoGoster = PdksUtil.hasStringValue(personelKGS.getKimlikNo());
+
+			}
 			String tekSirketTesis = (personel.getSirket() != null ? personel.getSirket().getId() : "") + "_" + (personel.getTesis() != null ? personel.getTesis().getId() : "");
 			String tekSirketTesisAdi = (personel.getSirket() != null ? personel.getSirket().getAd() : "") + " " + (personel.getTesis() != null ? personel.getTesis().getAciklama() : "");
 			sirketMap.put(tekSirketTesis, tekSirketTesisAdi);
@@ -4277,6 +4282,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 		ExcelUtil.getCell(sheet, ++row, col, styleGenel).setCellValue("");
 		ExcelUtil.getCell(sheet, ++row, col++, header).setCellValue(ortakIslemler.personelNoAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Adı Soyadı");
+		if (kimlikNoGoster)
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.kimlikNoAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.yoneticiAciklama());
 		if (fazlaMesaiIzinKullan) {
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("FM Ödeme");
@@ -4345,8 +4352,10 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 			AylikPuantaj aylikPuantaj = (AylikPuantaj) iter.next();
 
 			Personel personel = aylikPuantaj.getPdksPersonel();
+
 			if (!aylikPuantaj.isFazlaMesaiHesapla() || !aylikPuantaj.isSecili() || personel == null || personel.getSicilNo() == null || personel.getSicilNo().trim().equals(""))
 				continue;
+			PersonelKGS personelKGS = personel.getPersonelKGS();
 			PersonelDenklestirme personelDenklestirme = aylikPuantaj.getPersonelDenklestirmeAylik();
 			PersonelDenklestirme personelDenklestirmeGecenAy = personelDenklestirme != null ? personelDenklestirme.getPersonelDenklestirmeGecenAy() : null;
 			row++;
@@ -4376,6 +4385,12 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 						comment1.setString(str1);
 						personelCell.setCellComment(comment1);
 
+					}
+					if (kimlikNoGoster) {
+						String kimlikNo = "";
+						if (personelKGS != null && PdksUtil.hasStringValue(personelKGS.getKimlikNo()))
+							kimlikNo = personelKGS.getKimlikNo();
+						ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(kimlikNo);
 					}
 					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(aylikPuantaj.getYonetici() != null && aylikPuantaj.getYonetici().getId() != null ? aylikPuantaj.getYonetici().getAdSoyad() : "");
 					if (fazlaMesaiIzinKullan) {
