@@ -220,8 +220,8 @@ public class OrtakIslemler implements Serializable {
 	 */
 	public Tanim getEkSaha4(Sirket sirket, Long sirketId, Session session) {
 		Tanim tanim = null;
-		if (PdksUtil.isPuantajSorguAltBolumGir()) {
- 			if (sirket == null && sirketId != null) {
+		if (PdksUtil.isPuantajSorguAltBolumGir() || authenticatedUser.isAdmin()) {
+			if (sirket == null && sirketId != null) {
 				HashMap parametreMap = new HashMap();
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 				try {
@@ -233,14 +233,14 @@ public class OrtakIslemler implements Serializable {
 					e.printStackTrace();
 				}
 			}
-			if (sirket != null && sirket.isErp() && !PdksUtil.getCanliSunucuDurum()) {
+			if (sirket != null && sirket.isErp()) {
 				HashMap parametreMap = new HashMap();
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 				try {
 					parametreMap.put("tipi", Tanim.TIPI_PERSONEL_EK_SAHA);
 					parametreMap.put("durum", Boolean.TRUE);
 					parametreMap.put("kodu", "ekSaha4");
- 					tanim = (Tanim) pdksEntityController.getObjectByInnerObject(parametreMap, Tanim.class);
+					tanim = (Tanim) pdksEntityController.getObjectByInnerObject(parametreMap, Tanim.class);
 				} catch (Exception e) {
 					logger.error(e);
 					e.printStackTrace();
@@ -1813,7 +1813,8 @@ public class OrtakIslemler implements Serializable {
 							}
 						}
 					}
-					StringBuffer sp = new StringBuffer("SP_GET_FAZLA_MESAI_DATA");
+					String spAdi = PdksUtil.isPuantajSorguAltBolumGir() || bolumId != null ? "SP_GET_FAZLA_MESAI_DATA_ALT" : "SP_GET_FAZLA_MESAI_DATA";
+					StringBuffer sp = new StringBuffer(spAdi);
 					LinkedHashMap<String, Object> map = new LinkedHashMap<String, Object>();
 					Long denklestirmeDeger = 0L;
 					if (denklestirme) {
@@ -1846,7 +1847,7 @@ public class OrtakIslemler implements Serializable {
 					map.put("tesisId", tesisId != null ? tesisId : "");
 					map.put("direktorId", direktorId != null ? direktorId : 0L);
 					map.put("bolumId", bolumId != null ? bolumId : 0L);
-					if (PdksUtil.isPuantajSorguAltBolumGir())
+					if (PdksUtil.isPuantajSorguAltBolumGir() || bolumId != null)
 						map.put("altBolumId", altBolumId);
 					map.put("tipi", tipi);
 					map.put("basTarih", PdksUtil.convertToDateString(basTarih, "yyyyMMdd"));
@@ -1860,8 +1861,9 @@ public class OrtakIslemler implements Serializable {
 					try {
 						list = pdksEntityController.execSPList(map, sp, class1);
 					} catch (Exception e) {
-						logger.error(e);
+						logger.error(e + "\n" + spAdi + "\n" + gson.toJson(map));
 						e.printStackTrace();
+
 					}
 				}
 			}

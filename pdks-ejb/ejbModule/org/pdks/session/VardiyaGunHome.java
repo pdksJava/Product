@@ -8117,7 +8117,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		List<SelectItem> altBolumIdList = null;
 		seciliEkSaha4Id = aramaSecenekleri.getEkSaha4Id();
 		if (ekSaha4Tanim != null) {
-			altBolumIdList = fazlaMesaiOrtakIslemler.getFazlaMesaiAltBolumList(aramaSecenekleri.getSirket(), null, aramaSecenekleri.getEkSaha3Id(), denklestirmeAy != null ? new AylikPuantaj(denklestirmeAy) : null, Boolean.TRUE, session);
+			Long tesisId = aramaSecenekleri.getTesisId();
+			altBolumIdList = fazlaMesaiOrtakIslemler.getFazlaMesaiAltBolumList(aramaSecenekleri.getSirket(), tesisId != null ? String.valueOf(tesisId) : null, aramaSecenekleri.getEkSaha3Id(), denklestirmeAy != null ? new AylikPuantaj(denklestirmeAy) : null, Boolean.TRUE, session);
 			if (altBolumIdList.size() == 1)
 				seciliEkSaha4Id = (Long) altBolumIdList.get(0).getValue();
 			else if (seciliEkSaha4Id != null) {

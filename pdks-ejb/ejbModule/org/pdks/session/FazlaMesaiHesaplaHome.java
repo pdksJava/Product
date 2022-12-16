@@ -4792,7 +4792,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 	public String altBolumDoldur() {
 		aylikPuantajList.clear();
 		if (ekSaha4Tanim != null) {
-			altBolumList = fazlaMesaiOrtakIslemler.getFazlaMesaiAltBolumList(sirket, null, seciliEkSaha3Id, denklestirmeAy != null ? new AylikPuantaj(denklestirmeAy) : null, Boolean.TRUE, session);
+			altBolumList = fazlaMesaiOrtakIslemler.getFazlaMesaiAltBolumList(sirket,  tesisId != null ? String.valueOf(tesisId) : null, seciliEkSaha3Id, denklestirmeAy != null ? new AylikPuantaj(denklestirmeAy) : null, Boolean.TRUE, session);
 			if (altBolumList.size() == 1)
 				seciliEkSaha4Id = (Long) altBolumList.get(0).getValue();
 			else if (seciliEkSaha4Id != null) {
