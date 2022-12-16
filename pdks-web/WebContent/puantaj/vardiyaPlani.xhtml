@@ -73,11 +73,21 @@
 								requiredMessage="#{vardiyaGunHome.bolumAciklama} seçiniz!" required="#{vardiyaGunHome.aramaSecenekleri.gorevYeriList.size()>1}">
 								<f:selectItem itemLabel="Lütfen seçiniz" />
 								<f:selectItems value="#{vardiyaGunHome.aramaSecenekleri.gorevYeriList}" />
+								<a4j:support event="onchange" status="ajaxStatus" action="#{vardiyaGunHome.altBolumDoldur()}" ajaxSingle="true"
+									reRender="vardiyaPanel,girisler" />
+							</h:selectOneMenu>
+						</s:decorate>
+						<s:decorate template="/layout/edit.xhtml"
+							rendered="#{vardiyaGunHome.ekSaha4Tanim!=null and vardiyaGunHome.aramaSecenekleri.altBolumIdList!=null and vardiyaGunHome.aramaSecenekleri.altBolumIdList.size()>0}">
+							<ui:define name="label">#{vardiyaGunHome.ekSaha4Tanim.aciklama}</ui:define>
+							<h:selectOneMenu value="#{vardiyaGunHome.aramaSecenekleri.ekSaha4Id}" disabled="#{vardiyaGunHome.aramaSecenekleri.altBolumIdList.size()==1}"
+								requiredMessage="#{vardiyaGunHome.ekSaha4Tanim.aciklama} seçiniz!" required="#{vardiyaGunHome.aramaSecenekleri.altBolumIdList.size()>1}">
+								<f:selectItem itemLabel="Lütfen seçiniz" />
+								<f:selectItems value="#{vardiyaGunHome.aramaSecenekleri.altBolumIdList}" />
 								<a4j:support event="onchange" status="ajaxStatus" action="#{vardiyaGunHome.aylikPuantajList.clear()}" ajaxSingle="true"
 									reRender="vardiyaPanel,girisler" />
 							</h:selectOneMenu>
 						</s:decorate>
-
 						<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaGunHome.kullaniciPersonel==false}">
 							<ui:define name="label">#{ortakIslemler.personelNoAciklama()}</ui:define>
 							<h:inputText value="#{vardiyaGunHome.sicilNo}">

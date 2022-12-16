@@ -141,7 +141,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	private String bolumAciklama, kartNoAciklama, sirketKodu = "";
 	private User user, eskiKullanici;
 	private Date tarih;
-	private Tanim bosDepartman, parentDepartman;
+	private Tanim bosDepartman, parentDepartman, parentBordroTanim;
 	private String oldUserName, bosDepartmanKodu;
 
 	private PersonelIzin bakiyeIzin;
@@ -150,7 +150,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	private Personel asilYonetici1;
 	private String hataMesaj = "", personelERPGuncelleme = "";
 	private Boolean pdks, servisCalisti = Boolean.FALSE, fazlaMesaiIzinKullan = Boolean.FALSE, gebeMi = Boolean.FALSE, tesisYetki = Boolean.FALSE;
-	private Boolean sutIzni = Boolean.FALSE, kullaniciPersonel = Boolean.FALSE, sanalPersonel = Boolean.FALSE, icapDurum = Boolean.FALSE, yoneticiRolVarmi = Boolean.FALSE;
+	private Boolean sutIzni = Boolean.FALSE, kimlikNoGoster = Boolean.FALSE, kullaniciPersonel = Boolean.FALSE, sanalPersonel = Boolean.FALSE, icapDurum = Boolean.FALSE, yoneticiRolVarmi = Boolean.FALSE;
 	private Boolean ustYonetici = Boolean.FALSE, fazlaMesaiOde = Boolean.FALSE, suaOlabilir = Boolean.FALSE, egitimDonemi = Boolean.FALSE, partTimeDurum = Boolean.FALSE;
 	private Boolean emailCCDurum = Boolean.FALSE, emailBCCDurum = Boolean.FALSE, taseronKulaniciTanimla = Boolean.FALSE, manuelTanimla = Boolean.FALSE, ikinciYoneticiManuelTanimla = Boolean.FALSE;
 	private Boolean onaysizIzinKullanilir = Boolean.FALSE, departmanGoster = Boolean.FALSE, ikinciYoneticiIzinOnayla = Boolean.FALSE, izinGirisiVar = Boolean.FALSE, dosyaGuncellemeYetki = Boolean.FALSE;
@@ -1042,6 +1042,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	 * @param pdksDurum
 	 */
 	public void kayitGuncelle(PersonelView personelView, boolean pdksDurum) {
+		parentBordroTanim = null;
 		izinGirisiVar = Boolean.FALSE;
 		HashMap fields = new HashMap();
 		denemeMesaj = "Deneme mesajı gönderilmiştir.";
@@ -1302,8 +1303,14 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 				}
 
 			}
-		} else if (pdksPersonel.getSirket().isErp() == false) {
-			erpSirketleriAyikla(sirketList);
+		}
+
+		else {
+			if (pdksPersonel.getSirket().isErp() == false) {
+				erpSirketleriAyikla(sirketList);
+			} else
+				parentBordroTanim = ortakIslemler.getEkSaha4(pdksPersonel.getSirket(), null, session);
+
 		}
 		izinGirisDurum(pdksPersonel);
 	}
@@ -1833,6 +1840,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 		kullaniciPersonel = map.containsKey("kullaniciPersonel");
 		gebeMi = map.containsKey("gebeMi");
 		sutIzni = map.containsKey("sutIzni");
+		kimlikNoGoster = map.containsKey("kimlikNoGoster");
 		ustYonetici = map.containsKey("ustYonetici");
 		icapDurum = map.containsKey("icapDurum");
 		partTimeDurum = map.containsKey("partTimeDurum");
@@ -1910,6 +1918,10 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 		fillEkSahaTanim();
 		Date bugun = PdksUtil.getDate(Calendar.getInstance().getTime());
 		Personel pdksPersonel = getInstance();
+		parentBordroTanim = null;
+		if (pdksPersonel.getSirket().isErp())
+			parentBordroTanim = ortakIslemler.getEkSaha4(pdksPersonel.getSirket(), null, session);
+
 		izinGirisDurum(pdksPersonel);
 		Departman departman = null;
 		Sirket sirket = pdksPersonel.getSirket();
@@ -2929,6 +2941,15 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	 * @throws Exception
 	 */
 	private ByteArrayOutputStream excelServiceAktarDevam(List<PersonelView> list) throws Exception {
+		HashMap fields = new HashMap();
+		fields.put("tipi", Tanim.TIPI_GENEL_TANIM);
+		fields.put("kodu", Tanim.TIPI_BORDRO_ALT_BIRIMI);
+		if (session != null)
+			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+		Tanim parentBordroTanim = (Tanim) pdksEntityController.getObjectByInnerObject(fields, Tanim.class);
+		String bordroAltAlanStr = "";
+		if (parentBordroTanim != null && PdksUtil.hasStringValue(parentBordroTanim.getErpKodu()))
+			bordroAltAlanStr = parentBordroTanim.getErpKodu().trim();
 		HashMap<String, Integer> alanMap = setServisAlanlar();
 		List<PersonelView> personelList = new ArrayList<PersonelView>(list);
 		for (Iterator iterator = personelList.iterator(); iterator.hasNext();) {
@@ -2968,6 +2989,10 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 				Sirket sirket = personel.getSirket();
 				Tanim cinsiyet = personel.getCinsiyet(), gorev = personel.getGorevTipi(), bolum = personel.getEkSaha3();
 				Tanim masrafYeri = personel.getMasrafYeri(), bordroAltAlani = personel.getBordroAltAlan(), departman = personel.getEkSaha1(), tesis = personel.getTesis();
+				if (bordroAltAlanStr.equals("ekSaha2"))
+					bordroAltAlani = personel.getEkSaha2();
+				else if (bordroAltAlanStr.equals("ekSaha4"))
+					bordroAltAlani = personel.getEkSaha4();
 				for (int i = 0; i < dosyaTanimList.size(); i++) {
 					Liste liste = dosyaTanimList.get(i);
 					Tanim tanim = (Tanim) liste.getValue();
@@ -4349,5 +4374,21 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 
 	public void setBolumAciklama(String bolumAciklama) {
 		this.bolumAciklama = bolumAciklama;
+	}
+
+	public Tanim getParentBordroTanim() {
+		return parentBordroTanim;
+	}
+
+	public void setParentBordroTanim(Tanim parentBordroTanim) {
+		this.parentBordroTanim = parentBordroTanim;
+	}
+
+	public Boolean getKimlikNoGoster() {
+		return kimlikNoGoster;
+	}
+
+	public void setKimlikNoGoster(Boolean kimlikNoGoster) {
+		this.kimlikNoGoster = kimlikNoGoster;
 	}
 }

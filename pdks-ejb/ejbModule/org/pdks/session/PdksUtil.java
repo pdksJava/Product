@@ -124,7 +124,7 @@ public class PdksUtil implements Serializable {
 
 	private static Integer yarimYuvarlaLast = 1;
 
-	private static boolean sistemDestekVar = false;
+	private static boolean sistemDestekVar = false, puantajSorguAltBolumGir = false;
 
 	/**
 	 * @param aciklama
@@ -3256,6 +3256,14 @@ public class PdksUtil implements Serializable {
 
 	public static void setYarimYuvarlaLast(Integer yarimYuvarlaLast) {
 		PdksUtil.yarimYuvarlaLast = yarimYuvarlaLast;
+	}
+
+	public static boolean isPuantajSorguAltBolumGir() {
+		return puantajSorguAltBolumGir;
+	}
+
+	public static void setPuantajSorguAltBolumGir(boolean puantajSorguAltBolumGir) {
+		PdksUtil.puantajSorguAltBolumGir = puantajSorguAltBolumGir;
 	}
 
 }

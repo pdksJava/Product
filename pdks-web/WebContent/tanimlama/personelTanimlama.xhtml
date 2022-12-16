@@ -105,6 +105,12 @@
 								</f:facet>
 								<h:outputText value="#{personelView.pdksPersonel.sirket.ad}" id="sirket" />
 							</rich:column>
+							<rich:column rendered="#{pdksPersonelHome.kimlikNoGoster}">
+								<f:facet name="header">
+									<h:outputText value="#{ortakIslemler.kimlikNoAciklama()}" />
+								</f:facet>
+								<h:outputText value="#{personelView.pdksPersonel.personelKGS.kimlikNo}" />
+							</rich:column>
 							<rich:column rendered="#{pdksPersonelHome.yoneticiRolVarmi}">
 								<f:facet name="header">
 									<h:outputText value="#{ortakIslemler.yoneticiAciklama()}" />
@@ -805,6 +811,11 @@
 											</s:decorate>
 
 										</c:if>
+										<s:decorate template="/layout/edit.xhtml"
+											rendered="#{pdksPersonelHome.parentBordroTanim!=null and pdksPersonelHome.parentBordroTanim.erpKodu==''}">
+											<ui:define name="label">#{pdksPersonelHome.parentBordroTanim.aciklama}</ui:define>
+											#{pdksPersonelHome.instance.bordroAltAlan.aciklama}
+										</s:decorate>
 										<s:decorate template="/layout/edit.xhtml">
 											<ui:define name="label">Cinsiyet</ui:define>
 											<h:selectOneMenu value="#{pdksPersonelHome.instance.cinsiyet}"
