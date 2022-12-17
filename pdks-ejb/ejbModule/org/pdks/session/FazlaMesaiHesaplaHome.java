@@ -3766,7 +3766,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 					mailIcerik = PdksUtil.replaceAll(PdksUtil.convertToDateString(aylikPuantajDefault.getIlkGun(), "MMMMM yyyy") + " " + (aciklama != null ? " " + PdksUtil.replaceAll(aciklama, veriAyrac, " ") : "") + " fazla mesaileri " + authenticatedUser.getAdSoyad()
 							+ " tarafından onaylanmıştır.", "  ", " ");
 					String gorevYeriAciklama = getExcelAciklama();
-					excelDosyaAdi = "fazlaMesai" + gorevYeriAciklama + PdksUtil.convertToDateString(aylikPuantajDefault.getIlkGun(), "yyyyMM") + (bolum != null ? "_" + bolum.getAciklama() : "") + ".xlsx";
+					excelDosyaAdi = "fazlaMesai" + gorevYeriAciklama + PdksUtil.convertToDateString(aylikPuantajDefault.getIlkGun(), "yyyyMM") + (bolum != null ? "_" + bolum.getAciklama() : "") + (seciliAltBolum != null ? "_" + seciliAltBolum.getAciklama() : "") + ".xlsx";
 					for (Long yoneticiId : yoneticiMap.keySet()) {
 						List<AylikPuantaj> list = puantajMap.get(yoneticiId);
 						Personel personel = yoneticiMap.get(yoneticiId);
@@ -4110,6 +4110,15 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 			Sirket sirket = (Sirket) pdksEntityController.getObjectByInnerObject(parametreMap, Sirket.class);
 			if (sirket != null)
 				gorevYeriAciklama = sirket.getAciklama() + "_";
+		}
+		if (seciliEkSaha4Id != null && seciliEkSaha4Id.longValue() > 0L) {
+			HashMap parametreMap = new HashMap();
+			parametreMap.put("id", seciliEkSaha4Id);
+			if (session != null)
+				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+			Tanim ekSaha4 = (Tanim) pdksEntityController.getObjectByInnerObject(parametreMap, Tanim.class);
+			if (ekSaha4 != null)
+				gorevYeriAciklama += ekSaha4.getAciklama() + "_";
 		}
 		return gorevYeriAciklama;
 	}
@@ -4797,11 +4806,11 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 			if (eski)
 				seciliEkSaha4Id = (Long) altBolumList.get(0).getValue();
 			else if (seciliEkSaha4Id != null) {
- 				for (SelectItem st : altBolumList) {
+				for (SelectItem st : altBolumList) {
 					if (st.getValue().equals(seciliEkSaha4Id))
 						eski = true;
 				}
- 			}
+			}
 			if (!eski)
 				seciliEkSaha4Id = -1L;
 		}

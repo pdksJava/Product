@@ -138,7 +138,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 
 	private List<String> ccAdresList = null, bccAdresList = null, hareketAdresList = null;
 	private String adi, soyadi, sicilNo, yoneticiTipi, ccAdres, adresTipi, sanalPersonelAciklama, ePosta, denemeMesaj;
-	private String bolumAciklama, kartNoAciklama, sirketKodu = "";
+	private String bolumAciklama, departmanAciklama, kartNoAciklama, altBolumAciklama, sirketKodu = "";
 	private User user, eskiKullanici;
 	private Date tarih;
 	private Tanim bosDepartman, parentDepartman, parentBordroTanim;
@@ -1672,6 +1672,8 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 		setEkSahaTanimMap((TreeMap<String, Tanim>) sonucMap.get("ekSahaTanimMap"));
 		setSirketList((List<Sirket>) sonucMap.get("sirketList"));
 		bolumAciklama = (String) sonucMap.get("bolumAciklama");
+		departmanAciklama = (String) sonucMap.get("departmanAciklama");
+		altBolumAciklama = (String) sonucMap.get("altBolumAciklama");
 	}
 
 	/**
@@ -2432,7 +2434,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 			if (wb != null) {
 				setServisAlanlar();
 				Sheet sheet = wb.getSheetAt(0);
-
+				fillEkSahaTanim();
 				LinkedHashMap<String, TreeMap<String, List<String>>> anaMap = new LinkedHashMap<String, TreeMap<String, List<String>>>();
 				HashMap<String, String> referansMap = new HashMap<String, String>();
 				String REFERANS_SIRKET = ExcelUtil.getSheetStringValueTry(sheet, 0, COL_SIRKET_KODU);
@@ -2742,7 +2744,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	 */
 	private HashMap<String, Integer> setServisAlanlar() {
 		HashMap<String, Integer> alanMap = new HashMap<String, Integer>();
-		if (dosyaTanimList.isEmpty())
+		if (authenticatedUser.isAdmin() || dosyaTanimList.isEmpty())
 			servisBilgileriOlustur();
 		String yonetici2ERPKontrolStr = ortakIslemler.getParameterKey("yonetici2ERPKontrol");
 		boolean yonetici2ERPKontrol = yonetici2ERPKontrolStr.equals("1");
@@ -2950,7 +2952,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 		String bordroAltAlanStr = "";
 		if (parentBordroTanim != null && PdksUtil.hasStringValue(parentBordroTanim.getErpKodu()))
 			bordroAltAlanStr = parentBordroTanim.getErpKodu().trim().toLowerCase(PdksUtil.TR_LOCALE);
- 		HashMap<String, Integer> alanMap = setServisAlanlar();
+		HashMap<String, Integer> alanMap = setServisAlanlar();
 		List<PersonelView> personelList = new ArrayList<PersonelView>(list);
 		for (Iterator iterator = personelList.iterator(); iterator.hasNext();) {
 			PersonelView personelView = (PersonelView) iterator.next();
@@ -2979,7 +2981,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 			Tanim tanim = (Tanim) liste.getValue();
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(tanim.getAciklama());
 		}
-	
+
 		for (Iterator iter = personelList.iterator(); iter.hasNext();) {
 			PersonelView personelView = (PersonelView) iter.next();
 			row++;
@@ -2989,8 +2991,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 				Sirket sirket = personel.getSirket();
 				Tanim cinsiyet = personel.getCinsiyet(), gorev = personel.getGorevTipi(), bolum = personel.getEkSaha3();
 				Tanim masrafYeri = personel.getMasrafYeri(), bordroAltAlani = personel.getBordroAltAlan(), departman = personel.getEkSaha1(), tesis = personel.getTesis();
-				
-				if (bordroAltAlanStr.startsWith("eksaha2"))
+ 				if (bordroAltAlanStr.startsWith("eksaha2"))
 					bordroAltAlani = personel.getEkSaha2();
 				else if (bordroAltAlanStr.startsWith("eksaha4"))
 					bordroAltAlani = personel.getEkSaha4();
@@ -4391,5 +4392,21 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 
 	public void setKimlikNoGoster(Boolean kimlikNoGoster) {
 		this.kimlikNoGoster = kimlikNoGoster;
+	}
+
+	public String getDepartmanAciklama() {
+		return departmanAciklama;
+	}
+
+	public void setDepartmanAciklama(String departmanAciklama) {
+		this.departmanAciklama = departmanAciklama;
+	}
+
+	public String getAltBolumAciklama() {
+		return altBolumAciklama;
+	}
+
+	public void setAltBolumAciklama(String altBolumAciklama) {
+		this.altBolumAciklama = altBolumAciklama;
 	}
 }

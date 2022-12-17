@@ -2683,8 +2683,12 @@ public class OrtakIslemler implements Serializable {
 	public HashMap fillEkSahaTanim(Session session, Boolean kendisiBul, Boolean sirketEkle) {
 		HashMap sonucMap = fillEkSahaTanimBul(kendisiBul, sirketEkle, session);
 		TreeMap<String, Tanim> tanimMap = (TreeMap<String, Tanim>) sonucMap.get("ekSahaTanimMap");
+		String departmanAciklama = tanimMap != null && tanimMap.containsKey("ekSaha1") ? tanimMap.get("ekSaha1").getAciklama() : "Departman";
 		String bolumAciklama = tanimMap != null && tanimMap.containsKey("ekSaha3") ? tanimMap.get("ekSaha3").getAciklama() : "Bölüm";
+		String altBolumAciklama = tanimMap != null && tanimMap.containsKey("ekSaha4") ? tanimMap.get("ekSaha4").getAciklama() : "Alt Bölüm";
 		sonucMap.put("bolumAciklama", bolumAciklama);
+		sonucMap.put("departmanAciklama", departmanAciklama);
+		sonucMap.put("altBolumAciklama", altBolumAciklama);
 		return sonucMap;
 	}
 

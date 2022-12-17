@@ -557,9 +557,9 @@
 
 									<rich:column rendered="#{pdksPersonelHome.COL_DEPARTMAN_ADI>=0}">
 										<f:facet name="header">
-											<h:outputText value="Departman" />
+											<h:outputText value="#{pdksPersonelHome.departmanAciklama}" />
 										</f:facet>
-										<h:outputText value="#{personelERP.departmanAdi}" title="Departman Kodu : #{personelERP.departmanKodu}" />
+										<h:outputText value="#{personelERP.departmanAdi}" title="#{pdksPersonelHome.departmanAciklama} Kodu : #{personelERP.departmanKodu}" />
 									</rich:column>
 									<rich:column rendered="#{pdksPersonelHome.COL_BOLUM_ADI>=0}">
 										<f:facet name="header">
