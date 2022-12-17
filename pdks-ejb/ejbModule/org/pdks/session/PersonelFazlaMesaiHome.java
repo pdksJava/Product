@@ -225,7 +225,7 @@ public class PersonelFazlaMesaiHome extends EntityHome<PersonelFazlaMesai> imple
 					Sirket pdksSirket = pdksPersonel.getSirket();
 
 					if (pdksPersonel.getEkSaha1() != null) {
-						aramaSecenekleri.setEkSaha1Id(pdksPersonel.getEkSaha4().getId());
+						aramaSecenekleri.setEkSaha1Id(pdksPersonel.getEkSaha1().getId());
 					}
 					if (pdksPersonel.getEkSaha2() != null) {
 						aramaSecenekleri.setEkSaha2Id(pdksPersonel.getEkSaha2().getId());
