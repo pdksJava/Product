@@ -2319,6 +2319,32 @@ public class PdksVeriOrtakAktar implements Serializable {
 		fields.put("tipi", Tanim.TIPI_GENEL_TANIM);
 		fields.put("kodu", Tanim.TIPI_BORDRO_ALT_BIRIMI);
 		Tanim parentBordroTanim = (Tanim) pdksDAO.getObjectByInnerObject(fields, Tanim.class);
+		String parentBordroTanimKodu = Tanim.TIPI_BORDRO_ALT_BIRIMI, parentBordroTanimKoduStr = "";
+		if (parentBordroTanim != null) {
+			parentBordroTanimKoduStr = parentBordroTanim.getErpKodu();
+			if (parentBordroTanimKoduStr == null)
+				parentBordroTanimKoduStr = "";
+			else {
+				parentBordroTanimKodu = parentBordroTanimKoduStr.trim();
+			}
+		}
+		parentBordroTanimKoduStr = parentBordroTanimKodu.toLowerCase(Constants.TR_LOCALE);
+		String durumParentBordroTanimKoduStr = "";
+		List<String> parentBordroTanimKoduList = PdksUtil.getListByString(parentBordroTanimKoduStr, null);
+		if (parentBordroTanimKoduList.size() <= 2) {
+			switch (parentBordroTanimKoduList.size()) {
+			case 1:
+				durumParentBordroTanimKoduStr = parentBordroTanimKoduList.get(0);
+				break;
+			case 2:
+				parentBordroTanimKoduStr = parentBordroTanimKoduList.get(0);
+				durumParentBordroTanimKoduStr = parentBordroTanimKoduList.get(1);
+				break;
+			default:
+				break;
+			}
+		}
+		boolean durumParentBordroTanimKodu = durumParentBordroTanimKoduStr.equalsIgnoreCase("true");
 		Tanim parentBolum = personelEKSahaMap != null && personelEKSahaMap.containsKey("ekSaha3") ? personelEKSahaMap.get("ekSaha3") : null;
 		HashMap map = new HashMap();
 		if (bosDepartman == null && departmanYoneticiRolVar && parentDepartman != null && mailMap.containsKey("bosDepartmanKodu")) {
@@ -2545,9 +2571,7 @@ public class PdksVeriOrtakAktar implements Serializable {
 
 					Tanim bolum = getTanim(null, "ekSaha3", personelERP.getBolumKodu(), personelERP.getBolumAdi(), dataMap, saveList);
 					Tanim bordroAltAlan = null;
-					String parentBordroTanimKodu = Tanim.TIPI_BORDRO_ALT_BIRIMI;
-					if (parentBordroTanim != null)
-						parentBordroTanimKodu = parentBordroTanim.getErpKodu();
+
 					bordroAltAlan = getTanim(null, parentBordroTanimKodu, personelERP.getBordroAltAlanKodu(), personelERP.getBordroAltAlanAdi(), dataMap, saveList);
 					personel.setTesis(getTanim(personelERP.getSirketKodu(), Tanim.TIPI_TESIS, personelERP.getTesisKodu(), personelERP.getTesisAdi(), dataMap, saveList));
 					personel.setCinsiyet(getTanim(null, Tanim.TIPI_CINSIYET, personelERP.getCinsiyetKodu(), personelERP.getCinsiyeti(), dataMap, saveList));
@@ -2638,18 +2662,23 @@ public class PdksVeriOrtakAktar implements Serializable {
 							addHatalist(personelERP.getHataList(), parentDepartman.getAciklamatr() + " bilgisi boş olamaz!");
 						if (bolum == null && parentBolum != null)
 							addHatalist(personelERP.getHataList(), parentBolum.getAciklamatr() + " bilgisi boş olamaz!");
-						if (bordroAltAlan == null && parentBordroTanim != null && parentBordroTanim.getDurum())
-							addHatalist(personelERP.getHataList(), parentBordroTanim.getAciklamatr() + " bilgisi boş olamaz!");
+						if (bordroAltAlan == null && parentBordroTanim != null) {
+							if (durumParentBordroTanimKodu)
+								addHatalist(personelERP.getHataList(), parentBordroTanim.getAciklamatr() + " bilgisi boş olamaz!");
+						}
+
 					}
 					personel.setEkSaha1(departman);
 					personel.setEkSaha3(bolum);
-					if (parentBordroTanimKodu == null)
-						parentBordroTanimKodu = "";
-					if (parentBordroTanimKodu.equals("ekSaha2"))
+					if (parentBordroTanimKoduStr.startsWith("eksaha2")) {
 						personel.setEkSaha2(bordroAltAlan);
-					else if (parentBordroTanimKodu.equals("ekSaha4"))
+						if (personel.getBordroAltAlan() != null)
+							personel.setBordroAltAlan(null);
+					} else if (parentBordroTanimKoduStr.startsWith("eksaha4")) {
 						personel.setEkSaha4(bordroAltAlan);
-					else
+						if (personel.getBordroAltAlan() != null)
+							personel.setBordroAltAlan(null);
+					} else
 						personel.setBordroAltAlan(bordroAltAlan);
 
 					personel.setDogumTarihi(dogumTarihi);
@@ -3112,6 +3141,8 @@ public class PdksVeriOrtakAktar implements Serializable {
 				personelERP.setYoneticiPerNo(null);
 				personelERP.setYonetici2PerNo(null);
 				personelERP.setGrubaGirisTarihi(null);
+				personelERP.setBordroAltAlanAdi(null);
+				personelERP.setBordroAltAlanKodu(null);
 			}
 
 			if (testDurum)

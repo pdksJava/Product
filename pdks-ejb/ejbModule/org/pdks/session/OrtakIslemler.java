@@ -2784,7 +2784,7 @@ public class OrtakIslemler implements Serializable {
 				if (session != null)
 					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 				List<Object[]> veriler = pdksEntityController.getObjectBySQLList(sb, parametreMap, null);
-				if (veriler != null) {
+				if (veriler != null ) {
 					Gson gson = new Gson();
 					Object[] veri = veriler.get(0);
 					Long id = veri[0] != null ? ((BigDecimal) veri[0]).longValue() : null;

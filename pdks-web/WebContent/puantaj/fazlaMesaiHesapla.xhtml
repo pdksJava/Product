@@ -80,9 +80,9 @@
 							<s:decorate template="/layout/edit.xhtml"
 								rendered="#{fazlaMesaiHesaplaHome.ekSaha4Tanim!=null and fazlaMesaiHesaplaHome.altBolumList!=null and fazlaMesaiHesaplaHome.altBolumList.size()>0}">
 								<ui:define name="label">#{fazlaMesaiHesaplaHome.ekSaha4Tanim.aciklama}</ui:define>
-								<h:selectOneMenu value="#{fazlaMesaiHesaplaHome.seciliEkSaha4Id}" disabled="#{fazlaMesaiHesaplaHome.altBolumList.size()==1}"
-									requiredMessage="#{fazlaMesaiHesaplaHome.ekSaha4Tanim.aciklama} giriniz!" required="#{fazlaMesaiHesaplaHome.altBolumList.size()>1}">
-									<f:selectItem itemLabel="Lütfen seçiniz" />
+								<h:selectOneMenu value="#{fazlaMesaiHesaplaHome.seciliEkSaha4Id}" requiredMessage="#{fazlaMesaiHesaplaHome.ekSaha4Tanim.aciklama} giriniz!"
+									required="#{fazlaMesaiHesaplaHome.altBolumList.size()>1}">
+									<f:selectItem itemValue="-1" itemLabel="Hepsi" />
 									<f:selectItems value="#{fazlaMesaiHesaplaHome.altBolumList}" />
 									<a4j:support event="onchange" status="ajaxStatus" action="#{fazlaMesaiHesaplaHome.aylikPuantajList.clear()}" ajaxSingle="true"
 										reRender="denklestirmeDonemiTable,girisler" />

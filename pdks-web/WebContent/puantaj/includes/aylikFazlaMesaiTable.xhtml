@@ -127,7 +127,7 @@
 
 			</rich:column>
 			<rich:column class="#{aylikPuantaj.trSonucClass}" style="width: 40px;width:autostretch ;white-space: nowrap;"
-				rendered="#{fazlaMesaiHesaplaHome.ekSaha4Tanim!=null and fazlaMesaiHesaplaHome.seciliEkSaha4Id==null}">
+				rendered="#{fazlaMesaiHesaplaHome.ekSaha4Tanim!=null and fazlaMesaiHesaplaHome.seciliEkSaha4Id lt 0}">
 				<f:facet name="header">
 					<h:outputText value="#{fazlaMesaiHesaplaHome.ekSaha4Tanim.aciklama}" />
 				</f:facet>

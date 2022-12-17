@@ -80,9 +80,9 @@
 						<s:decorate template="/layout/edit.xhtml"
 							rendered="#{vardiyaGunHome.ekSaha4Tanim!=null and vardiyaGunHome.aramaSecenekleri.altBolumIdList!=null and vardiyaGunHome.aramaSecenekleri.altBolumIdList.size()>0}">
 							<ui:define name="label">#{vardiyaGunHome.ekSaha4Tanim.aciklama}</ui:define>
-							<h:selectOneMenu value="#{vardiyaGunHome.aramaSecenekleri.ekSaha4Id}" disabled="#{vardiyaGunHome.aramaSecenekleri.altBolumIdList.size()==1}"
+							<h:selectOneMenu value="#{vardiyaGunHome.aramaSecenekleri.ekSaha4Id}" 
 								requiredMessage="#{vardiyaGunHome.ekSaha4Tanim.aciklama} seçiniz!" required="#{vardiyaGunHome.aramaSecenekleri.altBolumIdList.size()>1}">
-								<f:selectItem itemLabel="Lütfen seçiniz" />
+								<f:selectItem itemValue="-1" itemLabel="Hepsi" />
 								<f:selectItems value="#{vardiyaGunHome.aramaSecenekleri.altBolumIdList}" />
 								<a4j:support event="onchange" status="ajaxStatus" action="#{vardiyaGunHome.aylikPuantajList.clear()}" ajaxSingle="true"
 									reRender="vardiyaPanel,girisler" />
@@ -91,7 +91,7 @@
 						<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaGunHome.kullaniciPersonel==false}">
 							<ui:define name="label">#{ortakIslemler.personelNoAciklama()}</ui:define>
 							<h:inputText value="#{vardiyaGunHome.sicilNo}">
-								<a4j:support event="onchange" status="ajaxStatus" action="#{vardiyaGunHome.aylikPuantajList.clear()}" ajaxSingle="true" reRender="girisler" />
+								<a4j:support event="onchange" status="ajaxStatus" action="#{vardiyaGunHome.fillPersonelSicilAylikPlanRaporList}" ajaxSingle="true" reRender="vardiyaPanel,girisler,ozelIstekSec" />
 							</h:inputText>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml" rendered="#{ not empty vardiyaGunHome.aylikPuantajList and vardiyaGunHome.sutIzniGoster}">

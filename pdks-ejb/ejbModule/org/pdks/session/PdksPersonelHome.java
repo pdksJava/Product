@@ -2949,8 +2949,8 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 		Tanim parentBordroTanim = (Tanim) pdksEntityController.getObjectByInnerObject(fields, Tanim.class);
 		String bordroAltAlanStr = "";
 		if (parentBordroTanim != null && PdksUtil.hasStringValue(parentBordroTanim.getErpKodu()))
-			bordroAltAlanStr = parentBordroTanim.getErpKodu().trim();
-		HashMap<String, Integer> alanMap = setServisAlanlar();
+			bordroAltAlanStr = parentBordroTanim.getErpKodu().trim().toLowerCase(PdksUtil.TR_LOCALE);
+ 		HashMap<String, Integer> alanMap = setServisAlanlar();
 		List<PersonelView> personelList = new ArrayList<PersonelView>(list);
 		for (Iterator iterator = personelList.iterator(); iterator.hasNext();) {
 			PersonelView personelView = (PersonelView) iterator.next();
@@ -2979,7 +2979,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 			Tanim tanim = (Tanim) liste.getValue();
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(tanim.getAciklama());
 		}
-
+	
 		for (Iterator iter = personelList.iterator(); iter.hasNext();) {
 			PersonelView personelView = (PersonelView) iter.next();
 			row++;
@@ -2989,9 +2989,10 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 				Sirket sirket = personel.getSirket();
 				Tanim cinsiyet = personel.getCinsiyet(), gorev = personel.getGorevTipi(), bolum = personel.getEkSaha3();
 				Tanim masrafYeri = personel.getMasrafYeri(), bordroAltAlani = personel.getBordroAltAlan(), departman = personel.getEkSaha1(), tesis = personel.getTesis();
-				if (bordroAltAlanStr.equals("ekSaha2"))
+				
+				if (bordroAltAlanStr.startsWith("eksaha2"))
 					bordroAltAlani = personel.getEkSaha2();
-				else if (bordroAltAlanStr.equals("ekSaha4"))
+				else if (bordroAltAlanStr.startsWith("eksaha4"))
 					bordroAltAlani = personel.getEkSaha4();
 				for (int i = 0; i < dosyaTanimList.size(); i++) {
 					Liste liste = dosyaTanimList.get(i);

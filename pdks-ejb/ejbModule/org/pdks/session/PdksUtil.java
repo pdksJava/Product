@@ -996,6 +996,21 @@ public class PdksUtil implements Serializable {
 	 * @param delim
 	 * @return
 	 */
+	public static List<String> getListStringTokenizer(String str, String delim) {
+		List<String> list = new ArrayList();
+		StringTokenizer st = new StringTokenizer(str, delim);
+		while (st.hasMoreTokens()) {
+			String part = st.nextToken();
+			list.add(part);
+		}
+		return list;
+	}
+
+	/**
+	 * @param str
+	 * @param delim
+	 * @return
+	 */
 	public static List<String> getListByString(String str, String delim) {
 		List<String> lList = null;
 		if (str != null) {
@@ -1010,13 +1025,8 @@ public class PdksUtil implements Serializable {
 					delim = " ";
 			}
 			if (delim != null) {
-				lList = new ArrayList<String>();
-				StringTokenizer st = new StringTokenizer(str, delim);
-				while (st.hasMoreTokens()) {
-					String part = st.nextToken();
-					lList.add(part);
-				}
-				// mailList = Arrays.asList(str.split(delim));
+				lList = getListStringTokenizer(str, delim);
+
 			}
 
 			else {

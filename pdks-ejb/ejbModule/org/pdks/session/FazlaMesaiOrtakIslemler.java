@@ -482,9 +482,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 		List<SelectItem> selectList = new ArrayList<SelectItem>();
 		if (!list.isEmpty()) {
 			list = PdksUtil.sortObjectStringAlanList(list, "getAciklama", null);
-			if (list.size() > 1)
-				selectList.add(new SelectItem(-1L, "Hepsi"));
-			for (Iterator iterator = list.iterator(); iterator.hasNext();) {
+ 			for (Iterator iterator = list.iterator(); iterator.hasNext();) {
 				Tanim veri = (Tanim) iterator.next();
 				selectList.add(new SelectItem(veri.getId(), veri.getAciklama()));
 			}
