@@ -123,7 +123,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	private List<VardiyaSablonu> sablonlar = new ArrayList<VardiyaSablonu>(), sablonIskurList = new ArrayList<VardiyaSablonu>();
 	private List<PersonelKGS> personelKGSList = new ArrayList<PersonelKGS>();
 	private List<PersonelView> tanimsizPersonelList = new ArrayList<PersonelView>();
-	private List<Personel> pdksPersonelList = new ArrayList<Personel>(), yoneticiList, yonetici2List;
+	private List<Personel> pdksPersonelList = new ArrayList<Personel>(), yoneticiList, yonetici2List, ikinciYoneticiHataliList;
 	private List<Sirket> sirketList = new ArrayList<Sirket>();
 	private List<UserMenuItemTime> menuItemTimeList;
 	private List<PersonelView> personelList = new ArrayList<PersonelView>();
@@ -149,7 +149,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	private Sirket oldSirket;
 	private Personel asilYonetici1;
 	private String hataMesaj = "", personelERPGuncelleme = "";
-	private Boolean pdks, servisCalisti = Boolean.FALSE, fazlaMesaiIzinKullan = Boolean.FALSE, gebeMi = Boolean.FALSE, tesisYetki = Boolean.FALSE;
+	private Boolean pdks, servisCalisti = Boolean.FALSE, fazlaMesaiIzinKullan = Boolean.FALSE, gebeMi = Boolean.FALSE, tesisYetki = Boolean.FALSE, istenAyrilmaGoster = Boolean.FALSE;
 	private Boolean sutIzni = Boolean.FALSE, kimlikNoGoster = Boolean.FALSE, kullaniciPersonel = Boolean.FALSE, sanalPersonel = Boolean.FALSE, icapDurum = Boolean.FALSE, yoneticiRolVarmi = Boolean.FALSE;
 	private Boolean ustYonetici = Boolean.FALSE, fazlaMesaiOde = Boolean.FALSE, suaOlabilir = Boolean.FALSE, egitimDonemi = Boolean.FALSE, partTimeDurum = Boolean.FALSE;
 	private Boolean emailCCDurum = Boolean.FALSE, emailBCCDurum = Boolean.FALSE, taseronKulaniciTanimla = Boolean.FALSE, manuelTanimla = Boolean.FALSE, ikinciYoneticiManuelTanimla = Boolean.FALSE;
@@ -827,6 +827,8 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 						}
 					}
 					if (mesajList.isEmpty()) {
+						saveIkinciYoneticiOlmazList();
+
 						session.flush();
 						try {
 							session.refresh(personelView);
@@ -1261,8 +1263,13 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 			getPersonelDinamikMap(pdksPersonel.getId());
 		else
 			personelDinamikMap.clear();
-		for (Tanim tanim : dinamikDurumList)
-			dinamikPersonelDurumList.add(getPersonelDinamikAlan(tanim, pdksPersonel));
+		for (Tanim tanim : dinamikDurumList) {
+			PersonelDinamikAlan pda = getPersonelDinamikAlan(tanim, pdksPersonel);
+			if (pda.getAlan().getKodu().equals("ikinciYoneticiOlmaz")) {
+				getIkinciYoneticiOlmazList(pda);
+			}
+			dinamikPersonelDurumList.add(pda);
+		}
 
 		for (Tanim tanim : dinamikSayisalList)
 			dinamikPersonelSayisalList.add(getPersonelDinamikAlan(tanim, pdksPersonel));
@@ -1313,6 +1320,50 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 
 		}
 		izinGirisDurum(pdksPersonel);
+	}
+
+	private void saveIkinciYoneticiOlmazList() {
+		if (ikinciYoneticiHataliList != null) {
+			Date guncellemeTarihi = new Date();
+			for (Personel personel2 : ikinciYoneticiHataliList) {
+				if (personel2.isCheckBoxDurum()) {
+					personel2.setAsilYonetici2(personel2.getYoneticisi());
+					personel2.setGuncellemeTarihi(guncellemeTarihi);
+					personel2.setGuncelleyenUser(authenticatedUser);
+					session.saveOrUpdate(personel2);
+				}
+			}
+		}
+	}
+
+	/**
+	 * @param personelDinamikAlan
+	 * @return
+	 */
+	public String getIkinciYoneticiOlmazList(PersonelDinamikAlan personelDinamikAlan) {
+		ikinciYoneticiHataliList = null;
+		if (personelDinamikAlan.getPersonel().getId() != null && personelDinamikAlan.getDurumSecim() != null) {
+			Long perId = personelDinamikAlan.getPersonel().getId();
+			boolean durum = personelDinamikAlan.getDurumSecim() != null && personelDinamikAlan.getDurumSecim();
+			if (durum)
+				ikinciYoneticiHataliList = ortakIslemler.getIkinciYoneticiOlmazList(perId, personelDinamikAlan.getAlan().getKodu(), session);
+			else {
+				ikinciYoneticiHataliList = ortakIslemler.getIkinciYoneticiOlmazList(0L, personelDinamikAlan.getAlan().getKodu(), session);
+				for (Iterator iterator = ikinciYoneticiHataliList.iterator(); iterator.hasNext();) {
+					Personel personel = (Personel) iterator.next();
+					if (!personel.getId().equals(perId) && !(personel.getYoneticisi() != null && personel.getYoneticisi().getId().equals(perId)))
+						iterator.remove();
+
+				}
+			}
+			for (Personel p2 : ikinciYoneticiHataliList) {
+				p2.setCheckBoxDurum(Boolean.TRUE);
+			}
+		}
+		if (ikinciYoneticiHataliList == null)
+			ikinciYoneticiHataliList = new ArrayList<Personel>();
+
+		return "";
 	}
 
 	public String durumIK() {
@@ -1608,7 +1659,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 			logger.error("PDKS hata out : " + e.getMessage());
 			PdksUtil.addMessageError("Hata : " + e.getMessage());
 		}
-		mantiksalAlanlariDoldur(list);
+
 		TreeMap<String, Boolean> map = mantiksalAlanlariDoldur(list);
 		for (String key : map.keySet())
 			personelDurumMap.put(key, map.get(key));
@@ -1837,6 +1888,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	private TreeMap<String, Boolean> mantiksalAlanlariDoldur(List<PersonelView> list) {
 		TreeMap<String, Boolean> map = ortakIslemler.mantiksalAlanlariDoldur(list);
 		fazlaMesaiIzinKullan = map.containsKey("fazlaMesaiIzinKullan");
+		istenAyrilmaGoster = map.containsKey("istenAyrilmaGoster");
 		fazlaMesaiOde = map.containsKey("fazlaMesaiOde");
 		sanalPersonel = map.containsKey("sanalPersonel");
 		kullaniciPersonel = map.containsKey("kullaniciPersonel");
@@ -2991,7 +3043,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 				Sirket sirket = personel.getSirket();
 				Tanim cinsiyet = personel.getCinsiyet(), gorev = personel.getGorevTipi(), bolum = personel.getEkSaha3();
 				Tanim masrafYeri = personel.getMasrafYeri(), bordroAltAlani = personel.getBordroAltAlan(), departman = personel.getEkSaha1(), tesis = personel.getTesis();
- 				if (bordroAltAlanStr.startsWith("eksaha2"))
+				if (bordroAltAlanStr.startsWith("eksaha2"))
 					bordroAltAlani = personel.getEkSaha2();
 				else if (bordroAltAlanStr.startsWith("eksaha4"))
 					bordroAltAlani = personel.getEkSaha4();
@@ -3124,7 +3176,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 		try {
 			if (list == null)
 				list = personelList;
-			ByteArrayOutputStream baosDosya = ortakIslemler.personelExcelDevam(Boolean.FALSE, Boolean.TRUE, list, ekSahaTanimMap, authenticatedUser, personelDinamikMap, session);
+			ByteArrayOutputStream baosDosya = ortakIslemler.personelExcelDevam(Boolean.TRUE, list, ekSahaTanimMap, authenticatedUser, personelDinamikMap, session);
 			if (baosDosya != null)
 				PdksUtil.setExcelHttpServletResponse(baosDosya, "personelListesi.xlsx");
 
@@ -4408,5 +4460,21 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 
 	public void setAltBolumAciklama(String altBolumAciklama) {
 		this.altBolumAciklama = altBolumAciklama;
+	}
+
+	public List<Personel> getIkinciYoneticiHataliList() {
+		return ikinciYoneticiHataliList;
+	}
+
+	public void setIkinciYoneticiHataliList(List<Personel> ikinciYoneticiHataliList) {
+		this.ikinciYoneticiHataliList = ikinciYoneticiHataliList;
+	}
+
+	public Boolean getIstenAyrilmaGoster() {
+		return istenAyrilmaGoster;
+	}
+
+	public void setIstenAyrilmaGoster(Boolean istenAyrilmaGoster) {
+		this.istenAyrilmaGoster = istenAyrilmaGoster;
 	}
 }

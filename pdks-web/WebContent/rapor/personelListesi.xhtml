@@ -73,19 +73,27 @@
 								</f:facet>
 								<h:outputText value="#{personelView.pdksPersonel.calismaModeli.aciklama}" id="calismaModeli" />
 							</rich:column>
-							<rich:column rendered="#{authenticatedUser.admin or ortakIslemler.getParameterKey('izinERPUpdate')!='1'}">
+							<rich:column style="text-align:center" rendered="#{authenticatedUser.admin or ortakIslemler.getParameterKey('izinERPUpdate')!='1'}">
 								<f:facet name="header">
 									<h:outputText value="#{ortakIslemler.kidemBasTarihiAciklama()}" />
 								</f:facet>
 								<h:outputText value="#{authenticatedUser.dateFormatla( personelView.pdksPersonel.izinHakEdisTarihi)}" />
 							</rich:column>
-							<rich:column>
+							<rich:column style="text-align:center">
 								<f:facet name="header">
 									<h:outputText value="İşe Giriş Tarihi" />
 								</f:facet>
 								<h:outputText value="#{authenticatedUser.dateFormatla( personelView.pdksPersonel.iseBaslamaTarihi)}" />
 							</rich:column>
-							<rich:column rendered="#{authenticatedUser.admin or ortakIslemler.getParameterKey('izinERPUpdate')!='1'}">
+							<rich:column style="text-align:center" rendered="#{pdksPersonelHome.istenAyrilmaGoster}">
+								<f:facet name="header">
+									<h:outputText value="İşten Ayrılma Tarihi" />
+								</f:facet>
+								<ui:fragment rendered="#{personelView.pdksPersonel.calisiyor==false}">
+									<h:outputText value="#{authenticatedUser.dateFormatla(personelView.pdksPersonel.istenAyrilisTarihi)}" />
+								</ui:fragment>
+							</rich:column>
+							<rich:column style="text-align:center" rendered="#{authenticatedUser.admin or ortakIslemler.getParameterKey('izinERPUpdate')!='1'}">
 								<f:facet name="header">
 									<h:outputText value="Doğum Tarihi" />
 								</f:facet>

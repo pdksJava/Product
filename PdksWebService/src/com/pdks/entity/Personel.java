@@ -308,7 +308,7 @@ public class Personel extends BaseObject {
 	public void setEkSaha4(Tanim value) {
 		if (this.getId() != null && !veriDegisti)
 			veriDegisti = PdksUtil.isTanimDegisti(ekSaha4, value);
- 		this.ekSaha4 = value;
+		this.ekSaha4 = value;
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)

@@ -194,7 +194,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 
 	private Date basTarih, bitTarih;
 
-	private String basTarihStr, bitTarihStr, sanalPersonelAciklama, bolumAciklama;
+	private String basTarihStr, bitTarihStr, sanalPersonelAciklama, bolumAciklama, altBolumAciklama, tesisAciklama;
 
 	private List<SelectItem> gunler;
 
@@ -324,6 +324,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		setEkSahaListMap((HashMap<String, List<Tanim>>) sonucMap.get("ekSahaList"));
 		setEkSahaTanimMap((TreeMap<String, Tanim>) sonucMap.get("ekSahaTanimMap"));
 		bolumAciklama = (String) sonucMap.get("bolumAciklama");
+		altBolumAciklama = (String) sonucMap.get("altBolumAciklama");
+		tesisAciklama = (String) sonucMap.get("tesisAciklama");
 	}
 
 	/**
@@ -750,14 +752,19 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		}
 		VardiyaGun vg = fmt.getVardiyaGun();
 		Personel personel = vg.getPersonel();
-		Tanim tesis = personel.getTesis(), bolum = personel.getEkSaha3();
+		Tanim tesis = personel.getTesis();
 		Sirket sirket = personel.getSirket();
-		mailKonu = PdksUtil.replaceAll(sirket.getAd() + " " + ortakIslemler.sirketAciklama() + "i " + (tesis != null ? tesis.getAciklama() + " tesisi " : "") + " " + (bolum != null ? bolum.getAciklama() + " bölümü " : "") + " çalışanı " + personel.getAdSoyad() + " " + " fazla mesai talep ", "  ",
-				" ");
+		Tanim bolum = personel.getEkSaha3();
+		Tanim altBolum = getPersonelAltBolumu(personel);
+		String tesisAciklamasi = getAciklamasi(tesis, tesisAciklama);
+		String bolumAciklamasi = getAciklamasi(bolum, bolumAciklama);
+		String altBolumAciklamasi = altBolum != null ? getAciklamasi(altBolum, altBolumAciklama) : null;
+		String ortakAciklama = sirket.getAd() + " " + ortakIslemler.sirketAciklama().toLowerCase(PdksUtil.TR_LOCALE) + "i " + (tesis != null ? tesis.getAciklama() + " " + tesisAciklamasi + " " : "") + " " + (bolum != null ? bolum.getAciklama() + " " + bolumAciklamasi + " " : "") + " "
+				+ (altBolum != null ? altBolum.getAciklama() + " " + altBolumAciklamasi + " " : "") + " çalışanı " + personel.getAdSoyad();
+		mailKonu = PdksUtil.replaceAll(ortakAciklama + " fazla mesai talep ", "  ", " ");
 		StringBuffer sb = new StringBuffer();
 		sb.append("<p>Sayın " + fmt.getGuncelleyenUser().getAdSoyad() + ",</p>");
-		sb.append("<p>" + sirket.getAd() + " " + ortakIslemler.sirketAciklama() + "i " + (tesis != null ? tesis.getAciklama() + " tesisi " : "") + " " + (bolum != null ? bolum.getAciklama() + " bölümü " : ""));
-		sb.append(" çalışanı " + personel.getAdSoyad() + " " + authenticatedUser.dateTimeFormatla(fmt.getBaslangicZamani()) + getTarihArasiBitisZamanString(fmt.getBaslangicZamani(), fmt.getBitisZamani()) + " arası " + authenticatedUser.sayiFormatliGoster(fmt.getMesaiSuresi()) + " saat ");
+		sb.append("<p>" + ortakAciklama + " " + authenticatedUser.dateTimeFormatla(fmt.getBaslangicZamani()) + getTarihArasiBitisZamanString(fmt.getBaslangicZamani(), fmt.getBitisZamani()) + " arası " + authenticatedUser.sayiFormatliGoster(fmt.getMesaiSuresi()) + " saat ");
 		sb.append((fmt.getMesaiNeden() != null ? "<b>\"" + fmt.getMesaiNeden().getAciklama() + (fmt.getAciklama() != null && fmt.getAciklama().trim().length() > 0 ? " ( Açıklama : " + fmt.getAciklama().trim() + " ) " : "") + "\"</b> nedeniyle " : "") + " fazla mesai yapacaktır." + "</p>");
 		mailIcerik = PdksUtil.replaceAll(sb.toString(), "  ", " ");
 		try {
@@ -788,6 +795,39 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			e.printStackTrace();
 		}
 		return "";
+	}
+
+	/**
+	 * @param bolumu
+	 * @return
+	 */
+	private String getAciklamasi(Tanim tanim, String ozelAciklama) {
+		String aciklama = null;
+		if (tanim != null && tanim.getParentTanim() != null)
+			aciklama = tanim.getParentTanim().getAciklama();
+		if (aciklama == null || aciklama.trim().length() == 0)
+			aciklama = ozelAciklama;
+		if (aciklama != null)
+			aciklama = aciklama.trim().toLowerCase(PdksUtil.TR_LOCALE);
+		return aciklama;
+	}
+
+	/**
+	 * @param personel
+	 * @return
+	 */
+	private Tanim getPersonelAltBolumu(Personel personel) {
+		Tanim bolumu = null, altBolum = null;
+		try {
+			bolumu = (Tanim) personel.getEkSaha3().clone();
+			altBolum = personel.getEkSaha4();
+		} catch (Exception e) {
+		}
+		if (PdksUtil.isPuantajSorguAltBolumGir() && altBolum != null) {
+			if (!bolumu.getAciklama().equals(altBolum.getAciklama()))
+				bolumu = altBolum;
+		}
+		return bolumu;
 	}
 
 	/**
@@ -828,15 +868,19 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 
 		VardiyaGun vg = fmt.getVardiyaGun();
 		Personel personel = vg.getPersonel();
-		Tanim tesis = personel.getTesis(), bolum = personel.getEkSaha3();
+		Tanim tesis = personel.getTesis();
 		Sirket sirket = personel.getSirket();
-		mailKonu = PdksUtil.replaceAll(
-				sirket.getAd() + " " + ortakIslemler.sirketAciklama() + "i " + (tesis != null ? tesis.getAciklama() + " tesisi " : "") + " " + (bolum != null ? bolum.getAciklama() + " bölümü " : "") + " çalışanı " + personel.getAdSoyad() + " Fazla Mesai Talep " + fmt.getOnayDurumAciklama(), "  ",
-				" ");
+		Tanim bolum = personel.getEkSaha3();
+		Tanim altBolum = getPersonelAltBolumu(personel);
+		String tesisAciklamasi = getAciklamasi(tesis, tesisAciklama);
+		String bolumAciklamasi = getAciklamasi(bolum, bolumAciklama);
+		String altBolumAciklamasi = altBolum != null ? getAciklamasi(altBolum, altBolumAciklama) : null;
+		String ortakAciklama = sirket.getAd() + " " + ortakIslemler.sirketAciklama().toLowerCase(PdksUtil.TR_LOCALE) + "i " + (tesis != null ? tesis.getAciklama() + " " + tesisAciklamasi + " " : "") + " " + (bolum != null ? bolum.getAciklama() + " " + bolumAciklamasi + " " : "") + " "
+				+ (altBolum != null ? altBolum.getAciklama() + " " + altBolumAciklamasi + " " : "") + " çalışanı " + personel.getAdSoyad();
+		mailKonu = PdksUtil.replaceAll(ortakAciklama + " Fazla Mesai Talep " + fmt.getOnayDurumAciklama(), "  ", " ");
 		StringBuffer sb = new StringBuffer();
 		sb.append("<p>Sayın " + fmt.getOlusturanUser().getAdSoyad() + ",</p>");
-		sb.append("<p>" + sirket.getAd() + " " + ortakIslemler.sirketAciklama() + "i  " + (tesis != null ? tesis.getAciklama() + " tesisi " : "") + " " + (bolum != null ? bolum.getAciklama() + " bölümü " : ""));
-		sb.append(" çalışanı " + personel.getAdSoyad() + " " + fmt.getOlusturanUser().dateTimeFormatla(fmt.getBaslangicZamani()) + getTarihArasiBitisZamanString(fmt.getBaslangicZamani(), fmt.getBitisZamani()) + " arası " + fmt.getOlusturanUser().sayiFormatliGoster(fmt.getMesaiSuresi()) + " saat ");
+		sb.append("<p>" + ortakAciklama + " " + fmt.getOlusturanUser().dateTimeFormatla(fmt.getBaslangicZamani()) + getTarihArasiBitisZamanString(fmt.getBaslangicZamani(), fmt.getBitisZamani()) + " arası " + fmt.getOlusturanUser().sayiFormatliGoster(fmt.getMesaiSuresi()) + " saat ");
 		sb.append((fmt.getMesaiNeden() != null ? "<b>\"" + fmt.getMesaiNeden().getAciklama() + (fmt.getAciklama() != null && fmt.getAciklama().trim().length() > 0 ? " ( Açıklama : " + fmt.getAciklama().trim() + " ) " : "") + "\"</b>" : " olması sebebiyle ") + " fazla mesai talebi "
 				+ (onayDurum ? "onaylandı" : (fmt.getRedNedeni() != null ? "<b>\"" + fmt.getRedNedeni().getAciklama() + "\"</b> nedeniyle " : "") + (fmt.getDurum() ? " rededildi" : " iptal edildi")) + ".</p>");
 		if (fmt.getIptalAciklama() != null && fmt.getIptalAciklama().trim().length() > 0) {
@@ -2114,7 +2158,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		}
 		if (aramaSecenekleri.getEkSaha4Id() != null && aramaSecenekleri.getEkSaha4Id().longValue() > 0L) {
 			parametreMap.clear();
-			parametreMap.put("id",  aramaSecenekleri.getEkSaha4Id());
+			parametreMap.put("id", aramaSecenekleri.getEkSaha4Id());
 			if (session != null)
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			Tanim ekSaha4 = (Tanim) pdksEntityController.getObjectByInnerObject(parametreMap, Tanim.class);
@@ -7943,7 +7987,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		seciliEkSaha4Id = aramaSecenekleri.getEkSaha4Id();
 		if (ekSaha4Tanim != null) {
 			Long tesisId = aramaSecenekleri.getTesisId();
-			altBolumIdList = fazlaMesaiOrtakIslemler.getFazlaMesaiAltBolumList(aramaSecenekleri.getSirket(), tesisId != null ? String.valueOf(tesisId) : null, aramaSecenekleri.getEkSaha3Id(), denklestirmeAy != null ? new AylikPuantaj(denklestirmeAy) : null, Boolean.TRUE, session);
+			altBolumIdList = fazlaMesaiOrtakIslemler.getFazlaMesaiAltBolumList(aramaSecenekleri.getSirket(), tesisId != null ? String.valueOf(tesisId) : null, aramaSecenekleri.getEkSaha3Id(), denklestirmeAy != null ? new AylikPuantaj(denklestirmeAy) : null, getDenklestirmeDurum(), session);
 			boolean eski = altBolumIdList.size() == 1;
 			if (eski)
 				seciliEkSaha4Id = (Long) altBolumIdList.get(0).getValue();
@@ -10222,5 +10266,21 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 
 	public void setEkSaha4Tanim(Tanim ekSaha4Tanim) {
 		this.ekSaha4Tanim = ekSaha4Tanim;
+	}
+
+	public String getAltBolumAciklama() {
+		return altBolumAciklama;
+	}
+
+	public void setAltBolumAciklama(String altBolumAciklama) {
+		this.altBolumAciklama = altBolumAciklama;
+	}
+
+	public String getTesisAciklama() {
+		return tesisAciklama;
+	}
+
+	public void setTesisAciklama(String tesisAciklama) {
+		this.tesisAciklama = tesisAciklama;
 	}
 }

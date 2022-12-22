@@ -104,6 +104,37 @@ public class PdksVeriOrtakAktar implements Serializable {
 	}
 
 	/**
+	 * @param kodu
+	 * @return
+	 */
+	private List<Personel> saveIkinciYoneticiOlmazList(String kodu) {
+		List<Personel> list = null;
+		LinkedHashMap<String, Object> map = new LinkedHashMap<String, Object>();
+		map.put("yoneticiId", 0L);
+		map.put("tipi", kodu);
+		map.put(BaseDAOHibernate.MAP_KEY_SELECT, "SP_IKINCI_YONETICI_OLAMAZ");
+		try {
+			list = pdksDAO.execSPList(map, Personel.class);
+			if (!list.isEmpty()) {
+ 				Date guncellemeTarihi = new Date();
+				for (Personel personel2 : list) {
+					personel2.setAsilYonetici2(personel2.getYoneticisi());
+					personel2.setGuncellemeTarihi(guncellemeTarihi);
+					personel2.setGuncelleyenUser(islemYapan);
+				}
+				pdksDAO.saveObjectList(list);
+			}
+
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
+		if (list == null)
+			list = new ArrayList<Personel>();
+		return list;
+	}
+
+	/**
 	 * @param dao
 	 */
 	private void personelKontrolVerileriAyarla(PdksDAO dao) {
@@ -2785,6 +2816,8 @@ public class PdksVeriOrtakAktar implements Serializable {
 							} else if (yoneticiRolVarmi && sanalPersonel == false && calisiyor)
 								addHatalist(personelERP.getHataList(), kapiGiris + " 2. yönetici " + personelERP.getYonetici2PerNo().trim() + " personel no bilgisi bulunamadı!");
 						}
+						if (yoneticisi2!=null)
+							logger.debug(yoneticisi2.getId());
 						if (personelERP.getHataList().isEmpty())
 							personel.setAsilYonetici2(yoneticisi2);
 					} else {
@@ -3144,8 +3177,9 @@ public class PdksVeriOrtakAktar implements Serializable {
 				personelERP.setBordroAltAlanAdi(null);
 				personelERP.setBordroAltAlanKodu(null);
 			}
-
-			if (testDurum)
+			if (personelList.size() > 1)
+				saveIkinciYoneticiOlmazList("ikinciYoneticiOlmaz");
+ 			if (testDurum)
 				hataList.clear();
 			if (yoneticiIdList != null && !yoneticiIdList.isEmpty()) {
 				sb = new StringBuffer();
@@ -3250,6 +3284,7 @@ public class PdksVeriOrtakAktar implements Serializable {
 			}
 			if (updateYonetici2)
 				setIkinciYoneticiSifirla();
+
 			saveFonksiyonVeri(null, personelList);
 			hataList = null;
 
