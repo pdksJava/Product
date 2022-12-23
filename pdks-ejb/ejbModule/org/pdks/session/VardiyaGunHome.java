@@ -756,7 +756,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		Sirket sirket = personel.getSirket();
 		Tanim bolum = personel.getEkSaha3();
 		Tanim altBolum = getPersonelAltBolumu(personel);
-		if (tesisAciklama == null)
+		if (tesisAciklama == null && tesis.getParentTanim() == null)
 			fillEkSahaTanim();
 		String tesisAciklamasi = getAciklamasi(tesis, tesisAciklama);
 		String bolumAciklamasi = getAciklamasi(bolum, bolumAciklama);
@@ -878,7 +878,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		Tanim tesis = personel.getTesis();
 		Sirket sirket = personel.getSirket();
 		Tanim bolum = personel.getEkSaha3();
-		if (tesisAciklama == null)
+		if (tesisAciklama == null && tesis.getParentTanim() == null)
 			fillEkSahaTanim();
 		Tanim altBolum = getPersonelAltBolumu(personel);
 		String tesisAciklamasi = getAciklamasi(tesis, tesisAciklama);
