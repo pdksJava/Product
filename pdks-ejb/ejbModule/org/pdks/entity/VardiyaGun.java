@@ -94,13 +94,13 @@ public class VardiyaGun extends BaseObject {
 
 	}
 
-	public VardiyaGun(Personel personel, Vardiya vardiya, Date vardiyaDate) {
+	public VardiyaGun(Personel xPpersonel, Vardiya xVardiya, Date xVardiyaDate) {
 		super();
-		this.setPersonel(personel);
-		this.setVardiya(vardiya);
-		this.setVardiyaDate(vardiyaDate);
-		if (vardiya != null)
-			this.durum = !vardiya.isCalisma();
+		this.setPersonel(xPpersonel);
+		this.setVardiya(xVardiya);
+		this.setVardiyaDate(xVardiyaDate);
+		if (xVardiya != null)
+			this.durum = !xVardiya.isCalisma();
 	}
 
 	@Column(name = "VERSION")
