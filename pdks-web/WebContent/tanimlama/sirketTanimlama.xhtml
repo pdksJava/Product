@@ -361,13 +361,13 @@
 										</f:facet>
 										<h:outputText value="#{personelView.pdksPersonel.tesis.aciklama}" />
 									</rich:column>
-									<rich:column rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin) and sirketHome.ekSahaTanimMap.containsKey('ekSaha1')}">
+									<rich:column rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin) and sirketHome.ekSahaTanimMap.containsKey('ekSaha1') and ortakIslemler.getListEkSahaDurum(sirketHome.personelList,'1')}">
 										<f:facet name="header">
 											<h:outputText value="#{sirketHome.ekSahaTanimMap.get('ekSaha1').aciklama}" />
 										</f:facet>
 										<h:outputText value="#{personelView.pdksPersonel.ekSaha1.aciklama}" />
 									</rich:column>
-									<rich:column rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin) and sirketHome.ekSahaTanimMap.containsKey('ekSaha2')}">
+									<rich:column rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin) and sirketHome.ekSahaTanimMap.containsKey('ekSaha2') and ortakIslemler.getListEkSahaDurum(sirketHome.personelList,'2')}">
 										<f:facet name="header">
 											<h:outputText value="#{sirketHome.ekSahaTanimMap.get('ekSaha2').aciklama}" />
 										</f:facet>
@@ -379,7 +379,7 @@
 										</f:facet>
 										<h:outputText value="#{personelView.pdksPersonel.ekSaha3.aciklama}" />
 									</rich:column>
-									<rich:column rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin) and sirketHome.ekSahaTanimMap.containsKey('ekSaha4')}">
+									<rich:column rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin) and sirketHome.ekSahaTanimMap.containsKey('ekSaha4') and ortakIslemler.getListEkSahaDurum(sirketHome.personelList,'4')}">
 										<f:facet name="header">
 											<h:outputText value="#{sirketHome.ekSahaTanimMap.get('ekSaha4').aciklama}" />
 										</f:facet>

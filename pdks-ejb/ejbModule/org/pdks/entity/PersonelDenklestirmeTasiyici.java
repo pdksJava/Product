@@ -7,8 +7,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 
-import javax.persistence.Transient;
-
 import org.apache.log4j.Logger;
 import org.pdks.security.entity.User;
 import org.pdks.session.PdksUtil;

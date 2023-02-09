@@ -139,11 +139,11 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 		CellStyle timeStamp = ExcelUtil.getCellStyleTimeStamp(wb);
 		int row = 0;
 		int col = 0;
-
-		boolean ekSaha1 = (authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin()) && aramaSecenekleri.getEkSahaTanimMap().containsKey("ekSaha1");
-		boolean ekSaha2 = (authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin()) && aramaSecenekleri.getEkSahaTanimMap().containsKey("ekSaha2");
-		boolean ekSaha3 = (authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin()) && aramaSecenekleri.getEkSahaTanimMap().containsKey("ekSaha3");
-		boolean ekSaha4 = (authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin()) && aramaSecenekleri.getEkSahaTanimMap().containsKey("ekSaha4");
+		HashMap<String, Boolean> map = ortakIslemler.getListEkSahaDurumMap(personelIzinList, null);
+		boolean ekSaha1 = (authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin()) && aramaSecenekleri.getEkSahaTanimMap().containsKey("ekSaha1") && map.containsKey("ekSaha1");
+		boolean ekSaha2 = (authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin()) && aramaSecenekleri.getEkSahaTanimMap().containsKey("ekSaha2") && map.containsKey("ekSaha2");
+		boolean ekSaha3 = (authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin()) && aramaSecenekleri.getEkSahaTanimMap().containsKey("ekSaha3") && map.containsKey("ekSaha3");
+		boolean ekSaha4 = (authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin()) && aramaSecenekleri.getEkSahaTanimMap().containsKey("ekSaha4") && map.containsKey("ekSaha4");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.personelNoAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Adı Soyadı");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.sirketAciklama());
@@ -384,11 +384,12 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 		CellStyle timeStamp = ExcelUtil.getCellStyleDate(wb);
 		int row = 0, col = 0;
 		boolean ekSaha1 = false, ekSaha2 = false, ekSaha3 = false, ekSaha4 = false;
+		HashMap<String, Boolean> map = ortakIslemler.getListEkSahaDurumMap(personelIzinList, null);
 		if (authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin()) {
-			ekSaha1 = aramaSecenekleri.getEkSahaListMap().containsKey("ekSaha1");
-			ekSaha2 = aramaSecenekleri.getEkSahaListMap().containsKey("ekSaha2");
-			ekSaha3 = aramaSecenekleri.getEkSahaListMap().containsKey("ekSaha3");
-			ekSaha4 = aramaSecenekleri.getEkSahaListMap().containsKey("ekSaha4");
+			ekSaha1 = map.containsKey("ekSaha1");
+			ekSaha2 = map.containsKey("ekSaha2");
+			ekSaha3 = map.containsKey("ekSaha3");
+			ekSaha4 = map.containsKey("ekSaha4");
 		}
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.personelNoAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Adı Soyadı");

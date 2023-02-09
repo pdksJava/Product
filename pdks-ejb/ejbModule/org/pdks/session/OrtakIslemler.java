@@ -210,28 +210,103 @@ public class OrtakIslemler implements Serializable {
 	 */
 	public boolean getListTesisDurum(List list) {
 		boolean tesisDurum = false;
-		if (list != null) {
+		if (list != null && !list.isEmpty()) {
+			if (getParameterKey("tesisDurumu").equals("1")) {
+				for (Object object : list) {
+					try {
+						if (!tesisDurum) {
+							Object objectPersonel = PdksUtil.getMethodObject(object, "getPdksPersonel", null);
+							if (objectPersonel != null) {
+								if (objectPersonel instanceof Personel) {
+									Personel personel = (Personel) objectPersonel;
+									if (personel.getSirket() != null)
+										tesisDurum = personel.getSirket().isTesisDurumu();
+								} else
+									break;
+							}
+						}
+						if (tesisDurum)
+							break;
+					} catch (Exception e) {
+						break;
+					}
+				}
+			}
+		}
+		return tesisDurum;
+	}
+
+	/**
+	 * @param list
+	 * @param index
+	 * @return
+	 */
+	public boolean getListEkSahaDurum(List list, String index) {
+		HashMap<String, Boolean> map = getListEkSahaDurumMap(list, Integer.parseInt(index));
+		boolean ekSahaDurum = map.containsKey("ekSaha" + index);
+		return ekSahaDurum;
+	}
+
+	/**
+	 * @param list
+	 * @param ekSaha
+	 * @return
+	 */
+	public HashMap<String, Boolean> getListEkSahaDurumMap(List list, Integer index) {
+		HashMap<String, Boolean> map = new HashMap<String, Boolean>();
+		if (list != null && !list.isEmpty()) {
+			List<Integer> sahalar = new ArrayList<Integer>();
+			if (index == null) {
+				for (int i = 0; i < 4; i++) {
+					sahalar.add(i + 1);
+				}
+			} else
+				sahalar.add(index);
 			for (Object object : list) {
 				try {
-					if (!tesisDurum) {
-						Object objectPersonel = PdksUtil.getMethodObject(object, "getPdksPersonel", null);
-						if (objectPersonel != null) {
-							if (objectPersonel instanceof Personel) {
-								Personel personel = (Personel) objectPersonel;
-								if (personel.getSirket() != null)
-									tesisDurum = personel.getSirket().isTesisDurumu();
-							} else
-								break;
+					Object objectPersonel = PdksUtil.getMethodObject(object, "getPdksPersonel", null);
+					if (objectPersonel != null) {
+						if (objectPersonel instanceof Personel) {
+							Personel personel = (Personel) objectPersonel;
+							for (Iterator iterator = sahalar.iterator(); iterator.hasNext();) {
+								Integer ekSaha = (Integer) iterator.next();
+								Tanim tanim = null;
+								switch (ekSaha) {
+								case 1:
+									tanim = personel.getEkSaha1();
+									break;
+								case 2:
+									tanim = personel.getEkSaha2();
+									break;
+								case 3:
+									tanim = personel.getEkSaha3();
+									break;
+								case 4:
+									tanim = personel.getEkSaha4();
+									break;
+								default:
+									break;
+								}
+								if (tanim != null) {
+									map.put("ekSaha" + ekSaha, true);
+									iterator.remove();
+								}
+							}
 						}
-					}
-					if (tesisDurum)
+
+					} else
+						break;
+
+					if (sahalar.isEmpty())
 						break;
 				} catch (Exception e) {
 					break;
 				}
 			}
+			sahalar = null;
 		}
-		return tesisDurum;
+
+		return map;
 	}
 
 	/**
@@ -9537,6 +9612,7 @@ public class OrtakIslemler implements Serializable {
 		boolean ik = user.isAdmin() || user.isIK();
 		// boolean hastane = getParameterKey("uygulamaTipi").equalsIgnoreCase("H");
 		boolean ikAdminDegil = user.isIK() && !user.isIKAdmin();
+
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(personelNoAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Adı Soyadı");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(sirketAciklama());
@@ -9569,23 +9645,25 @@ public class OrtakIslemler implements Serializable {
 		if (tesisDurum)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(tesisAciklama());
 		String ekSaha1 = null, ekSaha2 = null, ekSaha3 = null, ekSaha4 = null;
+
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Görevi");
 		if (admin) {
+			HashMap<String, Boolean> ekSahaMap = getListEkSahaDurumMap(personelList, null);
 			if (icapDurum)
 				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İcapçı");
-			if (tanimMap.containsKey("ekSaha1")) {
+			if (tanimMap.containsKey("ekSaha1") && ekSahaMap.containsKey("ekSaha1")) {
 				ekSaha1 = tanimMap.get("ekSaha1").getAciklama();
 				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ekSaha1);
 			}
-			if (tanimMap.containsKey("ekSaha2")) {
+			if (tanimMap.containsKey("ekSaha2") && ekSahaMap.containsKey("ekSaha2")) {
 				ekSaha2 = tanimMap.get("ekSaha2").getAciklama();
 				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ekSaha2);
 			}
-			if (tanimMap.containsKey("ekSaha3")) {
+			if (tanimMap.containsKey("ekSaha3") && ekSahaMap.containsKey("ekSaha3")) {
 				ekSaha3 = tanimMap.get("ekSaha3").getAciklama();
 				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ekSaha3);
 			}
-			if (tanimMap.containsKey("ekSaha4")) {
+			if (tanimMap.containsKey("ekSaha4") && ekSahaMap.containsKey("ekSaha4")) {
 				ekSaha4 = tanimMap.get("ekSaha4").getAciklama();
 				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ekSaha4);
 			}
