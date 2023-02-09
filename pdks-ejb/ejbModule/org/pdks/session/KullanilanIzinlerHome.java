@@ -305,16 +305,13 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 				parametreMap.put("izinSahibi", personeller);
 			else
 				kontrolEt = Boolean.TRUE;
-			if (tumIzinler) {
-				parametreMap.put("izinTipi.bakiyeIzinTipi=", null);
-			} else {
+			parametreMap.put("izinTipi.bakiyeIzinTipi=", null);
+			if (!tumIzinler) {
 				if (izinTipiId != null)
 					parametreMap.put("izinTipi.izinTipiTanim.id=", izinTipiId);
 				else if (izinTipiTanim != null) {
-					parametreMap.put("izinTipi.bakiyeIzinTipi=", null);
 					parametreMap.put("izinTipi.izinTipiTanim.id=", izinTipiTanim.getId());
 				}
-
 			}
 			Date bitisTarihi = (Date) bitTarih.clone();
 			if (PdksUtil.tarihKarsilastirNumeric(bitTarih, basTarih) == 0)
@@ -343,6 +340,7 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 					perMap.put(personel.getId(), personel.getId());
 				for (Iterator iterator = izinList.iterator(); iterator.hasNext();) {
 					PersonelIzin personelIzin = (PersonelIzin) iterator.next();
+
 					if (personelIzin.getIzinSahibi() == null || !perMap.containsKey(personelIzin.getIzinSahibi().getId()))
 						iterator.remove();
 

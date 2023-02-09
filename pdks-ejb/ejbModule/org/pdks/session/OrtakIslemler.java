@@ -2838,6 +2838,7 @@ public class OrtakIslemler implements Serializable {
 		if (aramaSecenekleri.getSessionClear())
 			session.clear();
 		HashMap sonucMap = fillEkSahaTanimBul(kendisiBul, sirketEkle, session);
+		TreeMap<String, Tanim> ekSahaTanimMap = null;
 		if (sonucMap != null && !sonucMap.isEmpty()) {
 			if (authenticatedUser != null && (authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin())) {
 				List<SelectItem> departmanIdList = new ArrayList<SelectItem>();
@@ -2846,7 +2847,8 @@ public class OrtakIslemler implements Serializable {
 					departmanIdList.add(new SelectItem(pdksDepartman.getId(), pdksDepartman.getDepartmanTanim().getAciklama()));
 				aramaSecenekleri.setDepartmanIdList(departmanIdList);
 				aramaSecenekleri.setEkSahaListMap((HashMap<String, List<Tanim>>) sonucMap.get("ekSahaList"));
-				aramaSecenekleri.setEkSahaTanimMap((TreeMap<String, Tanim>) sonucMap.get("ekSahaTanimMap"));
+				ekSahaTanimMap = (TreeMap<String, Tanim>) sonucMap.get("ekSahaTanimMap");
+				aramaSecenekleri.setEkSahaTanimMap(ekSahaTanimMap);
 				aramaSecenekleri.setEkSahaSelectListMap((HashMap<String, List<SelectItem>>) sonucMap.get("ekSahaSelectListMap"));
 			}
 
@@ -2860,9 +2862,82 @@ public class OrtakIslemler implements Serializable {
 							iterator.remove();
 					}
 					sirketIdList.clear();
+					List<Long> idList = new ArrayList<Long>();
 					for (Iterator iterator = sirketList.iterator(); iterator.hasNext();) {
 						Sirket sirket = (Sirket) iterator.next();
+						idList.add(sirket.getId());
 						sirketIdList.add(new SelectItem(sirket.getId(), sirket.getAd()));
+					}
+					if (!idList.isEmpty() && ekSahaTanimMap != null && !ekSahaTanimMap.isEmpty()) {
+						StringBuffer sb = new StringBuffer();
+						HashMap fields = new HashMap();
+						sb.append(" WITH PER AS ( ");
+						sb.append(" SELECT P.* FROM " + Personel.TABLE_NAME + " P WITH(nolock) ");
+						sb.append(" WHERE P." + Personel.COLUMN_NAME_SIRKET + " :s ), ");
+						sb.append(" EK_SAHA AS ( ");
+						String str = "";
+						if (ekSahaTanimMap.containsKey("ekSaha1")) {
+							sb.append(" SELECT P." + Personel.COLUMN_NAME_EK_SAHA1 + " AS ID FROM PER P ");
+							sb.append(" WHERE P." + Personel.COLUMN_NAME_EK_SAHA1 + " IS NOT NULL ");
+							str = " UNION ALL ";
+						}
+						if (ekSahaTanimMap.containsKey("ekSaha2")) {
+							sb.append(str);
+							sb.append(" SELECT P." + Personel.COLUMN_NAME_EK_SAHA2 + " AS ID FROM PER P ");
+							sb.append(" WHERE P." + Personel.COLUMN_NAME_EK_SAHA2 + " IS NOT NULL ");
+							str = " UNION ALL ";
+						}
+						if (ekSahaTanimMap.containsKey("ekSaha3")) {
+							sb.append(str);
+							sb.append(" SELECT P." + Personel.COLUMN_NAME_EK_SAHA3 + " AS ID FROM PER P ");
+							sb.append(" WHERE P." + Personel.COLUMN_NAME_EK_SAHA3 + " IS NOT NULL ");
+							str = " UNION ALL ";
+						}
+						if (ekSahaTanimMap.containsKey("ekSaha4")) {
+							sb.append(str);
+							sb.append(" SELECT P." + Personel.COLUMN_NAME_EK_SAHA4 + " AS ID FROM PER P ");
+							sb.append(" WHERE P." + Personel.COLUMN_NAME_EK_SAHA4 + " IS NOT NULL ");
+						}
+						sb.append(" ) ");
+						sb.append(" SELECT DISTINCT T.* FROM EK_SAHA E ");
+						sb.append(" INNER JOIN " + Tanim.TABLE_NAME + " T ON T." + Tanim.COLUMN_NAME_ID + "=E.ID AND T." + Tanim.COLUMN_NAME_DURUM + "=1 ");
+						fields.put("s", idList);
+						if (session != null)
+							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+						List<Tanim> tanimlar = pdksEntityController.getObjectBySQLList(sb, fields, Tanim.class);
+						if (!tanimlar.isEmpty()) {
+							tanimlar = PdksUtil.sortTanimList(null, tanimlar);
+							HashMap<String, List<Tanim>> ekSahaListMap = new HashMap<String, List<Tanim>>();
+							for (Tanim tanim : tanimlar) {
+								String key = tanim.getParentTanim().getKodu();
+								if (key.startsWith("BOLUM_DEPARTMAN"))
+									key = "ekSaha3";
+								List<Tanim> list = ekSahaListMap.containsKey(key) ? ekSahaListMap.get(key) : new ArrayList<Tanim>();
+								if (list.isEmpty())
+									ekSahaListMap.put(key, list);
+								list.add(tanim);
+							}
+							List<String> list = new ArrayList<String>(ekSahaTanimMap.keySet());
+							HashMap<String, List<SelectItem>> ekSahaSelectListMap = new HashMap<String, List<SelectItem>>();
+							for (String key : list) {
+								if (ekSahaListMap.containsKey(key)) {
+									List<Tanim> tanimList = ekSahaListMap.get(key);
+									List<SelectItem> selectItemList = new ArrayList<SelectItem>();
+									for (Tanim tanim : tanimList) {
+										selectItemList.add(new SelectItem(tanim.getId(), tanim.getAciklama()));
+									}
+									ekSahaSelectListMap.put(key, selectItemList);
+								} else {
+									ekSahaTanimMap.remove(key);
+								}
+
+							}
+							list = null;
+							aramaSecenekleri.setEkSahaListMap(ekSahaListMap);
+							aramaSecenekleri.setEkSahaSelectListMap(ekSahaSelectListMap);
+							aramaSecenekleri.setEkSahaTanimMap(ekSahaTanimMap);
+
+						}
 					}
 
 				}
