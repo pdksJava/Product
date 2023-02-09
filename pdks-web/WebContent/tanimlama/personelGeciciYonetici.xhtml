@@ -146,7 +146,7 @@
 											<h:outputText value="#{userView.pdksPersonel.sirket.ad}" />
 										</rich:column>
 										 
-										<rich:column rendered="#{ortakIslemler.tesisDurumu}">
+										<rich:column rendered="#{ortakIslemler.getListTesisDurum(personelGeciciYoneticiHome.userList)}">
 											<f:facet name="header">
 												<h:outputText value="#{ortakIslemler.tesisAciklama()}" />
 											</f:facet>
@@ -235,7 +235,7 @@
 											<h:outputText value="#{personelView.sirket.ad}" />
 										</rich:column>
 										 
-										<rich:column>
+										<rich:column rendered="#{ortakIslemler.getListTesisDurum(personelGeciciYoneticiHome.personelList)}">
 											<f:facet name="header">
 												<h:outputText value="#{ortakIslemler.tesisAciklama()}" />
 											</f:facet>

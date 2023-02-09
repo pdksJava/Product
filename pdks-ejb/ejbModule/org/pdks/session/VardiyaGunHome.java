@@ -6012,7 +6012,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					perList.clear();
 					perList.addAll(perNoList);
 					session.clear();
-					
+
 				}
 
 			}
@@ -6517,7 +6517,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.personelNoAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Adı Soyadı");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.sirketAciklama());
-		boolean tesisDurum = ortakIslemler.isTesisDurumu();
+		boolean tesisDurum = ortakIslemler.getListTesisDurum(aylikFazlaMesaiTalepler);
 		if (tesisDurum)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.tesisAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(bolumAciklama);
@@ -7902,7 +7902,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Adı Soyadı");
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.personelNoAciklama());
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.sirketAciklama());
-			boolean tesisDurum = ortakIslemler.isTesisDurumu();
+			boolean tesisDurum = ortakIslemler.getListTesisDurum(fazlaMesaiTalepler);
 			if (tesisDurum)
 				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.tesisAciklama());
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(bolumAciklama);

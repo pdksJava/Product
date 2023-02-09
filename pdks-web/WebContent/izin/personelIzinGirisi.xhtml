@@ -473,7 +473,7 @@
 								<h:outputText value="#{izin.izinSahibi.sirket.ad}" />
 							</rich:column>
 							<rich:column
-								rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin) and personelIzinGirisiHome.aramaListeSecenekleri.departmanIdList.size()==1 and personelIzinGirisiHome.aramaListeSecenekleri.tesisList.size()>1}">
+								rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin) and ortakIslemler.getListTesisDurum(personelIzinGirisiHome.personelIzinList)}">
 								<f:facet name="header">
 									<h:outputText value="#{ortakIslemler.tesisAciklama()}" />
 								</f:facet>

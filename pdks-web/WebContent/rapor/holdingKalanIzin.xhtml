@@ -158,7 +158,7 @@
 								</ui:fragment>
 							</rich:column>
 							
-							<rich:column>
+							<rich:column rendered="#{ortakIslemler.getListTesisDurum(holdingKalanIzinHome.holdingIzinList)}">
 								<f:facet name="header">
 									<h:outputText value="#{ortakIslemler.tesisAciklama()}" />
 								</f:facet>

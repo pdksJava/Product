@@ -329,7 +329,7 @@
 						</h:panelGrid>
 						<DIV class="#{authenticatedUser.scroolClass}" id="#{authenticatedUser.scroolDiv}">
 							<rich:dataTable rowClasses="acik,koyu" value="#{personelKalanIzinHome.pdksPersonelList}" var="izinler" rows="50" rowKeyVar="row" id="izinTable"
-								rendered="#{empty personelKalanIzinHome.personelBakiyeIzinList}">
+								rendered="#{empty personelKalanIzinHome.pdksPersonelList}">
 								<f:facet name="header">
 									<h:outputText value="Personeller İzinleri" />
 								</f:facet>
@@ -342,7 +342,7 @@
 									<h:outputText value="#{izinler.personel.sirket.ad}" />
 								</rich:column>
 
-								<rich:column>
+								<rich:column rendered="#{ortakIslemler.getListTesisDurum(personelKalanIzinHome.pdksPersonelList)}">
 									<f:facet name="header">
 										<h:outputText value="#{ortakIslemler.tesisAciklama()}" />
 									</f:facet>

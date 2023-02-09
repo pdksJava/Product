@@ -126,7 +126,7 @@
 							</f:facet>
 							<h:outputText value="#{authenticatedUser.getYesNo(sirket.tesisDurum)}" />
 						</rich:column>
-						 
+
 						<rich:column>
 							<f:facet name="header">
 								<h:outputText value="Aktif" />
@@ -259,7 +259,7 @@
 									<ui:define name="label">İşten Ayrıldığı Tarih Çalışıyor</ui:define>
 									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.istenAyrilmaTarihindeCalisiyor}" />
 								</s:decorate>
- 								<s:decorate template="/layout/edit.xhtml" rendered="#{ortakIslemler.tesisDurumu and authenticatedUser.admin}">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{ortakIslemler.tesisDurumu and authenticatedUser.admin}">
 									<ui:define name="label">#{ortakIslemler.tesisAciklama()} Durumu</ui:define>
 									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.tesisDurum}" />
 								</s:decorate>
@@ -355,8 +355,6 @@
 										</f:facet>
 										<h:outputText value="#{personelView.pdksPersonel.ekSaha3.aciklama}" />
 									</rich:column>
-
-
 									<rich:column rendered="#{sirketHome.seciliSirket.tesisDurumu}">
 										<f:facet name="header">
 											<h:outputText value="#{ortakIslemler.tesisAciklama()}" />
