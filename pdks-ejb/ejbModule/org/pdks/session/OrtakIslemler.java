@@ -243,7 +243,7 @@ public class OrtakIslemler implements Serializable {
 	 */
 	public boolean getListEkSahaDurum(List list, String index) {
 		HashMap<String, Boolean> map = getListEkSahaDurumMap(list, Integer.parseInt(index));
-		boolean ekSahaDurum = map.containsKey("ekSaha" + index);
+		boolean ekSahaDurum = !map.isEmpty();
 		return ekSahaDurum;
 	}
 
