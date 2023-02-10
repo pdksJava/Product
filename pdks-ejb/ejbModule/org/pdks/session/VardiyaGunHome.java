@@ -8007,10 +8007,18 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		List<SelectItem> list = fazlaMesaiOrtakIslemler.getFazlaMesaiTesisList(aramaSecenekleri.getSirket(), denklestirmeAy != null ? new AylikPuantaj(denklestirmeAy) : null, getDenklestirmeDurum(), session);
 		fazlaMesaiListeGuncelle(sirket, "T", list);
 		aramaSecenekleri.setTesisList(list);
+		Long onceki = aramaSecenekleri.getTesisId();
 		if (!list.isEmpty()) {
-			if (list.size() == 1)
+			if (list.size() == 1 || onceki == null)
 				aramaSecenekleri.setTesisId((Long) list.get(0).getValue());
-		}
+			else if (onceki != null) {
+				for (SelectItem st : list) {
+					if (st.getValue().equals(onceki))
+						aramaSecenekleri.setTesisId(onceki);
+				}
+			}
+		} else
+			aramaSecenekleri.setTesisId(null);
 		if (bolumDoldurDurum) {
 			if (sirket != null) {
 				if (sirket.isTesisDurumu() == false)
@@ -8058,13 +8066,29 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			list = new ArrayList<SelectItem>();
 
 		aramaSecenekleri.setGorevYeriList(list);
-		if (list.size() == 1)
-			aramaSecenekleri.setEkSaha3Id((Long) list.get(0).getValue());
+		Long onceki = aramaSecenekleri.getEkSaha3Id();
+		if (!list.isEmpty()) {
+			if (list.size() == 1 || onceki == null)
+				aramaSecenekleri.setEkSaha3Id((Long) list.get(0).getValue());
+			else if (onceki != null) {
+				aramaSecenekleri.setEkSaha3Id(null);
+				for (SelectItem st : list) {
+					if (st.getValue().equals(onceki))
+						aramaSecenekleri.setEkSaha3Id(onceki);
+
+				}
+			}
+		} else
+			aramaSecenekleri.setEkSaha3Id(null);
+
 		fileImportKontrol();
-		if (ekSaha4Tanim != null)
+		if (ekSaha4Tanim != null && aramaSecenekleri.getEkSaha3Id() != null)
 			altBolumDoldur();
-		else
+		else {
+			aramaSecenekleri.setAltBolumIdList(null);
 			aramaSecenekleri.setEkSaha4Id(null);
+		}
+
 	}
 
 	public String altBolumDoldur() {
