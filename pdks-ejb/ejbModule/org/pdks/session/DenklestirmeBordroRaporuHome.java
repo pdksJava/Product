@@ -328,7 +328,8 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 				}
 			}
 
-		}
+		} else
+			sirketId = onceki;
 		setSirketler(sirketList);
 
 		if (sirketId != null)
