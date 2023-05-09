@@ -3629,7 +3629,11 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 						aramaSecenekleri.setTesisId(oncekiId);
 				}
 			}
+		} else {
+			aramaSecenekleri.setTesisId(null);
+			fillBolumDoldur();
 		}
+
 		aramaSecenekleri.setTesisList(list);
 		if (bolumDoldur) {
 			if (aramaSecenekleri.getTesisId() != null)
@@ -7769,6 +7773,16 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				sb.append("SELECT F.* FROM " + VardiyaGun.TABLE_NAME + " V WITH(nolock) ");
 				sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P ON P.ID=V." + VardiyaGun.COLUMN_NAME_PERSONEL);
 				sb.append(" AND P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " :p");
+				if (sirketId != null)
+					sb.append(" AND P." + Personel.COLUMN_NAME_SIRKET + "=" + sirketId);
+				else if (departmanId != null) {
+					sb.append(" INNER JOIN " + Sirket.TABLE_NAME + " S ON S." + Sirket.COLUMN_NAME_ID + "=P." + Personel.COLUMN_NAME_SIRKET + " AND S." + Sirket.COLUMN_NAME_DEPARTMAN + "=" + departmanId);
+
+				}
+				if (tesisId != null)
+					sb.append(" AND P." + Personel.COLUMN_NAME_TESIS + "=" + tesisId);
+				if (seciliEkSaha3Id != null)
+					sb.append(" AND P." + Personel.COLUMN_NAME_EK_SAHA3 + "=" + seciliEkSaha3Id);
 				sb.append(" INNER JOIN " + FazlaMesaiTalep.TABLE_NAME + " F ON F." + FazlaMesaiTalep.COLUMN_NAME_VARDIYA_GUN + "=V.ID AND F.DURUM=1  ");
 				if (talepOnayDurum > 0) {
 					sb.append(" AND  F." + FazlaMesaiTalep.COLUMN_NAME_ONAY_DURUMU + "=:d  ");
@@ -7789,7 +7803,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				if (session != null)
 					map.put(PdksEntityController.MAP_KEY_SESSION, session);
 				fazlaMesaiTalepler = pdksEntityController.getObjectBySQLList(sb, map, FazlaMesaiTalep.class);
-
 				Personel loginPersonel = authenticatedUser.getPdksPersonel();
 				for (FazlaMesaiTalep ft : fazlaMesaiTalepler) {
 					ft.setCheckBoxDurum(false);
