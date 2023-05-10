@@ -913,7 +913,6 @@ public class PdksEntityController implements Serializable {
 		if (kayitAdet > 0) {
 			if (kayitAdet > 1)
 				list = PdksUtil.sortListByAlanAdi(list, "id", true);
-
 			Long id = (Long) PdksUtil.getMethodObject(list.get(0), "getId", null);
 			if (id.longValue() != kayitAdet) {
 				kayitAdet = 0;
@@ -962,7 +961,9 @@ public class PdksEntityController implements Serializable {
 
 					}
 					session.flush();
-				}
+					kayitAdet = saveList.size();
+				} else
+					kayitAdet = 0;
 			} else
 				kayitAdet = 0L;
 

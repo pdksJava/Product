@@ -6,8 +6,6 @@ import java.util.Date;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Temporal;
@@ -22,7 +20,7 @@ import org.pdks.session.PdksUtil;
 
 @Entity(name = PersonelHareketIslem.TABLE_NAME)
 @Immutable
-public class PersonelHareketIslem implements Serializable {
+public class PersonelHareketIslem extends BasePDKSObject implements Serializable {
 
 	/**
 	 * 
@@ -30,11 +28,10 @@ public class PersonelHareketIslem implements Serializable {
 	private static final long serialVersionUID = 2818559653323880265L;
 
 	public static final String TABLE_NAME = "PDKS_ISLEM";
-	public static final String COLUMN_NAME_ID = "ID";
-	public static final int ONAY_DURUM_ISLEM_YAPILMADI = 0;
+ 	public static final int ONAY_DURUM_ISLEM_YAPILMADI = 0;
 	public static final int ONAY_DURUM_ONAYLANDI = 1;
 	public static final int ONAY_DURUM_ONAYLANMADI = 2;
-	private Long id;
+ 
 	private User guncelleyenUser, onaylayanUser;
 	private Date zaman, olusturmaTarihi = new Date();
 	private String aciklama, islemTipi;
@@ -42,16 +39,7 @@ public class PersonelHareketIslem implements Serializable {
 	private Tanim neden;
 	private boolean puantajOnayDurum = Boolean.TRUE;
 
-	@Id
-	@GeneratedValue
-	@Column(name = COLUMN_NAME_ID, nullable = false)
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
+ 
 
 	@ManyToOne(cascade = CascadeType.REFRESH)
 	@JoinColumn(name = "GUNCELLEYEN_PERSONEL_ID", nullable = false)

@@ -5,8 +5,6 @@ import java.io.Serializable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
@@ -18,19 +16,17 @@ import org.hibernate.annotations.FetchMode;
 
 @Entity(name = CalismaModeliAy.TABLE_NAME)
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = { CalismaModeliAy.COLUMN_NAME_DONEM, CalismaModeliAy.COLUMN_NAME_CALISMA_MODELI }) })
-public class CalismaModeliAy implements Serializable {
+public class CalismaModeliAy extends BasePDKSObject implements Serializable {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 4015750209129001721L;
 	public static final String TABLE_NAME = "CALISMA_MODELI_AY";
-	public static final String COLUMN_NAME_ID = "ID";
+
 	public static final String COLUMN_NAME_DONEM = "DONEM_ID";
 	public static final String COLUMN_NAME_CALISMA_MODELI = "CALISMA_MODELI_ID";
 	public static final String COLUMN_NAME_HAREKET_KAYDI_VARDIYA_BUL = "HAREKET_KAYDI_VARDIYA_BUL";
-
-	private Long id;
 
 	private DenklestirmeAy denklestirmeAy;
 
@@ -52,17 +48,6 @@ public class CalismaModeliAy implements Serializable {
 			this.negatifBakiyeDenkSaat = calismaModeli.getNegatifBakiyeDenkSaat();
 			this.hareketKaydiVardiyaBul = calismaModeli.getHareketKaydiVardiyaBul();
 		}
-	}
-
-	@Id
-	@GeneratedValue
-	@Column(name = COLUMN_NAME_ID)
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH)
