@@ -2722,8 +2722,9 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 
 		List<YemekIzin> yemekler = null;
 		Date aksamVardiyaBaslangicZamani = null, aksamVardiyaBitisZamani = null;
-
+		String keyDonem = String.valueOf(yil * 100 + ay);
 		for (VardiyaGun pdksVardiyaGun : aylikPuantaj.getVardiyalar()) {
+			pdksVardiyaGun.setAyinGunu(pdksVardiyaGun.getVardiyaDateStr().startsWith(keyDonem));
 			if (pdksVardiyaGun != null)
 				pdksVardiyaGun.setGorevliPersonelMap(gorevliPersonelMap);
 			pdksVardiyaGun.setVardiyalar(null);
@@ -5767,7 +5768,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 							pdksVardiyaGun.setAyinGunu(pdksVardiyaGun.getVardiyaDateStr().startsWith(donem));
 						}
 						pdksVardiyaGun.setDonemStr(pdksVardiyaGunMaster.getDonemStr());
-
+						if (tatilGunleriMap.containsKey(pdksVardiyaGun.getVardiyaDateStr()))
+							pdksVardiyaGun.setTatil(tatilGunleriMap.get(pdksVardiyaGun.getVardiyaDateStr()));
 						pdksVardiyaGun.setTdClass(aylikPuantaj.getTrClass());
 						boolean kayit = false;
 						if (!pdksVardiyaGun.isCalismayaBaslamadi() && !pdksVardiyaGun.isCalismayiBirakti()) {
@@ -5804,8 +5806,11 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 								}
 								pdksVardiyaGun.setOlusturanUser(authenticatedUser);
 
-								if (yeniKayit && pdksVardiyaGun.getTatil() != null && !pdksVardiyaGun.getTatil().isYarimGunMu() && pdksVardiyaGun.getVardiya() != null && pdksVardiyaGun.getVardiya().isCalisma())
-									pdksVardiyaGun.setVardiya(offVardiya);
+								if (yeniKayit && pdksVardiyaGun.getTatil() != null && pdksVardiyaGun.getVardiya().isCalisma()) {
+									Tatil tatil = pdksVardiyaGun.getTatil();
+									if (!tatil.isYarimGunMu())
+										pdksVardiyaGun.setVardiya(offVardiya);
+								}
 
 								try {
 									if (personelCalmayaBasladi && pdksVardiyaGunMaster.getVardiyaDate().getTime() <= sonCalismaTarihi.getTime()) {
@@ -5827,10 +5832,9 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 								if (hareketKaydiVardiyaBul && !pdksVardiyaGun.getVardiya().isHaftaTatil() && pdksVardiyaGun.getVersion() >= 0) {
 									if ((yeniKayit || yeniVardiyaMap.containsKey(vardiyaKey))) {
 										kayit = true;
-
-										pdksVardiyaGun.setVersion(-1);
+										if (pdksVardiyaGun.getVardiya().isCalisma())
+											pdksVardiyaGun.setVersion(-1);
 										vardiyaGunHareketOnaysizList.add(pdksVardiyaGun);
-
 									}
 								}
 								vardiyalarMap.put(pdksVardiyaGun.getVardiyaKey(), pdksVardiyaGun);

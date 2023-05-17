@@ -8796,11 +8796,8 @@ public class OrtakIslemler implements Serializable {
 							if (vardiya.isCalisma()) {
 								Tatil pdksTatil = tatillerMap.get(key);
 								if (!pdksTatil.isYarimGunMu()) {
-									if (!tatilDonemList.contains(vardiyaKey))
-										vardiya = offVardiya;
-									else
-										testVardiyaGun1.setVersion(-1);
-
+									vardiya = offVardiya;
+									testVardiyaGun1.setVersion(0);
 								}
 
 							}
@@ -12615,7 +12612,7 @@ public class OrtakIslemler implements Serializable {
 						}
 						puantajData.setEksikCalismaSure(0.0d);
 						if (calismaModeli.isSaatlikOdeme()) {
- 							if (hesaplananDenklestirme.getDevredenSure() < 0.0d) {
+							if (hesaplananDenklestirme.getDevredenSure() < 0.0d) {
 								Double eksikCalismaSure = -hesaplananDenklestirme.getDevredenSure();
 								if (puantajData.getFazlaMesaiSure() > 0.0d) {
 									double sure = puantajData.getFazlaMesaiSure() - eksikCalismaSure;
