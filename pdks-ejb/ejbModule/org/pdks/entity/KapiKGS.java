@@ -6,8 +6,10 @@ import java.util.Date;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -29,8 +31,13 @@ public class KapiKGS implements Serializable {
 	public static final String TABLE_NAME = "KAPI_KGS";
 	public static final String COLUMN_NAME_ID = "ID";
 	public static final String COLUMN_NAME_ACIKLAMA = "ACIKLAMA";
+	public static final String COLUMN_NAME_KGS_ID = "KGS_ID";
+	public static final String COLUMN_NAME_KGS_SIRKET = "KGS_SIRKET_ID";
+
 	private Long id;
+	private Long kgsId;
 	private String aciklamaKGS;
+	private KapiSirket kapiSirket;
 	private int kartYonu;
 	private Long terminalNo;
 	private Boolean durum = Boolean.FALSE, manuel = Boolean.FALSE;
@@ -38,13 +45,22 @@ public class KapiKGS implements Serializable {
 	private Kapi kapi;
 
 	@Id
- 	@Column(name = COLUMN_NAME_ID)
+	@Column(name = COLUMN_NAME_ID)
 	public Long getId() {
 		return id;
 	}
 
 	public void setId(Long id) {
 		this.id = id;
+	}
+
+	@Column(name = COLUMN_NAME_KGS_ID)
+	public Long getKgsId() {
+		return kgsId;
+	}
+
+	public void setKgsId(Long kgsId) {
+		this.kgsId = kgsId;
 	}
 
 	@Column(name = COLUMN_NAME_ACIKLAMA)
@@ -54,6 +70,17 @@ public class KapiKGS implements Serializable {
 
 	public void setAciklamaKGS(String aciklamaKGS) {
 		this.aciklamaKGS = aciklamaKGS;
+	}
+
+	@ManyToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
+	@JoinColumn(name = COLUMN_NAME_KGS_SIRKET, nullable = true)
+	@Fetch(FetchMode.JOIN)
+	public KapiSirket getKapiSirket() {
+		return kapiSirket;
+	}
+
+	public void setKapiSirket(KapiSirket kapiSirket) {
+		this.kapiSirket = kapiSirket;
 	}
 
 	@Column(name = "KART_YONU")
@@ -116,6 +143,14 @@ public class KapiKGS implements Serializable {
 	@Transient
 	public boolean isManuel() {
 		return manuel != null && manuel;
+	}
+
+	@Transient
+	public boolean isPdksManuel() {
+		boolean pdksManuel = false;
+		if (manuel != null && manuel)
+			pdksManuel = kapiSirket == null || kapiSirket.getId() <= 0L;
+		return pdksManuel;
 	}
 
 	@Transient
