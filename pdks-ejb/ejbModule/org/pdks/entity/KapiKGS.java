@@ -7,7 +7,6 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
-import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
@@ -21,38 +20,27 @@ import org.hibernate.annotations.Immutable;
 
 @Entity(name = KapiKGS.TABLE_NAME)
 @Immutable
-public class KapiKGS implements Serializable {
+public class KapiKGS extends BasePDKSObject implements Serializable {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1510062205167709853L;
 
-	public static final String TABLE_NAME = "KAPI_KGS";
-	public static final String COLUMN_NAME_ID = "ID";
+	// public static final String TABLE_NAME = "KAPI_KGS";
+	public static final String TABLE_NAME = "KAPI_SIRKET_KGS";
 	public static final String COLUMN_NAME_ACIKLAMA = "ACIKLAMA";
 	public static final String COLUMN_NAME_KGS_ID = "KGS_ID";
 	public static final String COLUMN_NAME_KGS_SIRKET = "KGS_SIRKET_ID";
 
-	private Long id;
 	private Long kgsId;
-	private String aciklamaKGS;
 	private KapiSirket kapiSirket;
+	private String aciklamaKGS;
 	private int kartYonu;
 	private Long terminalNo;
 	private Boolean durum = Boolean.FALSE, manuel = Boolean.FALSE;
 	private Date islemZamani;
 	private Kapi kapi;
-
-	@Id
-	@Column(name = COLUMN_NAME_ID)
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
 
 	@Column(name = COLUMN_NAME_KGS_ID)
 	public Long getKgsId() {
@@ -61,15 +49,6 @@ public class KapiKGS implements Serializable {
 
 	public void setKgsId(Long kgsId) {
 		this.kgsId = kgsId;
-	}
-
-	@Column(name = COLUMN_NAME_ACIKLAMA)
-	public String getAciklamaKGS() {
-		return aciklamaKGS;
-	}
-
-	public void setAciklamaKGS(String aciklamaKGS) {
-		this.aciklamaKGS = aciklamaKGS;
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
@@ -81,6 +60,15 @@ public class KapiKGS implements Serializable {
 
 	public void setKapiSirket(KapiSirket kapiSirket) {
 		this.kapiSirket = kapiSirket;
+	}
+
+	@Column(name = COLUMN_NAME_ACIKLAMA)
+	public String getAciklamaKGS() {
+		return aciklamaKGS;
+	}
+
+	public void setAciklamaKGS(String aciklamaKGS) {
+		this.aciklamaKGS = aciklamaKGS;
 	}
 
 	@Column(name = "KART_YONU")

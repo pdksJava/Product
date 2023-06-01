@@ -45,8 +45,6 @@ public class PersonelDinamikAlan extends BasePDKSObject implements Serializable 
 
 	}
 
- 
-
 	private Personel personel;
 
 	private Tanim alan, tanimDeger;
@@ -56,8 +54,6 @@ public class PersonelDinamikAlan extends BasePDKSObject implements Serializable 
 	private Double sayisalDeger;
 
 	private Integer version = 0;
-
- 
 
 	@Column(name = "VERSION")
 	public Integer getVersion() {

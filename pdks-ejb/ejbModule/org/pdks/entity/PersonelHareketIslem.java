@@ -20,7 +20,7 @@ import org.pdks.session.PdksUtil;
 
 @Entity(name = PersonelHareketIslem.TABLE_NAME)
 @Immutable
-public class PersonelHareketIslem extends BasePDKSObject implements Serializable {
+public class PersonelHareketIslem  extends BasePDKSObject implements Serializable {
 
 	/**
 	 * 

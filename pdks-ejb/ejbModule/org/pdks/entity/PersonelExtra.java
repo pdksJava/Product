@@ -23,15 +23,11 @@ public class PersonelExtra extends BasePDKSObject implements Serializable {
 	 */
 	private static final long serialVersionUID = -3881392269334061361L;
 
- 
-
 	private Personel personel;
 
 	private String cepTelefon = "", ilce = "", ozelNot = "";
 
 	private Integer version = 0;
-
- 
 
 	@Column(name = "VERSION")
 	public Integer getVersion() {

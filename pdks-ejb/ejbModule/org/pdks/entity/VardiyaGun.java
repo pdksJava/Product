@@ -89,7 +89,6 @@ public class VardiyaGun extends BaseObject {
 	private Boolean fazlaMesaiOnayla;
 	private Integer version = 0;
 	private List<FazlaMesaiTalep> fazlaMesaiTalepler;
-	private VardiyaIzin vardiyaIzin;
 
 	public VardiyaGun() {
 		super();
@@ -2078,67 +2077,6 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	@Transient
-	public double getSaatCalisanIzinGunKatsayisi() {
-		double katSayi = 0.0d;
-		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_IZIN_GUN.value());
-
-			katSayi = decimal != null ? decimal.doubleValue() : 9.0d;
-		}
-		return katSayi;
-	}
-
-	@Transient
-	public double getSaatCalisanHaftaTatilKatsayisi() {
-		double katSayi = 0.0d;
-		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_HAFTA_TATIL.value());
-			katSayi = decimal != null ? decimal.doubleValue() : 7.5d;
-		}
-		return katSayi;
-	}
-
-	@Transient
-	public double getSaatCalisanResmiTatilKatsayisi() {
-		double katSayi = 0.0d;
-		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_RESMI_TATIL.value());
-			katSayi = decimal != null ? decimal.doubleValue() : 7.5d;
-		}
-		return katSayi;
-	}
-
-	@Transient
-	public double getSaatCalisanArifeTatilKatsayisi() {
-		double katSayi = 0.0d;
-		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_ARIFE_TATIL_SAAT.value());
-			katSayi = decimal != null ? decimal.doubleValue() : 5.0d;
-		}
-		return katSayi;
-	}
-
-	@Transient
-	public double getSaatCalisanArifeNormalKatsayisi() {
-		double katSayi = 0.0d;
-		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_ARIFE_NORMAL_SAAT.value());
-			katSayi = decimal != null ? decimal.doubleValue() : 4.0d;
-		}
-		return katSayi;
-	}
-
-	@Transient
-	public double getSaatCalisanNormalGunKatsayisi() {
-		double katSayi = 0.0d;
-		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_NORMAL_GUN.value());
-			katSayi = decimal != null ? decimal.doubleValue() : 9.0d;
-		}
-		return katSayi;
-	}
-
-	@Transient
 	public BigDecimal getKatSayi(Integer tipi) {
 		BigDecimal katSayi = null;
 		try {
@@ -2170,6 +2108,78 @@ public class VardiyaGun extends BaseObject {
 		this.donemStr = donemStr;
 	}
 
+	// SAAT_CALISAN_NORMAL_GUN(91), SAAT_CALISAN_IZIN_GUN(92), SAAT_CALISAN_HAFTA_TATIL(93), SAAT_CALISAN_RESMI_TATIL(
+	@Transient
+	public double getSaatCalisanNormalGunKatsayisi() {
+		double katSayi = 0.0d;
+		if (ayinGunu) {
+			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_NORMAL_GUN.value());
+			katSayi = decimal != null ? decimal.doubleValue() : 9.0d;
+		}
+		return katSayi;
+	}
+
+	@Transient
+	public double getSaatCalisanIzinGunKatsayisi() {
+		double katSayi = 0.0d;
+		if (ayinGunu) {
+			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_IZIN_GUN.value());
+
+			katSayi = decimal != null ? decimal.doubleValue() : 9.0d;
+		}
+		return katSayi;
+	}
+
+	@Transient
+	public double getSaatCalisanHaftaTatilKatsayisi() {
+		double katSayi = 0.0d;
+		if (ayinGunu) {
+			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_HAFTA_TATIL.value());
+			katSayi = decimal != null ? decimal.doubleValue() : 7.5d;
+		}
+		return katSayi;
+	}
+
+	@Transient
+	public double getSaatCalisanResmiTatilKatsayisi() {
+		double katSayi = 0.0d;
+		if (ayinGunu) {
+			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_RESMI_TATIL.value());
+			katSayi = decimal != null ? decimal.doubleValue() : 7.5d;
+		}
+		return katSayi;
+	}
+
+	@Transient
+	public double getSaatCalisanGunlukKatsayisi() {
+		double katSayi = 0.0d;
+		if (ayinGunu) {
+			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_GUN.value());
+			katSayi = decimal != null ? decimal.doubleValue() : 7.5d;
+		}
+		return katSayi;
+	}
+
+	@Transient
+	public double getSaatCalisanArifeNormalKatsayisi() {
+		double katSayi = 0.0d;
+		if (ayinGunu) {
+			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_ARIFE_NORMAL_SAAT.value());
+			katSayi = decimal != null ? decimal.doubleValue() : 3.75d;
+		}
+		return katSayi;
+	}
+
+	@Transient
+	public double getSaatCalisanArifeTatilKatsayisi() {
+		double katSayi = 0.0d;
+		if (ayinGunu) {
+			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_ARIFE_TATIL_SAAT.value());
+			katSayi = decimal != null ? decimal.doubleValue() : 3.75d;
+		}
+		return katSayi;
+	}
+
 	@Transient
 	public boolean isFazlaMesaiTalepDurum() {
 		if (!fazlaMesaiTalepDurum && izin == null && ayinGunu) {
@@ -2197,12 +2207,4 @@ public class VardiyaGun extends BaseObject {
 		this.izinHaftaTatilDurum = izinHaftaTatilDurum;
 	}
 
-	@Transient
-	public VardiyaIzin getVardiyaIzin() {
-		return vardiyaIzin;
-	}
-
-	public void setVardiyaIzin(VardiyaIzin vardiyaIzin) {
-		this.vardiyaIzin = vardiyaIzin;
-	}
 }

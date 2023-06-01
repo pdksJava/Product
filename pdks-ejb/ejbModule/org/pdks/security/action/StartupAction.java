@@ -46,6 +46,7 @@ import org.pdks.entity.Parameter;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
 import org.pdks.entity.PersonelIzin;
+import org.pdks.entity.ServisData;
 import org.pdks.entity.Sirket;
 import org.pdks.entity.SkinBean;
 import org.pdks.entity.Tanim;
@@ -54,7 +55,6 @@ import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGorev;
 import org.pdks.entity.VardiyaGun;
 import org.pdks.entity.VardiyaHafta;
-import org.pdks.entity.VardiyaIzin;
 import org.pdks.entity.VardiyaYemekIzin;
 import org.pdks.entity.YemekKartsiz;
 import org.pdks.erp.action.SapRfcManager;
@@ -222,7 +222,7 @@ public class StartupAction implements Serializable {
 			list.add(ArifeVardiyaDonem.class);
 			list.add(CalismaModeliVardiya.class);
 			list.add(DepartmanMailGrubu.class);
- 			list.add(IzinTipiBirlesikHaric.class);
+			list.add(IzinTipiBirlesikHaric.class);
 			list.add(IzinHakedisHakki.class);
 			list.add(IzinTipiMailAdres.class);
 			list.add(MailUser.class);
@@ -235,11 +235,11 @@ public class StartupAction implements Serializable {
 			list.add(UserTesis.class);
 			list.add(VardiyaGorev.class);
 			list.add(VardiyaHafta.class);
-			list.add(VardiyaIzin.class);
+//			list.add(VardiyaIzin.class);
 			list.add(VardiyaYemekIzin.class);
 			list.add(YemekKartsiz.class);
-			// list.add(ServisData.class);
- 			pdksEntityController.savePrepareTableID(UserRoles.class, entityManager, session);
+			list.add(ServisData.class);
+			// pdksEntityController.savePrepareTableID(ServisData.class, entityManager, session);
 
 			for (Class class1 : list) {
 				long adet = pdksEntityController.savePrepareTableID(class1, entityManager, session);

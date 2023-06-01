@@ -66,6 +66,10 @@ public class PdksEntityController implements Serializable {
 	@In(required = false, create = true)
 	User authenticatedUser;
 
+	/**
+	 * @param fieldValue
+	 * @return
+	 */
 	private String getStringParse(Object fieldValue) {
 		String stringParse = "";
 		if (fieldValue != null) {
@@ -140,6 +144,12 @@ public class PdksEntityController implements Serializable {
 		map = null;
 	}
 
+	/**
+	 * @param fieldsOrj
+	 * @param class1
+	 * @param esit
+	 * @return
+	 */
 	private List getObjectByInnerObjectList(HashMap fieldsOrj, Class class1, String esit) {
 		List objectList = null;
 		List<Liste> listKey = null;
@@ -679,7 +689,6 @@ public class PdksEntityController implements Serializable {
 		logger.debug(queryStr);
 		int sayac = 0;
 		if (list != null) {
-
 			for (Iterator iterator = list.iterator(); iterator.hasNext();) {
 				String key1 = (String) iterator.next();
 				if (!veriMap.containsKey(key1))
@@ -692,41 +701,6 @@ public class PdksEntityController implements Serializable {
 		int sonuc = query.executeUpdate();
 		return sonuc;
 
-	}
-
-	/**
-	 * @param kapi
-	 * @param personel
-	 * @param zaman
-	 * @param guncelleyen
-	 * @param nedenId
-	 * @param aciklama
-	 * @return
-	 */
-	public long hareketEkle(KapiView kapi, PersonelView personel, Date zaman, User guncelleyen, long nedenId, String aciklama, Session session) {
-		if (session == null)
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		if (guncelleyen == null)
-			guncelleyen = authenticatedUser;
-		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		StringBuffer sp = new StringBuffer("SP_HAREKET_EKLE");
-		veriMap.put("kapi", kapi.getId());
-		veriMap.put("personel", personel.getId());
-		veriMap.put("zaman", zaman);
-		veriMap.put("guncelleyenId", guncelleyen.getId());
-		veriMap.put("nedenId", nedenId);
-		veriMap.put("aciklama", aciklama);
-		if (session != null)
-			veriMap.put(MAP_KEY_SESSION, session);
-		Long sonuc = null;
-		try {
-			List<BigDecimal> list = execSPList(veriMap, sp, null);
-			if (!list.isEmpty())
-				sonuc = list.get(0).longValue();
-		} catch (Exception e) {
-			sonuc = 0L;
-		}
-		return sonuc;
 	}
 
 	/**
@@ -775,28 +749,63 @@ public class PdksEntityController implements Serializable {
 	}
 
 	/**
-	 * @param kgsId
-	 * @param pdksId
+	 * @param kapi
+	 * @param personel
 	 * @param zaman
 	 * @param guncelleyen
 	 * @param nedenId
 	 * @param aciklama
 	 * @return
 	 */
-	public Long hareketGuncelle(long kgsId, long pdksId, Date zaman, User guncelleyen, long nedenId, String aciklama, Session session) {
+	public Long hareketEkle(KapiView kapi, PersonelView personel, Date zaman, User guncelleyen, long nedenId, String aciklama, Session session) {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		if (guncelleyen == null)
-			guncelleyen = authenticatedUser;
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		StringBuffer sp = new StringBuffer("SP_HAREKET_GUNCELLE");
+		StringBuffer sp = new StringBuffer("SP_HAREKET_EKLE");
+		veriMap.put("kapi", kapi.getId());
+		veriMap.put("personel", personel.getId());
+		veriMap.put("zaman", zaman);
+		veriMap.put("guncelleyenId", guncelleyen.getId());
+		veriMap.put("nedenId", nedenId);
+		veriMap.put("aciklama", aciklama);
+		if (session != null)
+			veriMap.put(MAP_KEY_SESSION, session);
+		Long sonuc = null;
+		try {
+			List<BigDecimal> list = execSPList(veriMap, sp, null);
+			if (!list.isEmpty())
+				sonuc = list.get(0).longValue();
+		} catch (Exception e) {
+			sonuc = 0L;
+		}
+		return sonuc;
+	}
+
+	/**
+	 * @param kgsId
+	 * @param pdksId
+	 * @param zaman
+	 * @param guncelleyen
+	 * @param nedenId
+	 * @param aciklama
+	 * @param sirketId
+	 * @param sirketStr
+	 * @param session
+	 * @return
+	 */
+	public Long hareketGuncelle(long kgsId, long pdksId, Date zaman, User guncelleyen, long nedenId, String aciklama, long sirketId, String sirketStr, Session session) {
+		if (session == null)
+			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+		StringBuffer sp = new StringBuffer("SP_HAREKET_GUNCELLE" + sirketStr);
 		veriMap.put("kgsId", kgsId);
 		veriMap.put("pdksId", pdksId);
 		veriMap.put("zaman", zaman);
-		veriMap.put("guncelleyen", guncelleyen != null ? guncelleyen.getId() : null);
+		veriMap.put("guncelleyen", guncelleyen.getId());
 		veriMap.put("nedenId", nedenId);
 		veriMap.put("aciklama", aciklama);
-
+		if (!sirketStr.equals(""))
+			veriMap.put("sirketId", sirketId);
 		if (session != null)
 			veriMap.put(MAP_KEY_SESSION, session);
 		Long sonuc = 0L;
@@ -816,20 +825,23 @@ public class PdksEntityController implements Serializable {
 	 * @param guncelleyen
 	 * @param nedenId
 	 * @param aciklama
+	 * @param sirketId
+	 * @param sirketStr
+	 * @param session
 	 * @return
 	 */
-	public Long hareketSil(long kgsId, long pdksId, User guncelleyen, long nedenId, String aciklama, Session session) {
+	public Long hareketSil(long kgsId, long pdksId, User guncelleyen, long nedenId, String aciklama, long sirketId, String sirketStr, Session session) {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		if (guncelleyen == null)
-			guncelleyen = authenticatedUser;
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		StringBuffer sp = new StringBuffer("SP_HAREKET_SIL");
+		StringBuffer sp = new StringBuffer("SP_HAREKET_SIL" + sirketStr);
 		veriMap.put("kgsId", kgsId);
 		veriMap.put("pdksId", pdksId);
 		veriMap.put("guncelleyenId", guncelleyen.getId());
 		veriMap.put("nedenId", nedenId);
 		veriMap.put("aciklama", aciklama);
+		if (!sirketStr.equals(""))
+			veriMap.put("sirketId", sirketId);
 		if (session != null)
 			veriMap.put(MAP_KEY_SESSION, session);
 		Long sonuc = 0L;
@@ -841,60 +853,6 @@ public class PdksEntityController implements Serializable {
 			sonuc = 0L;
 		}
 		return sonuc;
-	}
-
-	/**
-	 * @param islemId
-	 * @param guncelleyen
-	 * @return
-	 */
-	public int hareketOnayla(long islemId, User guncelleyen, Session session) {
-		if (session == null)
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		if (guncelleyen == null)
-			guncelleyen = authenticatedUser;
-		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		StringBuffer sp = new StringBuffer("SP_HAREKET_ONAYLA");
-		veriMap.put("islemId", islemId);
-		veriMap.put("guncelleyen", guncelleyen != null ? guncelleyen.getId() : null);
-		if (session != null)
-			veriMap.put(MAP_KEY_SESSION, session);
-		int sonuc = 0;
-		try {
-			sonuc = execSP(veriMap, sp);
-		} catch (Exception e) {
-			sonuc = 0;
-		}
-		return sonuc;
-
-	}
-
-	/**
-	 * @param kgsId
-	 * @param pdksId
-	 * @param guncelleyen
-	 * @return
-	 */
-	public int hareketOnaylama(long kgsId, long pdksId, User guncelleyen, Session session) {
-		if (session == null)
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		if (guncelleyen == null)
-			guncelleyen = authenticatedUser;
-		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		StringBuffer sp = new StringBuffer("SP_HAREKET_ONAYLAMA");
-		veriMap.put("kgsId", kgsId);
-		veriMap.put("pdksId", pdksId);
-		veriMap.put("guncelleyen", guncelleyen != null ? guncelleyen.getId() : null);
-		if (session != null)
-			veriMap.put(MAP_KEY_SESSION, session);
-		int sonuc = 0;
-		try {
-			sonuc = execSP(veriMap, sp);
-		} catch (Exception e) {
-			sonuc = 0;
-		}
-		return sonuc;
-
 	}
 
 	/**
@@ -961,17 +919,64 @@ public class PdksEntityController implements Serializable {
 
 					}
 					session.flush();
-					kayitAdet = saveList.size();
-				} else
-					kayitAdet = 0;
+				}
 			} else
 				kayitAdet = 0L;
-
 		}
 		list = null;
 		if (kayitAdet > 0)
 			logger.info(kayitAdet + " " + class1.getName() + " düzenlendi.");
 		return kayitAdet;
+	}
+
+	/**
+	 * @param islemId
+	 * @param guncelleyen
+	 * @return
+	 */
+	public int hareketOnayla(long islemId, User guncelleyen, Session session) {
+		if (session == null)
+			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+		StringBuffer sp = new StringBuffer("SP_HAREKET_ONAYLA");
+		veriMap.put("islemId", islemId);
+		veriMap.put("guncelleyen", guncelleyen.getId());
+		if (session != null)
+			veriMap.put(MAP_KEY_SESSION, session);
+		int sonuc = 0;
+		try {
+			sonuc = execSP(veriMap, sp);
+		} catch (Exception e) {
+			sonuc = 0;
+		}
+		return sonuc;
+
+	}
+
+	/**
+	 * @param kgsId
+	 * @param pdksId
+	 * @param guncelleyen
+	 * @return
+	 */
+	public int hareketOnaylama(long kgsId, long pdksId, User guncelleyen, Session session) {
+		if (session == null)
+			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+		StringBuffer sp = new StringBuffer("SP_HAREKET_ONAYLAMA");
+		veriMap.put("kgsId", kgsId);
+		veriMap.put("pdksId", pdksId);
+		veriMap.put("guncelleyen", guncelleyen.getId());
+		if (session != null)
+			veriMap.put(MAP_KEY_SESSION, session);
+		int sonuc = 0;
+		try {
+			sonuc = execSP(veriMap, sp);
+		} catch (Exception e) {
+			sonuc = 0;
+		}
+		return sonuc;
+
 	}
 
 	/**
@@ -986,6 +991,13 @@ public class PdksEntityController implements Serializable {
 		return object;
 	}
 
+	/**
+	 * @param sb
+	 * @param fields
+	 * @param class1
+	 * @param uzerineYaz
+	 * @return
+	 */
 	public TreeMap getObjectBySQLMap(StringBuffer sb, HashMap fields, Class class1, Boolean uzerineYaz) {
 		TreeMap treeMap = null;
 		if (fields.containsKey(MAP_KEY_MAP)) {
@@ -998,6 +1010,15 @@ public class PdksEntityController implements Serializable {
 		return treeMap;
 	}
 
+	/**
+	 * @param session
+	 * @param maxSize
+	 * @param sqlSTR
+	 * @param key
+	 * @param list
+	 * @param class1
+	 * @return
+	 */
 	public List getObjectBySQLList(Session session, Integer maxSize, String sqlSTR, String key, Collection list, Class class1) {
 		List listAll = new ArrayList();
 		List veriler = new ArrayList(list);
@@ -1073,6 +1094,12 @@ public class PdksEntityController implements Serializable {
 		return listAll;
 	}
 
+	/**
+	 * @param sb
+	 * @param fields
+	 * @param class1
+	 * @return
+	 */
 	public List getObjectBySQLList(StringBuffer sb, HashMap fields, Class class1) {
 		List list = null;
 		// Integer ti = null;

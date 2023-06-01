@@ -1494,63 +1494,6 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 	}
 
 	/**
-	 * @param hareketler
-	 */
-	private void manuelHareketSil(List<HareketKGS> hareketler) {
-		if (hareketler != null) {
-			for (Iterator iterator = hareketler.iterator(); iterator.hasNext();) {
-				HareketKGS hareketKGS = (HareketKGS) iterator.next();
-				if (hareketKGS.getId() != null && hareketKGS.getId().startsWith(HareketKGS.AYRIK_HAREKET))
-					iterator.remove();
-			}
-		}
-
-	}
-
-	/**
-	 * @return
-	 */
-	public String ayrikKayitlariOlustur() {
-		List<AylikPuantaj> list = new ArrayList<AylikPuantaj>(aylikPuantajList);
-		boolean devam = false;
-		for (AylikPuantaj aylikPuantaj : list) {
-			if (aylikPuantaj.isAyrikHareketVar() == false)
-				continue;
-			List<VardiyaGun> vardiyaList = new ArrayList<VardiyaGun>(aylikPuantaj.getVardiyalar());
-			int ayrikVar = 0;
-			for (Iterator iterator = vardiyaList.iterator(); iterator.hasNext();) {
-				VardiyaGun vardiyaGun = (VardiyaGun) iterator.next();
-				if (vardiyaGun.isAyinGunu() && vardiyaGun.getId() != null) {
-					if (vardiyaGun.isAyrikHareketVar()) {
-						manuelHareketSil(vardiyaGun.getGirisHareketleri());
-						manuelHareketSil(vardiyaGun.getCikisHareketleri());
-						manuelHareketSil(vardiyaGun.getHareketler());
-						++ayrikVar;
-					} else if (ayrikVar == 0)
-						iterator.remove();
-				} else
-					iterator.remove();
-
-			}
-			if (ayrikVar > 1) {
-				try {
-					ortakIslemler.addManuelGirisCikisHareketler(vardiyaList, true, null, session);
-					devam = true;
-				} catch (Exception e) {
-					logger.error(e);
-					e.printStackTrace();
-				}
-
-			}
-			vardiyaList = null;
-		}
-		list = null;
-		if (devam)
-			fillFazlaMesaiOzetRaporList();
-		return "";
-	}
-
-	/**
 	 * @param islemPuantaj
 	 * @param vardiyaGun
 	 * @param paramsMap
@@ -1606,12 +1549,12 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		if (fazlaMesaiOnaylaDurum || (vardiyaGun.isAyrikHareketVar() && vardiyaGun.getVardiya().isCalisma())) {
 			for (Iterator iterator = girisHareketleri.iterator(); iterator.hasNext();) {
 				HareketKGS hareketKGS = (HareketKGS) iterator.next();
-				if (hareketKGS.getId() == null || hareketKGS.getId().startsWith("V") || hareketKGS.getId().startsWith("M"))
+				if (hareketKGS.getId() == null || hareketKGS.getId().startsWith(HareketKGS.SANAL_HAREKET) || hareketKGS.getId().startsWith(HareketKGS.AYRIK_HAREKET))
 					iterator.remove();
 			}
 			for (Iterator iterator = cikisHareketleri.iterator(); iterator.hasNext();) {
 				HareketKGS hareketKGS = (HareketKGS) iterator.next();
-				if (hareketKGS.getId() == null || hareketKGS.getId().startsWith("V") || hareketKGS.getId().startsWith("M"))
+				if (hareketKGS.getId() == null || hareketKGS.getId().startsWith(HareketKGS.SANAL_HAREKET) || hareketKGS.getId().startsWith(HareketKGS.AYRIK_HAREKET))
 					iterator.remove();
 			}
 			boolean cikis = false;
@@ -2500,7 +2443,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		AylikPuantaj.baslikCell(factory, drawing, anchor, cell, "ÜÖM", "Çalışanın bu listenin sonunda ücret olarak ödediğimiz fazla mesai saati");
 		if (maasKesintiGoster) {
 			cell = ExcelUtil.getCell(sheet, row, col++, header);
-			AylikPuantaj.baslikCell(factory, drawing, anchor, cell, "MASK", "Çalışanın bu listenin sonunda ücretinden kesilecek saati");
+			AylikPuantaj.baslikCell(factory, drawing, anchor, cell, "NORMC", "Çalışanın bu listenin sonunda ücretinden kesilecek saati");
 		}
 		if (resmiTatilVar) {
 			cell = ExcelUtil.getCell(sheet, row, col++, header);

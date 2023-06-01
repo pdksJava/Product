@@ -57,13 +57,11 @@ public class Role extends BasePDKSObject implements Serializable {
 	public static final String TIPI_YEMEKHANE = "yemekHane";
 	public static final String TIPI_TASERON_ADMIN = "kontratliAdmin";
 
- 	private String rolename;
+	private String rolename;
 	private String aciklama;
 	private Set<Role> groups;
 	private Boolean status = Boolean.TRUE, adminRole = Boolean.FALSE;
 	private Departman departman;
-
- 
 
 	@RoleName
 	@Column(name = COLUMN_NAME_ROLE_NAME)
