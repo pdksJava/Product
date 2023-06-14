@@ -13682,9 +13682,7 @@ public class OrtakIslemler implements Serializable {
 								}
 								oncekiCikisZaman = (Date) cikisZaman.clone();
 							}
-
 							if (sureHesapla && gunlukSaat > 0) {
-
 								double fark = toplamYemekSuresi - vardiyaYemekSuresi;
 								if (toplamYemekSuresi > vardiyaYemekSuresi) {
 									calSure += fark;
