@@ -23,7 +23,6 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
-import org.apache.poi.hssf.usermodel.HSSFCellStyle;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -764,8 +763,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		Workbook wb = new XSSFWorkbook();
 		Sheet sheet = ExcelUtil.createSheet(wb, "Izin Karti", Boolean.TRUE);
 		CellStyle style = ExcelUtil.getStyleData(wb);
-		CellStyle styleCenter = ExcelUtil.getStyleData(wb);
-		styleCenter.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+		CellStyle styleCenter = ExcelUtil.getStyleDataCenter(wb);
 		CellStyle header = ExcelUtil.getStyleHeader(wb);
 		CellStyle timeStamp = ExcelUtil.getCellStyleDate(wb);
 		CellStyle tutarStyle = ExcelUtil.getCellStyleTutar(wb);
@@ -835,8 +833,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		Workbook wb = new XSSFWorkbook();
 		Sheet sheet = ExcelUtil.createSheet(wb, "Izin Karti", Boolean.TRUE);
 		CellStyle style = ExcelUtil.getStyleData(wb);
-		CellStyle styleCenter = ExcelUtil.getStyleData(wb);
-		styleCenter.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+		CellStyle styleCenter = ExcelUtil.getStyleDataCenter(wb);
 		CellStyle header = ExcelUtil.getStyleHeader(wb);
 		CellStyle timeStamp = ExcelUtil.getCellStyleDate(wb);
 		int row = 0, col = 0;
@@ -1193,7 +1190,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 									parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 								personel = (Personel) pdksEntityController.getObjectByInnerObject(parametreMap, Personel.class);
 								fields.clear();
-								fields.put("izinSahibi", personel);
+								fields.put("izinSahibi.id", personel.getId());
 								fields.put("izinTipi", izinTipleri);
 								if (session != null)
 									fields.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -1253,8 +1250,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 										tempIzin.setDogumTarihi(dogumTarihi);
 									}
 									tempIzin.setIzinHakEdisTarihi(izinHakEdisTarihi);
-								} else
-									tempIzin = null;
+								}  
 							}
 							try {
 								bakiyeYil = ExcelUtil.getSheetDoubleValue((org.apache.poi.ss.usermodel.Cell) veriMap.get(COL_IZIN_YILI)).intValue();

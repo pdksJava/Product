@@ -32,13 +32,10 @@ import org.apache.poi.ss.usermodel.ClientAnchor;
 import org.apache.poi.ss.usermodel.Comment;
 import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.Drawing;
-import org.apache.poi.ss.usermodel.Font;
-import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.RichTextString;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.hibernate.FlushMode;
@@ -186,11 +183,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 
 	private List<FazlaMesaiTalep> aylikFazlaMesaiTalepler;
 
-	private List<YemekIzin> yemekAraliklari;
-
 	private List<Vardiya> calismaOlmayanVardiyaList;
-
-	private List<YemekIzin> yemekList;
 
 	private boolean vardiyaVar = Boolean.FALSE, seciliDurum, mailGonder, mesaiOnayla, haftaTatilMesaiDurum = Boolean.FALSE, vardiyaGuncelle = Boolean.FALSE, hastaneSuperVisor = Boolean.FALSE;
 	private boolean fazlaMesaiIzinRaporuDurum, onayDurum = Boolean.FALSE, partTimeGoster = Boolean.FALSE, sutIzniGoster = Boolean.FALSE, planGirisi, sablonGuncelle, veriGuncellendi;
@@ -1748,57 +1741,41 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		String aciklamaExcel = PdksUtil.replaceAll(gorevYeriAciklama + " " + PdksUtil.convertToDateString(aylikPuantajDefault.getIlkGun(), "yyyy MMMMMM  "), "_", "");
 		Workbook wb = new XSSFWorkbook();
 		Sheet sheet = ExcelUtil.createSheet(wb, PdksUtil.convertToDateString(aylikPuantajDefault.getIlkGun(), "MMMMM yyyy") + " Çalışma Planı", Boolean.TRUE);
-		XSSFCellStyle styleCenter = (XSSFCellStyle) ExcelUtil.getStyleData(wb);
-		styleCenter.setWrapText(Boolean.TRUE);
-		styleCenter.setAlignment(CellStyle.ALIGN_CENTER);
-		styleCenter.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 255, (byte) 255, (byte) 0 }));
-		styleCenter.getFont().setColor(IndexedColors.BLACK.index);
-		styleCenter.setFillPattern(CellStyle.SOLID_FOREGROUND);
 
-		XSSFCellStyle styleOdd = (XSSFCellStyle) ExcelUtil.getCellStyleTutar(wb);
-		XSSFCellStyle styleEven = (XSSFCellStyle) ExcelUtil.getCellStyleTutar(wb);
-		XSSFCellStyle styleTatil = (XSSFCellStyle) ExcelUtil.getStyleData(wb);
-		styleTatil.setAlignment(CellStyle.ALIGN_CENTER);
+		CellStyle styleOdd = ExcelUtil.getStyleOdd(null, wb);
+		CellStyle styleEven = ExcelUtil.getStyleEven(null, wb);
+		CellStyle styleOddCenter = ExcelUtil.getStyleOdd(ExcelUtil.ALIGN_CENTER, wb);
+		CellStyle styleEvenCenter = ExcelUtil.getStyleEven(ExcelUtil.ALIGN_CENTER, wb);
+		CellStyle styleTutarEvenDay = ExcelUtil.getStyleDayEven(ExcelUtil.FORMAT_TUTAR, wb);
+		styleTutarEvenDay.setAlignment(CellStyle.ALIGN_CENTER);
+		CellStyle styleTutarOddDay = ExcelUtil.getStyleDayOdd(ExcelUtil.FORMAT_TUTAR, wb);
+		styleTutarOddDay.setAlignment(CellStyle.ALIGN_CENTER);
+		CellStyle styleTutarDay = null, styleGenelCenter = null, styleGenel = null, styleGenelLeft = null;
+		XSSFCellStyle styleTatil = (XSSFCellStyle) ExcelUtil.getStyleDataCenter(wb);
 
-		XSSFCellStyle styleIstek = (XSSFCellStyle) ExcelUtil.getStyleData(wb);
-		styleIstek.setAlignment(CellStyle.ALIGN_CENTER);
-		XSSFCellStyle styleEgitim = (XSSFCellStyle) ExcelUtil.getStyleData(wb);
-		styleEgitim.setAlignment(CellStyle.ALIGN_CENTER);
-		XSSFCellStyle styleOff = (XSSFCellStyle) ExcelUtil.getStyleData(wb);
-		styleOff.setAlignment(CellStyle.ALIGN_CENTER);
-		XSSFFont xssfFont = styleOff.getFont();
-		xssfFont.setColor(new XSSFColor(Color.WHITE));
-		XSSFCellStyle styleIzin = (XSSFCellStyle) ExcelUtil.getStyleData(wb);
-		styleIzin.setAlignment(CellStyle.ALIGN_CENTER);
-		XSSFCellStyle header = (XSSFCellStyle) ExcelUtil.getStyleHeader(wb);
-		XSSFCellStyle styleCalisma = (XSSFCellStyle) ExcelUtil.getStyleData(wb);
-		styleCalisma.setAlignment(CellStyle.ALIGN_CENTER);
+		XSSFCellStyle styleIstek = (XSSFCellStyle) ExcelUtil.getStyleDataCenter(wb);
+		XSSFCellStyle styleEgitim = (XSSFCellStyle) ExcelUtil.getStyleDataCenter(wb);
+		XSSFCellStyle styleOff = (XSSFCellStyle) ExcelUtil.getStyleDataCenter(wb);
+		ExcelUtil.setFontColor(styleOff, Color.WHITE);
+		XSSFCellStyle style = (XSSFCellStyle) ExcelUtil.getStyleDataCenter(wb);
+		XSSFCellStyle styleIzin = (XSSFCellStyle) ExcelUtil.getStyleDataCenter(wb);
+		XSSFCellStyle header = (XSSFCellStyle) ExcelUtil.getStyleHeader(9, wb);
+
+		XSSFCellStyle styleCalisma = (XSSFCellStyle) ExcelUtil.getStyleDataCenter(wb);
 		int row = 0, col = 0;
-		ExcelUtil.setFont(9, new Integer(Font.BOLDWEIGHT_BOLD), header, wb);
 
-		header.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 156, (byte) 192, (byte) 223 }));
+		ExcelUtil.setFillForegroundColor(styleTatil, 255, 153, 204);
+		ExcelUtil.setFillForegroundColor(styleIstek, 255, 255, 0);
+		ExcelUtil.setFillForegroundColor(styleIzin, 146, 208, 80);
+		ExcelUtil.setFillForegroundColor(styleCalisma, 255, 255, 255);
 
-		styleOdd.setFillPattern(CellStyle.SOLID_FOREGROUND);
-		styleOdd.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.index);
-		styleEven.setFillPattern(CellStyle.SOLID_FOREGROUND);
-		styleEven.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 219, (byte) 248, (byte) 219 }));
+		ExcelUtil.setFillForegroundColor(styleEgitim, 0, 0, 255);
 
-		styleTatil.setFillPattern(CellStyle.SOLID_FOREGROUND);
-		styleTatil.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 255, (byte) 153, (byte) 204 }));
-		styleIstek.setFillPattern(CellStyle.SOLID_FOREGROUND);
-		styleIstek.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 255, (byte) 255, (byte) 0 }));
-		styleIzin.setFillPattern(CellStyle.SOLID_FOREGROUND);
-		styleIzin.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 146, (byte) 208, (byte) 80 }));
-		styleCalisma.setFillPattern(CellStyle.SOLID_FOREGROUND);
-		styleCalisma.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 255, (byte) 255, (byte) 255 }));
-		styleEgitim.setFillPattern(CellStyle.SOLID_FOREGROUND);
-		styleEgitim.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 0, (byte) 0, (byte) 255 }));
-		styleOff.setFillPattern(CellStyle.SOLID_FOREGROUND);
-		styleOff.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 13, (byte) 12, (byte) 89 }));
-		styleOff.getFont().setColor(new XSSFColor(new byte[] { (byte) 256, (byte) 256, (byte) 256 }));
+		ExcelUtil.setFillForegroundColor(styleOff, 13, 12, 89);
+		styleOff.getFont().setColor(ExcelUtil.getXSSFColor(256, 256, 256));
 		ExcelUtil.getCell(sheet, row, col, header).setCellValue(aciklamaExcel);
 		for (int i = 0; i < 3; i++)
-			ExcelUtil.getCell(sheet, row, col + i + 1, header).setCellValue("");
+			ExcelUtil.getCell(sheet, row, col + i + 1, style).setCellValue("");
 
 		try {
 			sheet.addMergedRegion(ExcelUtil.getRegion((int) row, (int) 0, (int) row, (int) 4));
@@ -1806,7 +1783,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			e.printStackTrace();
 		}
 		col = 0;
-		ExcelUtil.getCell(sheet, ++row, col, header).setCellValue("");
+		ExcelUtil.getCell(sheet, ++row, col, style).setCellValue("");
 		ExcelUtil.getCell(sheet, ++row, col++, header).setCellValue(ortakIslemler.personelNoAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Adı Soyadı");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.yoneticiAciklama());
@@ -1816,22 +1793,22 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		CreationHelper factory = wb.getCreationHelper();
 		Drawing drawing = sheet.createDrawingPatriarch();
 		ClientAnchor anchor = factory.createClientAnchor();
-		XSSFCellStyle headerVardiyaGun = (XSSFCellStyle) ExcelUtil.getStyleHeader(9, wb);
-		headerVardiyaGun.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 99, (byte) 182, (byte) 153 }));
+		CellStyle headerVardiyaGun = ExcelUtil.getStyleHeader(9, wb);
+		ExcelUtil.setFillForegroundColor(headerVardiyaGun, 99, 182, 153);
 
-		XSSFCellStyle headerVardiyaTatilYarimGun = (XSSFCellStyle) ExcelUtil.getStyleHeader(9, wb);
-		headerVardiyaTatilYarimGun.getFont().setColor(new XSSFColor(new byte[] { (byte) 255, (byte) 255, (byte) 0 }));
-		headerVardiyaTatilYarimGun.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 144, (byte) 185, (byte) 63 }));
+		CellStyle headerVardiyaTatilYarimGun = ExcelUtil.getStyleHeader(9, wb);
+		ExcelUtil.setFontColor(headerVardiyaTatilYarimGun, 255, 255, 0);
+		ExcelUtil.setFillForegroundColor(headerVardiyaTatilYarimGun, 144, 185, 63);
 
-		XSSFCellStyle headerVardiyaTatilGun = (XSSFCellStyle) ExcelUtil.getStyleHeader(9, wb);
-		headerVardiyaTatilGun.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 92, (byte) 127, (byte) 45 }));
-		headerVardiyaTatilGun.getFont().setColor(new XSSFColor(new byte[] { (byte) 255, (byte) 255, (byte) 0 }));
+		CellStyle headerVardiyaTatilGun = ExcelUtil.getStyleHeader(9, wb);
+		ExcelUtil.setFillForegroundColor(headerVardiyaTatilGun, 92, 127, 45);
+		ExcelUtil.setFontColor(headerVardiyaTatilGun, 255, 255, 0);
 		for (VardiyaGun vardiyaGun : aylikPuantajDefault.getVardiyalar()) {
 			try {
 				if (!vardiyaGun.isAyinGunu())
 					continue;
 				cal.setTime(vardiyaGun.getVardiyaDate());
-				XSSFCellStyle headerVardiya = headerVardiyaGun;
+				CellStyle headerVardiya = headerVardiyaGun;
 				String title = null;
 				if (vardiyaGun.getTatil() != null) {
 					Tatil tatil = vardiyaGun.getTatil();
@@ -1886,18 +1863,20 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			}
 			if (modelGoster)
 				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Çalışma Modeli");
-			XSSFCellStyle headerIzinTipi = (XSSFCellStyle) header.clone();
-			headerIzinTipi.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 255, (byte) 153, (byte) 204 }));
+			CellStyle headerIzinTipi = (XSSFCellStyle) header.clone();
+			ExcelUtil.setFillForegroundColor(headerIzinTipi, 255, 153, 204);
 
 			if (bordroPuantajEkranindaGoster) {
-				XSSFCellStyle headerSaat = (XSSFCellStyle) header.clone();
-				XSSFCellStyle headerIzin = (XSSFCellStyle) header.clone();
-				XSSFCellStyle headerBGun = (XSSFCellStyle) header.clone();
-				XSSFCellStyle headerBTGun = (XSSFCellStyle) header.clone();
-				headerSaat.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 146, (byte) 208, (byte) 62 }));
-				headerIzin.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 255, (byte) 255, (byte) 255 }));
-				headerBGun.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 255, (byte) 255, (byte) 0 }));
-				headerBTGun.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 236, (byte) 125, (byte) 125 }));
+				XSSFCellStyle headerSiyah = (XSSFCellStyle) ExcelUtil.getStyleHeader(wb);
+				headerSiyah.getFont().setColor(ExcelUtil.getXSSFColor(255, 255, 255));
+				XSSFCellStyle headerSaat = (XSSFCellStyle) headerSiyah.clone();
+				XSSFCellStyle headerIzin = (XSSFCellStyle) headerSiyah.clone();
+				XSSFCellStyle headerBGun = (XSSFCellStyle) headerSiyah.clone();
+				XSSFCellStyle headerBTGun = (XSSFCellStyle) (XSSFCellStyle) headerSiyah.clone();
+				ExcelUtil.setFillForegroundColor(headerSaat, 146, 208, 62);
+				ExcelUtil.setFillForegroundColor(headerIzin, 255, 255, 255);
+				ExcelUtil.setFillForegroundColor(headerBGun, 255, 255, 0);
+				ExcelUtil.setFillForegroundColor(headerBTGun, 236, 125, 125);
 
 				if (normalCalismaSaatKod) {
 					cell = ExcelUtil.getCell(sheet, row, col++, headerSaat);
@@ -1986,17 +1965,20 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				calismaModeli = personel.getCalismaModeli();
 			boolean help = helpPersonel(aylikPuantaj.getPdksPersonel());
 			++sayac;
-			XSSFCellStyle styleGenelCenter = null, styleGenel = null, styleGenelLeft = null;
+
 			try {
-				if (row % 2 == 0) {
-					styleGenel = (XSSFCellStyle) styleOdd.clone();
+				if (row % 2 != 0) {
+					styleTutarDay = styleTutarOddDay;
+					styleGenel = styleOdd;
+					styleGenelLeft = styleOdd;
+					styleGenelCenter = styleOddCenter;
 				} else {
-					styleGenel = (XSSFCellStyle) styleEven.clone();
+					styleTutarDay = styleTutarEvenDay;
+					styleGenel = styleEven;
+					styleGenelLeft = styleEven;
+					styleGenelCenter = styleEvenCenter;
 				}
-				styleGenelCenter = (XSSFCellStyle) styleGenel.clone();
-				styleGenelCenter.setAlignment(CellStyle.ALIGN_CENTER);
-				styleGenelLeft = (XSSFCellStyle) styleGenel.clone();
-				styleGenelLeft.setAlignment(CellStyle.ALIGN_LEFT);
+
 				boolean koyuRenkli = onayDurumList.size() == 2 && aylikPuantaj.isOnayDurum();
 				if (koyuRenkli) {
 					ExcelUtil.setFontNormalBold(wb, styleGenel);
@@ -2032,7 +2014,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				for (Iterator iterator = vardiyaList.iterator(); iterator.hasNext();) {
 					VardiyaGun pdksVardiyaGun = (VardiyaGun) iterator.next();
 					String styleText = pdksVardiyaGun.getAylikClassAdi(aylikPuantaj.getTrClass());
-					styleGenel = styleCalisma;
+					styleGenel = styleTutarDay;
 					if (styleText.equals(VardiyaGun.STYLE_CLASS_HAFTA_TATIL))
 						styleGenel = styleTatil;
 					else if (styleText.equals(VardiyaGun.STYLE_CLASS_IZIN))
@@ -2061,7 +2043,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 
 				}
 				if (sonucGoster && !help) {
-					if (row % 2 == 0)
+					if (row % 2 != 0)
 						styleGenel = styleOdd;
 					else {
 						styleGenel = styleEven;
@@ -2173,17 +2155,30 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		int son = col;
 		if (sonucGoster && sayac > 1) {
 			row += 2;
+			boolean renk = Boolean.TRUE;
 			for (VardiyaGun vardiyaGun : aylikVardiyaOzetList) {
 				Vardiya vardiya = vardiyaGun.getVardiya();
 				row++;
+				if (renk) {
+					styleGenelLeft = styleOdd;
+					styleGenelCenter = styleOddCenter;
+					styleTutarDay = styleTutarOddDay;
+
+				} else {
+					styleGenelLeft = styleEven;
+					styleGenelCenter = styleEvenCenter;
+					styleTutarDay = styleTutarEvenDay;
+
+				}
+				renk = !renk;
 				String bolumAdi = "";
 				Personel personel = vardiyaGun.getPersonel();
 				if (personel != null)
 					bolumAdi = personel.getPlanGrup2() != null ? personel.getPlanGrup2().getAciklama() : "Tanımsız";
 				col = 0;
-				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("");
-				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(bolumAdi);
-				Cell cellBaslik = ExcelUtil.getCell(sheet, row, col++, header);
+				ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+				ExcelUtil.getCell(sheet, row, col++, styleGenelLeft).setCellValue(bolumAdi);
+				Cell cellBaslik = ExcelUtil.getCell(sheet, row, col++, styleGenelCenter);
 				String title = vardiya.getVardiyaAciklama();
 				if (title != null) {
 					Comment comment1 = drawing.createCellComment(anchor);
@@ -2195,7 +2190,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				cellBaslik.setCellValue(vardiya.getKisaAciklama());
 
 				for (Integer ay : vardiya.getGunlukList()) {
-					Cell cell = ExcelUtil.getCell(sheet, row, col++, styleCenter);
+					Cell cell = ExcelUtil.getCell(sheet, row, col++, styleTutarDay);
 					cell.setCellValue(ay != 0 ? ay.toString() : "");
 				}
 			}
@@ -2383,7 +2378,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					}
 
 					if (!helpPersonel(personelAylikPuantaj.getPdksPersonel()))
-						ortakIslemler.aylikPlanSureHesapla(personelAylikPuantaj, false, yemekAraliklari, tatilGunleriMap, session);
+						ortakIslemler.aylikPlanSureHesapla(true, personelAylikPuantaj, false, tatilGunleriMap, session);
 				}
 			} catch (Exception ee) {
 				logger.info(ee.getMessage());
@@ -3011,6 +3006,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 
 			pdksVardiyaGun.setKullaniciYetkili(kullaniciYetkili);
 			pdksVardiyaGun.setDonemAcik(donemAcik);
+			List<YemekIzin> yemekList = pdksVardiyaGun.getYemekList();
+
 			if (pdksVardiyaGun.isAyinGunu() && aksamVardiyaBaslangicZamani != null && aksamVardiyaBitisZamani != null && pdksVardiyaGun.getIslemVardiya() != null && pdksVardiyaGun.getIslemVardiya().isAksamVardiyasi()) {
 				Date cikisZaman = pdksVardiyaGun.getIslemVardiya().getVardiyaBitZaman();
 				Date girisZaman = pdksVardiyaGun.getIslemVardiya().getVardiyaBasZaman();
@@ -3018,8 +3015,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					continue;
 				if (!(girisZaman.getTime() <= aksamVardiyaBitisZamani.getTime() && cikisZaman.getTime() >= aksamVardiyaBaslangicZamani.getTime()))
 					continue;
-				if (yemekList == null)
-					yemekList = ortakIslemler.getYemekList(session);
+
 				if (girisZaman.before(aksamVardiyaBaslangicZamani))
 					girisZaman = aksamVardiyaBaslangicZamani;
 				if (cikisZaman.after(aksamVardiyaBitisZamani))
@@ -3107,7 +3103,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		}
 
 		if (haftaCalismaSuresi > 0)
-			ortakIslemler.aylikPlanSureHesapla(aylikPuantaj, false, null, tatilGunleriMap, session);
+			ortakIslemler.aylikPlanSureHesapla(false, aylikPuantaj, false, tatilGunleriMap, session);
 
 		aylikPuantaj.setAksamVardiyaSaatSayisi(aksamVardiyaSaatSayisi);
 		aylikPuantaj.setAksamVardiyaSayisi(aksamVardiyaSayisi);
@@ -3203,7 +3199,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			plan.getVardiyaGunMap().clear();
 		boolean durum = !vardiyalarMap.isEmpty();
 		if (!helpPersonel(personelAylikPuantaj.getPdksPersonel()))
-			ortakIslemler.aylikPlanSureHesapla(personelAylikPuantaj, false, yemekAraliklari, tatilGunleriMap, session);
+			ortakIslemler.aylikPlanSureHesapla(true, personelAylikPuantaj, false, tatilGunleriMap, session);
 		TreeMap<Long, VardiyaGun> mesaiMap = new TreeMap<Long, VardiyaGun>();
 		for (VardiyaGun pdksVardiyaGun : personelAylikPuantaj.getVardiyalar()) {
 			if (pdksVardiyaGun.isGuncellendi() || pdksVardiyaGun.getId() == null) {
@@ -3410,7 +3406,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				if (tekrarOku && !baskaKayitVar)
 					fillAylikVardiyaPlanList();
 				else if (!helpPersonel(personelAylikPuantaj.getPdksPersonel()))
-					ortakIslemler.aylikPlanSureHesapla(personelAylikPuantaj, true, yemekAraliklari, tatilGunleriMap, session);
+					ortakIslemler.aylikPlanSureHesapla(true, personelAylikPuantaj, true, tatilGunleriMap, session);
 				aylikVardiyaOzetOlustur();
 			}
 
@@ -5264,7 +5260,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		gorevYeriGirisDurum = ortakIslemler.getParameterKey("uygulamaTipi").equals("H") && ortakIslemler.getParameterKey("gorevYeriGiris").equals("1");
 		departmanBolumAyni = Boolean.FALSE;
 		fazlaMesaiTalepVar = planGirisi && aramaSecenekleri.getSirket() != null && aramaSecenekleri.getSirket().isFazlaMesaiTalepGirer() && aramaSecenekleri.getSirket().getDepartman().isFazlaMesaiTalepGirer();
-		yemekList = null;
 		modelGoster = Boolean.FALSE;
 		sanalPersonelAciklama = ortakIslemler.sanalPersonelAciklama();
 		String aksamBordroBasZamani = ortakIslemler.getParameterKey("aksamBordroBasZamani"), aksamBordroBitZamani = ortakIslemler.getParameterKey("aksamBordroBitZamani");
@@ -5280,7 +5275,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		gunSec = Boolean.FALSE;
 		DepartmanDenklestirmeDonemi denklestirmeDonemi = new DepartmanDenklestirmeDonemi(), denklestirmeDonemiGecenAy = new DepartmanDenklestirmeDonemi();
 		HashMap fields = new HashMap();
-		yemekAraliklari = ortakIslemler.getYemekList(session);
 		sicilNo = ortakIslemler.getSicilNo(sicilNo);
 		if (aramaSecenekleri.getSirketId() != null) {
 			fields.clear();
@@ -5655,7 +5649,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 						iterator.remove();
 
 				}
-
 				fields.clear();
 				fields.put(PdksEntityController.MAP_KEY_MAP, "getVardiyaGunId");
 				fields.put("vardiyaGun", vardiyaGunList);
@@ -5701,6 +5694,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				}
 				TreeMap<Long, List> bagliIdMap = new TreeMap<Long, List>();
 				if (!vardiyaGunList.isEmpty()) {
+					List<YemekIzin> yemekGenelList = ortakIslemler.getYemekList(session);
+					ortakIslemler.setVardiyaYemekList(vardiyaGunList, yemekGenelList);
 					fazlaMesaiTalepVar = false;
 					List<Long> vardiyaIdList = new ArrayList<Long>();
 					for (VardiyaGun vardiyaGun : vardiyaGunList) {
@@ -6177,7 +6172,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					try {
 						if (gecenAylikPuantaj.getPersonelDenklestirmeAylik() != null && !helpPersonel(personel)) {
 							gecenAylikPuantaj.setCalismaModeliAy(gecenAylikPuantaj.getPersonelDenklestirmeAylik().getCalismaModeliAy());
-							ortakIslemler.aylikPlanSureHesapla(gecenAylikPuantaj, false, yemekAraliklari, tatilGunleriMap, session);
+							ortakIslemler.aylikPlanSureHesapla(true, gecenAylikPuantaj, false, tatilGunleriMap, session);
 						}
 
 					} catch (Exception e) {
@@ -6224,7 +6219,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 						aylikPuantaj.setCalismaModeliAy(personelDenklestirme.getCalismaModeliAy());
 						CalismaModeli calismaModeli = personelDenklestirme.getCalismaModeliAy().getCalismaModeli();
 						if (!helpPersonel(personel))
-							ortakIslemler.aylikPlanSureHesapla(aylikPuantaj, denklestirmeAyDurum, yemekAraliklari, tatilGunleriMap, session);
+							ortakIslemler.aylikPlanSureHesapla(true, aylikPuantaj, denklestirmeAyDurum, tatilGunleriMap, session);
 
 						if (denklestirmeAy.getSure() == 0.0d) {
 							Double genelSaatToplami = aylikPuantaj.getSaatToplami();
@@ -6237,7 +6232,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 							denklestirmeAy.setGuncellemeTarihi(new Date());
 							denklestirmeAy.setGuncelleyenUser(sistemUser);
 							pdksEntityController.saveOrUpdate(session, entityManager, denklestirmeAy);
-							ortakIslemler.aylikPlanSureHesapla(aylikPuantaj, denklestirmeAyDurum, yemekAraliklari, tatilGunleriMap, session);
+							ortakIslemler.aylikPlanSureHesapla(true, aylikPuantaj, denklestirmeAyDurum, tatilGunleriMap, session);
 							flush = true;
 						}
 						if (!denklestirmeAyDurum) {
@@ -6549,14 +6544,15 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				e.printStackTrace();
 			}
 		}
-		gerceklesenMesaiKod = bordroPuantajEkranindaGoster == false || baslikMap.containsKey(ortakIslemler.gerceklesenMesaiKod());
-		devredenBakiyeKod = bordroPuantajEkranindaGoster == false || baslikMap.containsKey(ortakIslemler.devredenBakiyeKod());
-		devredenMesaiKod = bordroPuantajEkranindaGoster == false || baslikMap.containsKey(ortakIslemler.devredenMesaiKod());
-		ucretiOdenenKod = bordroPuantajEkranindaGoster == false || baslikMap.containsKey(ortakIslemler.ucretiOdenenKod());
-		normalCalismaSaatKod = bordroPuantajEkranindaGoster || baslikMap.containsKey(ortakIslemler.normalCalismaSaatKod());
-		haftaTatilCalismaSaatKod = bordroPuantajEkranindaGoster || baslikMap.containsKey(ortakIslemler.haftaTatilCalismaSaatKod());
-		resmiTatilCalismaSaatKod = bordroPuantajEkranindaGoster || baslikMap.containsKey(ortakIslemler.resmiTatilCalismaSaatKod());
-		izinSureSaatKod = bordroPuantajEkranindaGoster || baslikMap.containsKey(ortakIslemler.izinSureSaatKod());
+		boolean saatlikCalismaVar = ortakIslemler.getParameterKey("saatlikCalismaVar").equals("1");
+		gerceklesenMesaiKod = saatlikCalismaVar == false || bordroPuantajEkranindaGoster == false || baslikMap.containsKey(ortakIslemler.gerceklesenMesaiKod());
+		devredenBakiyeKod = saatlikCalismaVar == false || bordroPuantajEkranindaGoster == false || baslikMap.containsKey(ortakIslemler.devredenBakiyeKod());
+		devredenMesaiKod = saatlikCalismaVar == false || bordroPuantajEkranindaGoster == false || baslikMap.containsKey(ortakIslemler.devredenMesaiKod());
+		ucretiOdenenKod = saatlikCalismaVar == false || bordroPuantajEkranindaGoster == false || baslikMap.containsKey(ortakIslemler.ucretiOdenenKod());
+		normalCalismaSaatKod = (saatlikCalismaVar && bordroPuantajEkranindaGoster) || baslikMap.containsKey(ortakIslemler.normalCalismaSaatKod());
+		haftaTatilCalismaSaatKod = (saatlikCalismaVar && bordroPuantajEkranindaGoster) || (baslikMap.containsKey(ortakIslemler.haftaTatilCalismaSaatKod()));
+		resmiTatilCalismaSaatKod = (saatlikCalismaVar && bordroPuantajEkranindaGoster) || (baslikMap.containsKey(ortakIslemler.resmiTatilCalismaSaatKod()));
+		izinSureSaatKod = (saatlikCalismaVar && bordroPuantajEkranindaGoster) || (baslikMap.containsKey(ortakIslemler.izinSureSaatKod()));
 		normalCalismaGunKod = bordroPuantajEkranindaGoster && baslikMap.containsKey(ortakIslemler.normalCalismaGunKod());
 		haftaTatilCalismaGunKod = bordroPuantajEkranindaGoster && baslikMap.containsKey(ortakIslemler.haftaTatilCalismaGunKod());
 		resmiTatilCalismaGunKod = bordroPuantajEkranindaGoster && baslikMap.containsKey(ortakIslemler.resmiTatilCalismaGunKod());
@@ -7897,7 +7893,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		seciliDurum = false;
 
 		departmanBolumAyni = Boolean.FALSE;
-		yemekList = null;
 		LinkedHashMap<String, Object> lastMap = new LinkedHashMap<String, Object>();
 		Long departmanId = aramaSecenekleri.getDepartmanId(), sirketId = aramaSecenekleri.getSirketId(), tesisId = aramaSecenekleri.getTesisId(), seciliEkSaha3Id = aramaSecenekleri.getEkSaha3Id();
 		if (sirketId != null || seciliEkSaha3Id != null) {
@@ -8283,7 +8278,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		try {
 
 			Sheet sheet = ExcelUtil.createSheet(wb, "Tüm Talepler", Boolean.TRUE);
-			XSSFCellStyle styleTutar = (XSSFCellStyle) ExcelUtil.getStyleData(wb);
+			CellStyle styleTutar = ExcelUtil.getStyleData(wb);
 			styleTutar.setAlignment(CellStyle.ALIGN_RIGHT);
 			CellStyle style = ExcelUtil.getStyleData(wb);
 			CellStyle styleCenter = ExcelUtil.getStyleData(wb);
@@ -9006,7 +9001,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		if (aylikPuantajDosyaList == null)
 			aylikPuantajDosyaList = new ArrayList<AylikPuantaj>();
 		boolean fileImportDurum = userHome.hasPermission("vardiyaPlani", "fileImportPlan");
-		if ((fileImportDurum || (ikRole && ortakIslemler.getParameterKey("fileImport").equals("1"))) && ay > 0 && aramaSecenekleri.getSirketId() != null) {
+		String fileImportStr = ortakIslemler.getParameterKey("fileImport");
+		if (ay > 0 && aramaSecenekleri.getSirketId() != null && (fileImportDurum || fileImportStr.equals("1") || (ikRole && fileImportStr.equalsIgnoreCase("ik")))) {
 			Calendar cal = Calendar.getInstance();
 			cal.add(Calendar.MONTH, 1);
 			int donem = (cal.get(Calendar.YEAR) * 100) + cal.get(Calendar.MONTH) + 1;
@@ -10175,14 +10171,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		this.sutIzniGoster = sutIzniGoster;
 	}
 
-	public List<YemekIzin> getYemekAraliklari() {
-		return yemekAraliklari;
-	}
-
-	public void setYemekAraliklari(List<YemekIzin> yemekAraliklari) {
-		this.yemekAraliklari = yemekAraliklari;
-	}
-
 	public TreeMap<String, VardiyaGun> getVardiyalarMap() {
 		return vardiyalarMap;
 	}
@@ -10481,14 +10469,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 
 	public void setBitTarihStr(String bitTarihStr) {
 		this.bitTarihStr = bitTarihStr;
-	}
-
-	public List<YemekIzin> getYemekList() {
-		return yemekList;
-	}
-
-	public void setYemekList(List<YemekIzin> yemekList) {
-		this.yemekList = yemekList;
 	}
 
 	public Boolean getDepartmanBolumAyni() {

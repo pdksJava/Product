@@ -15,13 +15,11 @@ import javax.faces.model.SelectItem;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
-import org.apache.poi.hssf.usermodel.HSSFCellStyle;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
@@ -480,19 +478,19 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 				List<PersonelDenklestirmeBordro> borDenklestirmeBordroList = pdksEntityController.getObjectBySQLList(sb, fields, PersonelDenklestirmeBordro.class);
 				if (!borDenklestirmeBordroList.isEmpty()) {
 					TreeMap<Long, PersonelDenklestirmeBordro> idMap = new TreeMap<Long, PersonelDenklestirmeBordro>();
-
+					boolean saatlikCalismaVar = ortakIslemler.getParameterKey("saatlikCalismaVar").equals("1");
 					for (PersonelDenklestirmeBordro personelDenklestirmeBordro : borDenklestirmeBordroList) {
 						PersonelDenklestirme personelDenklestirme = personelDenklestirmeBordro.getPersonelDenklestirme();
-
-						if (!normalGunSaatDurum)
-							normalGunSaatDurum = personelDenklestirmeBordro.getSaatNormal() != null && personelDenklestirmeBordro.getSaatNormal().doubleValue() > 0.0d;
-						if (!haftaTatilSaatDurum)
-							haftaTatilSaatDurum = personelDenklestirmeBordro.getSaatHaftaTatil() != null && personelDenklestirmeBordro.getSaatHaftaTatil().doubleValue() > 0.0d;
-						if (!resmiTatilSaatDurum)
-							resmiTatilSaatDurum = personelDenklestirmeBordro.getSaatResmiTatil() != null && personelDenklestirmeBordro.getSaatResmiTatil().doubleValue() > 0.0d;
-						if (!izinSaatDurum)
-							izinSaatDurum = personelDenklestirmeBordro.getSaatIzin() != null && personelDenklestirmeBordro.getSaatIzin().doubleValue() > 0.0d;
-
+						if (saatlikCalismaVar) {
+							if (!normalGunSaatDurum)
+								normalGunSaatDurum = personelDenklestirmeBordro.getSaatNormal() != null && personelDenklestirmeBordro.getSaatNormal().doubleValue() > 0.0d;
+							if (!haftaTatilSaatDurum)
+								haftaTatilSaatDurum = personelDenklestirmeBordro.getSaatHaftaTatil() != null && personelDenklestirmeBordro.getSaatHaftaTatil().doubleValue() > 0.0d;
+							if (!resmiTatilSaatDurum)
+								resmiTatilSaatDurum = personelDenklestirmeBordro.getSaatResmiTatil() != null && personelDenklestirmeBordro.getSaatResmiTatil().doubleValue() > 0.0d;
+							if (!izinSaatDurum)
+								izinSaatDurum = personelDenklestirmeBordro.getSaatIzin() != null && personelDenklestirmeBordro.getSaatIzin().doubleValue() > 0.0d;
+						}
 						if (!artikGunDurum)
 							artikGunDurum = personelDenklestirmeBordro.getArtikAdet() != null && personelDenklestirmeBordro.getArtikAdet().doubleValue() > 0.0d;
 						if (!resmiTatilGunDurum)
@@ -697,28 +695,27 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 			Workbook wb = new XSSFWorkbook();
 			sheet = ExcelUtil.createSheet(wb, PdksUtil.setTurkishStr(PdksUtil.convertToDateString(basGun, " MMMMM yyyy")) + " Liste", Boolean.TRUE);
 			CellStyle style = ExcelUtil.getStyleData(wb);
-			CellStyle styleCenter = ExcelUtil.getStyleData(wb);
-			styleCenter.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+			CellStyle styleCenter = ExcelUtil.getStyleDataCenter(wb);
 			XSSFCellStyle header = (XSSFCellStyle) ExcelUtil.getStyleHeader(wb);
-			header.setFillPattern(CellStyle.SOLID_FOREGROUND);
-			header.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 156, (byte) 192, (byte) 223 }));
 			tutarStyle = ExcelUtil.getCellStyleTutar(wb);
 			numberStyle = ExcelUtil.getCellStyleTutar(wb);
-			XSSFCellStyle headerSaat = (XSSFCellStyle) header.clone();
-			XSSFCellStyle headerIzin = (XSSFCellStyle) header.clone();
-			XSSFCellStyle headerBGun = (XSSFCellStyle) header.clone();
-			XSSFCellStyle headerBTGun = (XSSFCellStyle) header.clone();
-			headerSaat.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 146, (byte) 208, (byte) 62 }));
-			headerIzin.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 255, (byte) 255, (byte) 255 }));
-			headerBGun.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 255, (byte) 255, (byte) 0 }));
-			headerBTGun.setFillForegroundColor(new XSSFColor(new byte[] { (byte) 236, (byte) 125, (byte) 125 }));
+			XSSFCellStyle headerSiyah = (XSSFCellStyle) ExcelUtil.getStyleHeader(wb);
+			headerSiyah.getFont().setColor(ExcelUtil.getXSSFColor(255, 255, 255));
+			XSSFCellStyle headerSaat = (XSSFCellStyle) headerSiyah.clone();
+			XSSFCellStyle headerIzin = (XSSFCellStyle) headerSiyah.clone();
+			XSSFCellStyle headerBGun = (XSSFCellStyle) headerSiyah.clone();
+			XSSFCellStyle headerBTGun = (XSSFCellStyle) (XSSFCellStyle) headerSiyah.clone();
+			ExcelUtil.setFillForegroundColor(headerSaat, 146, 208, 62);
+			ExcelUtil.setFillForegroundColor(headerIzin, 255, 255, 255);
+			ExcelUtil.setFillForegroundColor(headerBGun, 255, 255, 0);
+			ExcelUtil.setFillForegroundColor(headerBTGun, 236, 125, 125);
 			DataFormat df = wb.createDataFormat();
 			numberStyle.setDataFormat(df.getFormat("###"));
 			int row = 0, col = 0;
 			for (Iterator iterator = bordroAlanlari.iterator(); iterator.hasNext();) {
 				Tanim tanim = (Tanim) iterator.next();
 				String kodu = tanim.getKodu();
-				XSSFCellStyle baslikHeader = null;
+				CellStyle baslikHeader = null;
 				if (kodu.startsWith(COL_TESIS) && tesisGoster == false) {
 					iterator.remove();
 					continue;
