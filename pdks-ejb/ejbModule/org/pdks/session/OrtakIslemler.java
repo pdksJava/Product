@@ -224,6 +224,196 @@ public class OrtakIslemler implements Serializable {
 	}
 
 	/**
+	 * @param date
+	 * @param vardiyaGunList
+	 * @param bolumAciklama
+	 * @param wb
+	 */
+	public void vardiyaHareketExcel(Date date, List<VardiyaGun> vardiyaGunList, String bolumAciklama, Workbook wb) {
+		boolean tesisDurum = getListTesisDurum(vardiyaGunList);
+		Sheet sheetHareket = ExcelUtil.createSheet(wb, "Hareket  Listesi", false);
+		CellStyle header = ExcelUtil.getStyleHeader(wb);
+		CellStyle styleOdd = ExcelUtil.getStyleOdd(null, wb);
+		CellStyle styleOddCenter = ExcelUtil.getStyleOdd(ExcelUtil.ALIGN_CENTER, wb);
+		CellStyle styleOddDateTime = ExcelUtil.getStyleOdd(ExcelUtil.FORMAT_DATETIME, wb);
+		CellStyle styleEven = ExcelUtil.getStyleEven(null, wb);
+		CellStyle styleEvenCenter = ExcelUtil.getStyleEven(ExcelUtil.ALIGN_CENTER, wb);
+		CellStyle styleEvenDateTime = ExcelUtil.getStyleEven(ExcelUtil.FORMAT_DATETIME, wb);
+		int col = 0, row = 0;
+		ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue(personelNoAciklama());
+		ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue("Personel");
+		ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue(yoneticiAciklama());
+		ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue(sirketAciklama());
+		if (tesisDurum)
+			ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue(tesisAciklama());
+		ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue(bolumAciklama);
+
+		ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue("Vardiya");
+		ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue("Kapı");
+		ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue("Zaman");
+
+		boolean manuelGiris = false, izinDurum = false, hareketDurum = false, fazlaMesaiDurum = false;
+		Date bugun = new Date();
+		int gunDurum = PdksUtil.tarihKarsilastirNumeric(date, bugun);
+		HashMap<Long, VardiyaGun> idMap = new HashMap<Long, VardiyaGun>();
+		for (Iterator iterator = vardiyaGunList.iterator(); iterator.hasNext();) {
+			VardiyaGun pdksVardiyaGun = (VardiyaGun) iterator.next();
+			Vardiya islemVardiya = pdksVardiyaGun.getIslemVardiya();
+			boolean sil = pdksVardiyaGun.getId() == null || islemVardiya == null;
+			try {
+				if (!sil) {
+					if (idMap.containsKey(pdksVardiyaGun.getId())) {
+						if (pdksVardiyaGun.getIzin() != null) {
+							VardiyaGun vardiyaGun = idMap.get(pdksVardiyaGun.getId());
+							vardiyaGun.setIzin(pdksVardiyaGun.getIzin());
+						}
+
+						sil = true;
+
+					} else
+						idMap.put(pdksVardiyaGun.getId(), pdksVardiyaGun);
+
+					if (pdksVardiyaGun.getVardiyaDate().before(date)) {
+						if (!(islemVardiya.getBitSaat() < islemVardiya.getBasSaat() && gunDurum == 0) || pdksVardiyaGun.getIzin() != null)
+							sil = true;
+
+					} else {
+						if (islemVardiya.getBitSaat() < islemVardiya.getBasSaat() && gunDurum == 0 && bugun.before(islemVardiya.getVardiyaBasZaman()))
+							sil = true;
+					}
+				}
+			} catch (Exception e) {
+				sil = true;
+				e.printStackTrace();
+			}
+
+			if (sil)
+				iterator.remove();
+
+		}
+
+		for (VardiyaGun calismaPlani : vardiyaGunList) {
+			if (calismaPlani.getHareketler() != null && !calismaPlani.getHareketler().isEmpty()) {
+				for (HareketKGS hareketKGS : calismaPlani.getHareketler()) {
+					if (hareketKGS.getIslem() != null) {
+						manuelGiris = true;
+						break;
+					}
+				}
+
+			}
+			if (izinDurum == false && calismaPlani.getVardiya() != null)
+				try {
+					izinDurum = calismaPlani.getVardiya().isCalisma() == false || calismaPlani.isIzinli();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
+			if (hareketDurum == false)
+				hareketDurum = calismaPlani.getHareketler() != null && !calismaPlani.getHareketler().isEmpty();
+			if (izinDurum && hareketDurum && fazlaMesaiDurum && manuelGiris)
+				break;
+		}
+		if (manuelGiris) {
+			ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue("İşlem Yapan");
+			ExcelUtil.getCell(sheetHareket, row, col++, header).setCellValue("İşlem Zamanı");
+		}
+		int rowHareket = 0, colHareket = 0;
+		boolean renk = true;
+		for (VardiyaGun calismaPlani : vardiyaGunList) {
+			Personel personel = calismaPlani.getPersonel();
+
+			List<HareketKGS> hareketler = calismaPlani.getHareketler();
+			Sirket sirket = null;
+			Vardiya vardiya = null;
+			if (personel != null) {
+				sirket = personel.getSirket();
+				vardiya = calismaPlani.getVardiya();
+			} else
+				continue;
+
+			CellStyle style = null, styleCenter = null, cellStyleDateTime = null;
+
+			if (renk) {
+				cellStyleDateTime = styleOddDateTime;
+				style = styleOdd;
+				styleCenter = styleOddCenter;
+			} else {
+				cellStyleDateTime = styleEvenDateTime;
+				style = styleEven;
+				styleCenter = styleEvenCenter;
+			}
+			renk = !renk;
+
+			if (hareketDurum) {
+				StringBuffer sb = new StringBuffer();
+				if (hareketler != null && !hareketler.isEmpty()) {
+					for (Iterator iterator = calismaPlani.getHareketler().iterator(); iterator.hasNext();) {
+						HareketKGS hareketKGS = (HareketKGS) iterator.next();
+						KapiKGS kapiKGS = hareketKGS.getKapiKGS();
+						String kapiAciklama = kapiKGS.getKapi() != null ? kapiKGS.getKapi().getAciklama() : kapiKGS.getAciklamaKGS();
+						sb.append(kapiAciklama + " --> " + authenticatedUser.dateTimeFormatla(hareketKGS.getOrjinalZaman()) + (iterator.hasNext() ? "\n" : ""));
+						rowHareket++;
+						colHareket = 0;
+						ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, styleCenter).setCellValue(personel.getPdksSicilNo());
+						ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(personel.getAdSoyad());
+						ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(personel.getYoneticisi() != null && personel.getYoneticisi().isCalisiyorGun(calismaPlani.getVardiyaDate()) ? personel.getYoneticisi().getAdSoyad() : "");
+						ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(sirket.getAd());
+						if (tesisDurum)
+							ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(personel.getTesis() != null ? personel.getTesis().getAciklama() : "");
+						ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(personel.getEkSaha3() != null ? personel.getEkSaha3().getAciklama() : "");
+						ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, styleCenter).setCellValue(vardiya.isCalisma() ? authenticatedUser.dateFormatla(calismaPlani.getVardiyaDate()) + " " + vardiya.getAciklama() : vardiya.getAdi());
+						ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(kapiAciklama);
+						ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, cellStyleDateTime).setCellValue(hareketKGS.getOrjinalZaman());
+						if (manuelGiris) {
+							PersonelHareketIslem islem = hareketKGS.getIslem();
+							if (islem != null) {
+								manuelGiris = true;
+								ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(islem.getOnaylayanUser() != null ? islem.getOnaylayanUser().getAdSoyad() : "");
+								if (islem.getOlusturmaTarihi() != null)
+									ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, cellStyleDateTime).setCellValue(islem.getOlusturmaTarihi());
+								else
+									ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue("");
+							} else {
+								ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue("");
+								ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue("");
+
+							}
+						}
+					}
+				} else {
+					rowHareket++;
+					colHareket = 0;
+					if (calismaPlani.isIzinli()) {
+						if (calismaPlani.getIzin() != null)
+							sb.append(calismaPlani.getIzin().getIzinTipiAciklama());
+						else
+							sb.append(calismaPlani.getVardiyaAdi());
+
+					} else if (calismaPlani.getVardiya().isCalisma())
+						sb.append("Devamsız");
+					ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, styleCenter).setCellValue(personel.getPdksSicilNo());
+					ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(personel.getAdSoyad());
+					ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(personel.getYoneticisi() != null && personel.getYoneticisi().isCalisiyorGun(calismaPlani.getVardiyaDate()) ? personel.getYoneticisi().getAdSoyad() : "");
+					ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(sirket.getAd());
+					if (tesisDurum)
+						ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(personel.getTesis() != null ? personel.getTesis().getAciklama() : "");
+					ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(personel.getEkSaha3() != null ? personel.getEkSaha3().getAciklama() : "");
+					ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, styleCenter).setCellValue(vardiya.isCalisma() ? authenticatedUser.dateFormatla(calismaPlani.getVardiyaDate()) + " " + vardiya.getAciklama() : vardiya.getAdi());
+					ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue(sb.toString());
+					ExcelUtil.getCell(sheetHareket, rowHareket, colHareket++, style).setCellValue("");
+				}
+				sb = null;
+
+			}
+
+		}
+		for (int i = 0; i < colHareket; i++)
+			sheetHareket.autoSizeColumn(i);
+
+	}
+
+	/**
 	 * @param izinList
 	 * @return
 	 * @throws Exception
@@ -10793,7 +10983,7 @@ public class OrtakIslemler implements Serializable {
 		}
 		Sheet sheet = ExcelUtil.createSheet(wb, "Personel Listesi", false);
 		CellStyle header = ExcelUtil.getStyleHeader(wb);
- 		CellStyle styleOdd = ExcelUtil.getStyleOdd(null, wb);
+		CellStyle styleOdd = ExcelUtil.getStyleOdd(null, wb);
 		CellStyle styleOddCenter = ExcelUtil.getStyleOdd(ExcelUtil.ALIGN_CENTER, wb);
 		CellStyle styleOddDate = ExcelUtil.getStyleOdd(ExcelUtil.FORMAT_DATE, wb);
 		CellStyle styleEven = ExcelUtil.getStyleEven(null, wb);
@@ -13003,6 +13193,8 @@ public class OrtakIslemler implements Serializable {
 
 						}
 						puantajData.setEksikCalismaSure(0.0d);
+						if (hesaplananDenklestirme.getDevredenSure() != 0.0d)
+							hesaplananDenklestirme.setDevredenSure(PdksUtil.setSureDoubleTypeRounded(hesaplananDenklestirme.getDevredenSure(), yarimYuvarla));
 						if (calismaModeli.isSaatlikOdeme()) {
 							if (hesaplananDenklestirme.getDevredenSure() < 0.0d) {
 

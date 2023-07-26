@@ -2279,10 +2279,21 @@ public class PdksUtil implements Serializable {
 				case 2:
 					fark = doubleValue.doubleValue() - doubleValue.longValue();
 					double arti = 0;
-					for (int i = 3; i >= 0; i--) {
-						arti = i * 0.25;
-						if (fark >= arti)
-							break;
+					if (fark > 0.0d) {
+						for (int i = 3; i >= 0; i--) {
+							arti = i * 0.25;
+							if (fark >= arti)
+								break;
+						}
+					} else if (fark < 0.0d) {
+						for (int i = 3; i >= 0; i--) {
+							arti = -i * 0.25;
+							if (fark < arti) {
+								arti -= 0.25;
+								break;
+							}
+
+						}
 					}
 					yuvarlanmisDeger = doubleValue.longValue() + arti;
 					break;
