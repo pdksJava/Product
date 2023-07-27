@@ -2261,7 +2261,7 @@ public class PdksUtil implements Serializable {
 		if (doubleValue != null) {
 			double d = doubleValue.doubleValue();
 			long l = doubleValue.longValue();
-			if (d > 0.0d && d > l) {
+			if (d != 0.0d && d != l) {
 				double fark = 0.0d;
 				switch (yarimYuvarla) {
 				case 1:

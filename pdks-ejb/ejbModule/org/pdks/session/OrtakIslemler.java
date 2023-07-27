@@ -12797,6 +12797,7 @@ public class OrtakIslemler implements Serializable {
 						List<VardiyaGun> haftaVardiyaGunler = pdksVardiyaHafta.getVardiyaGunler();
 						for (VardiyaGun pdksVardiyaGun : haftaVardiyaGunler) {
 							String key = pdksVardiyaGun.getVardiyaDateStr();
+
 							if (pdksVardiyaGun.isFiiliHesapla() == false) {
 								if (ilkGiris)
 									puantajData.setResmiTatilToplami(0.0d);
@@ -13098,9 +13099,8 @@ public class OrtakIslemler implements Serializable {
 									if (pdksVardiyaGun.getCalismaSuresi() > bugunResmiTatilSure)
 										toplamSure += pdksVardiyaGun.getCalismaSuresi() - bugunResmiTatilSure;
 								}
-								// calisilanSure +=
-								// pdksVardiyaGun.getCalismaSuresi();
-								toplamSure += PdksUtil.setSureDoubleTypeRounded(pdksVardiyaGun.getCalismaSuresi() - pdksVardiyaGun.getBayramCalismaSuresi(), pdksVardiyaGun.getYarimYuvarla());
+ 								double bayramFark = PdksUtil.setSureDoubleTypeRounded(pdksVardiyaGun.getCalismaSuresi() - pdksVardiyaGun.getBayramCalismaSuresi(), pdksVardiyaGun.getYarimYuvarla());
+								toplamSure += bayramFark;
 								calisilanSure += pdksVardiyaGun.getCalismaSuresi();
 								// bazSure += pdksVardiyaGun.getCalismaSuresi();
 
@@ -13139,8 +13139,10 @@ public class OrtakIslemler implements Serializable {
 							}
 						}
 						double sureToplam = toplamSure - calisilmayanSuresi;
-						if (sureToplam != 0.0d)
+						if (sureToplam != 0.0d) {
 							planlanSure += sureToplam;
+						}
+
 						toplamCalismaGunSayisi += calismaGunSayisi;
 
 						if (authenticatedUser.isAdmin() && toplamSure + izinSuresi != 0) {

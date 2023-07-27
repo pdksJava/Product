@@ -112,6 +112,7 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 		hareket.setKapiView(new KapiView());
 		hareket.setIslem(new PersonelHareketIslem());
 		setDate(new Date());
+		fillEkSahaTanim();
 		if (aramaSecenekleri == null)
 			aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
 		fillEkSahaTanim();
@@ -222,6 +223,7 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 	}
 
 	private void fillEkSahaTanim() {
+		ortakIslemler.fillEkSahaTanimAramaSecenekAta(session, Boolean.FALSE, Boolean.TRUE, aramaSecenekleri);
 		HashMap sonucMap = ortakIslemler.fillEkSahaTanim(session, Boolean.FALSE, null);
 		bolumAciklama = (String) sonucMap.get("bolumAciklama");
 	}
