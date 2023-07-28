@@ -909,7 +909,7 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 
 	public String vardiyaOzetExcel() {
 		try {
-			ByteArrayOutputStream baosDosya = vardiyaOzetExcellDevam();
+			ByteArrayOutputStream baosDosya = vardiyaOzetExcelDevam();
 			if (baosDosya != null) {
 				String dosyaAdi = "VardiyaOzetRaporu" + PdksUtil.convertToDateString(date, "yyyyMMdd") + ".xlsx";
 				PdksUtil.setExcelHttpServletResponse(baosDosya, dosyaAdi);
@@ -924,7 +924,7 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 		return "";
 	}
 
-	private ByteArrayOutputStream vardiyaOzetExcellDevam() {
+	private ByteArrayOutputStream vardiyaOzetExcelDevam() {
 		ByteArrayOutputStream baosDosya = null;
 		try {
 			Workbook wb = new XSSFWorkbook();

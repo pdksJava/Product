@@ -112,7 +112,7 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 		hareket.setKapiView(new KapiView());
 		hareket.setIslem(new PersonelHareketIslem());
 		setDate(new Date());
-		fillEkSahaTanim();
+
 		if (aramaSecenekleri == null)
 			aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
 		fillEkSahaTanim();
