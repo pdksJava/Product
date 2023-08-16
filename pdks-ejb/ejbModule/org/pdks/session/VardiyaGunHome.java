@@ -6990,7 +6990,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			ExcelUtil.getCell(sheet, row, col++, styleDateTime).setCellValue(fmt.getBaslangicZamani());
 			ExcelUtil.getCell(sheet, row, col++, styleDateTime).setCellValue(fmt.getBitisZamani());
 			Double sure = fmt.getMesaiSuresi();
-			ExcelUtil.getCell(sheet, row, col++, sure.doubleValue() > sure.doubleValue() ? styleTutar : styleNumber).setCellValue(sure);
+			ExcelUtil.getCell(sheet, row, col++, PdksUtil.isDoubleValueNotLong(sure) ? styleTutar : styleNumber).setCellValue(sure);
 			ExcelUtil.getCell(sheet, row, col++, style).setCellValue(fmt.getMesaiNeden() != null ? fmt.getMesaiNeden().getAciklama() : "");
 			ExcelUtil.getCell(sheet, row, col++, style).setCellValue(fmt.getOnayDurumAciklama());
 			ExcelUtil.getCell(sheet, row, col++, style).setCellValue(fmt.getOlusturanUser() != null ? fmt.getOlusturanUser().getAdSoyad() : "");
@@ -8431,7 +8431,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					ExcelUtil.getCell(sheet, row, col++, cellStyleDateTime).setCellValue(ft.getBaslangicZamani());
 					ExcelUtil.getCell(sheet, row, col++, cellStyleDateTime).setCellValue(ft.getBitisZamani());
 					Double sure = ft.getMesaiSuresi();
-					ExcelUtil.getCell(sheet, row, col++, sure.doubleValue() > sure.longValue() ? cellTutar : cellNumber).setCellValue(sure);
+					ExcelUtil.getCell(sheet, row, col++, PdksUtil.isDoubleValueNotLong(sure) ? cellTutar : cellNumber).setCellValue(sure);
 					String neden = ft.getMesaiNeden().getAciklama() + (ft.getAciklama() != null && ft.getAciklama().trim().length() > 0 ? "\nAçıklama : " + ft.getAciklama().trim() : "");
 					ExcelUtil.getCell(sheet, row, col++, style).setCellValue(ft.getOnayDurumAciklama());
 					ExcelUtil.getCell(sheet, row, col++, style).setCellValue(ft.getOlusturanUser().getAdSoyad());

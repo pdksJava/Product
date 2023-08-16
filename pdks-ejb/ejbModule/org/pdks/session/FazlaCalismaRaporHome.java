@@ -1,5 +1,6 @@
 package org.pdks.session;
 
+import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -20,7 +21,10 @@ import org.apache.log4j.Logger;
 import org.apache.poi.hssf.usermodel.HSSFFont;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.ClientAnchor;
+import org.apache.poi.ss.usermodel.Comment;
 import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.Drawing;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.RichTextString;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -43,16 +47,14 @@ import org.pdks.entity.AylikPuantaj;
 import org.pdks.entity.DenklestirmeAy;
 import org.pdks.entity.Departman;
 import org.pdks.entity.DepartmanDenklestirmeDonemi;
-import org.pdks.entity.FazlaMesaiTalep;
 import org.pdks.entity.Liste;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
-import org.pdks.entity.PersonelFazlaMesai;
 import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Tatil;
-import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGun;
+import org.pdks.entity.VardiyaSaat;
 import org.pdks.security.action.UserHome;
 import org.pdks.security.entity.User;
 
@@ -112,16 +114,18 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 
 	private List<SelectItem> aylar;
 
+	private Drawing drawing = null;
+	private ClientAnchor anchor;
 	private AylikPuantaj aylikPuantajDefault;
 
 	private TreeMap<String, Tanim> ekSahaTanimMap;
 
-	private String sanalPersonelAciklama, bolumAciklama, raporSecim;
-	private String sicilNo = "", excelDosyaAdi, tabAdi, tabAciklama;
+	private String sanalPersonelAciklama, bolumAciklama, raporSecim, raporAdi;
+	private String sicilNo = "", excelDosyaAdi;
 
 	private Long seciliEkSaha3Id, sirketId = null, departmanId, gorevTipiId, tesisId;
 
-	private Tanim gorevYeri, seciliBolum;
+	private Tanim gorevYeri, seciliBolum, ekSaha4Tanim;
 
 	private byte[] excelData;
 
@@ -130,11 +134,11 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 
 	private TreeMap<String, Tanim> fazlaMesaiMap;
 	private Date basTarih, bitTarih;
-	private List<VardiyaGun> vardiyaGunList;
+	private List<VardiyaGun> vardiyaGunList, vardiyaGunPerList;
 	private VardiyaGun vardiyaGun;
 	private Font fontBold, font;
-	private CellStyle header, styleOdd, styleOddCenter, styleOddTimeStamp, styleOddDate, styleOddTutar, styleOddNumber;
-	private CellStyle styleEven, styleEvenCenter, styleEvenTimeStamp, styleEvenDate, styleEvenTutar, styleEvenNumber;
+	private CellStyle header, styleOdd, styleOddCenter, styleOddTutar, styleOddNumber;
+	private CellStyle styleEven, styleEvenCenter, styleEvenTutar, styleEvenNumber;
 	private Session session;
 
 	@Override
@@ -173,13 +177,14 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 	public VardiyaGun vardiyaBul(AylikPuantaj aylikPuantaj, VardiyaGun islemVardiyaGun) {
 		vardiyaGun = null;
 		try {
-			if (aylikPuantaj.getVgMap().containsKey(islemVardiyaGun.getVardiyaDateStr()))
-				vardiyaGun = aylikPuantaj.getVgMap().get(islemVardiyaGun.getVardiyaDateStr());
+			String key = islemVardiyaGun.getVardiyaDateStr();
+			if (aylikPuantaj.getVgMap().containsKey(key))
+				vardiyaGun = aylikPuantaj.getVgMap().get(key);
 			if (vardiyaGun != null && !vardiyaGun.getDurum()) {
 				vardiyaGun.setVardiyaSaat(null);
 			}
 		} catch (Exception e) {
-			// TODO: handle exception
+
 		}
 
 		return vardiyaGun;
@@ -210,6 +215,8 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			raporList.add(new SelectItem("maxGunCalismaSaat", "Günlük Çalışmayı Aşanlar"));
 		if (!ortakIslemler.getParameterKey("maxHaftaCalismaSaat").equals(""))
 			raporList.add(new SelectItem("maxHaftaCalismaSaat", "Haftalık Çalışmayı Aşanlar"));
+		if (authenticatedUser.isAdmin() && !ortakIslemler.getParameterKey("maxToplamMesai").equals(""))
+			raporList.add(new SelectItem("maxToplamMesai", "Fazla Mesai Yapanlar"));
 		if (raporList.isEmpty())
 			raporSecim = null;
 		else if (raporSecim == null)
@@ -335,6 +342,16 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 						tesisIdStr = (String) veriLastMap.get("tesisId");
 					if (veriLastMap.containsKey("bolumId"))
 						gorevYeriIdStr = (String) veriLastMap.get("bolumId");
+					if (veriLastMap.containsKey("raporSecim")) {
+						String str = (String) veriLastMap.get("raporSecim");
+						for (SelectItem st : raporList) {
+							if (st.getValue().equals(str))
+								raporSecim = str;
+
+						}
+						raporSecim = (String) veriLastMap.get("raporSecim");
+					}
+
 					if ((authenticatedUser.isIK() || authenticatedUser.isAdmin()) && veriLastMap.containsKey("sicilNo"))
 						sicilNo = (String) veriLastMap.get("sicilNo");
 
@@ -476,10 +493,11 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 	}
 
 	public boolean veriDolu() {
-		return aylikPuantajList.size() > 0;
+		return aylikPuantajList.size() + vardiyaGunPerList.size() > 0;
 	}
 
 	public String listeTemizle() {
+		raporAdi = "";
 		if (aylikPuantajList == null)
 			aylikPuantajList = new ArrayList<AylikPuantaj>();
 		else
@@ -489,6 +507,11 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			vardiyaGunList = new ArrayList<VardiyaGun>();
 		else
 			vardiyaGunList.clear();
+
+		if (vardiyaGunPerList == null)
+			vardiyaGunPerList = new ArrayList<VardiyaGun>();
+		else
+			vardiyaGunPerList.clear();
 
 		talepGoster = false;
 		return "";
@@ -604,6 +627,23 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		boolean devam = true;
 		if (basTarih.getTime() <= bitTarih.getTime()) {
 			Date sonGun = PdksUtil.tariheGunEkleCikar(basTarih, maxFazlaCalismaGun);
+
+			if (!raporSecim.equals("maxToplamMesai")) {
+				Long gun = PdksUtil.tarihFarki(basTarih, bitTarih);
+				if (raporSecim.equals("maxGunCalismaSaat")) {
+					if (gun > 31) {
+						PdksUtil.addMessageAvailableWarn(" Bir aylık süreyi aşamazsınız!");
+						devam = false;
+					}
+				} else if (raporSecim.equals("maxHaftaCalismaSaat")) {
+					long mod = (gun.longValue() + 1) % 7;
+					if (gun > 31 || mod != 0) {
+						PdksUtil.addMessageAvailableWarn(" Bir aylık süreyi  aşamazsınız ve gün sayısı 7'nin katları olmalıdır!");
+						devam = false;
+					}
+				}
+
+			}
 			if (maxFazlaCalismaGun > 0 && sonGun.before(bitTarih)) {
 				PdksUtil.addMessageAvailableWarn(maxFazlaCalismaGun + " günden fazla işlem yapılmaz!");
 				devam = false;
@@ -663,16 +703,15 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 	 * @param denklestirmeDonemi
 	 */
 	public void fillPersonelDenklestirmeRaporDevam(AylikPuantaj aylikPuantajSablon, DepartmanDenklestirmeDonemi denklestirmeDonemi) {
-
+		session.clear();
 		fazlaMesaiVardiyaGun = null;
 		sanalPersonelAciklama = ortakIslemler.sanalPersonelAciklama();
 		departmanBolumAyni = Boolean.FALSE;
-
 		saveLastParameter();
 		departmanBolumAyni = sirket != null && sirket.isTesisDurumu() == false;
 		if (sicilNo != null)
 			sicilNo = sicilNo.trim();
-
+		listeTemizle();
 		try {
 			seciliBolum = null;
 
@@ -688,48 +727,114 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 						iterator.remove();
 				}
 			}
-			listeTemizle();
-
+			ekSaha4Tanim = null;
 			if (!personelList.isEmpty()) {
+				ekSaha4Tanim = ortakIslemler.getEkSaha4(null, sirketId, session);
 				List<Long> personelIdler = new ArrayList<Long>();
+				boolean ekSaha4Var = false;
+				TreeMap<Long, AylikPuantaj> puantajMap = new TreeMap<Long, AylikPuantaj>();
 				for (Personel personel : personelList) {
+					if (!ekSaha4Var)
+						ekSaha4Var = personel.getEkSaha4() != null;
 					AylikPuantaj aylikPuantaj = new AylikPuantaj();
+					aylikPuantaj.setSaatToplami(0.0d);
 					aylikPuantaj.setPdksPersonel(personel);
 					aylikPuantaj.setVgMap(new TreeMap<String, VardiyaGun>());
 					aylikPuantaj.setVardiyalar(new ArrayList<VardiyaGun>());
 					aylikPuantajList.add(aylikPuantaj);
 					personelIdler.add(personel.getId());
+					puantajMap.put(personel.getId(), aylikPuantaj);
 				}
-
-				TreeMap<String, VardiyaGun> varMap = ortakIslemler.getIslemVardiyalar(personelList, basTarih, bitTarih, false, session, false);
+				if (!ekSaha4Var)
+					ekSaha4Tanim = null;
 				Calendar cal = Calendar.getInstance();
-				cal.setTime(basTarih);
-				while (bitTarih.getTime() >= cal.getTime().getTime()) {
-					Date tarih = cal.getTime();
-					VardiyaGun gun = new VardiyaGun(null, null, tarih);
-					vardiyaGunList.add(gun);
-					String key = gun.getVardiyaDateStr();
-					for (AylikPuantaj aylikPuantaj : aylikPuantajList) {
-						Personel personel = aylikPuantaj.getPdksPersonel();
-						String vKey = (personel != null ? personel.getSicilNo() : "") + "_" + key;
-						VardiyaGun gun2 = varMap.containsKey(vKey) ? (VardiyaGun) varMap.get(vKey).clone() : new VardiyaGun(personel, null, tarih);
-						aylikPuantaj.getVgMap().put(key, gun2);
-						if (personel.getIseBaslamaTarihi().after(tarih) || personel.getSskCikisTarihi().before(tarih))
-							continue;
-						if (gun2.getId() != null)
-							aylikPuantaj.getVardiyalar().add(gun2);
-					}
-					cal.add(Calendar.DATE, 1);
+				if (raporSecim.equals("maxGunCalismaSaat") || raporSecim.equals("maxHaftaCalismaSaat")) {
+					TreeMap<String, VardiyaGun> varMap = ortakIslemler.getIslemVardiyalar(personelList, basTarih, bitTarih, false, session, false);
 
+					cal.setTime(basTarih);
+					while (bitTarih.getTime() >= cal.getTime().getTime()) {
+						Date tarih = cal.getTime();
+						VardiyaGun gun = new VardiyaGun(null, null, tarih);
+						vardiyaGunList.add(gun);
+						String key = gun.getVardiyaDateStr();
+						for (AylikPuantaj aylikPuantaj : aylikPuantajList) {
+							Personel personel = aylikPuantaj.getPdksPersonel();
+							String vKey = (personel != null ? personel.getSicilNo() : "") + "_" + key;
+							VardiyaGun gun2 = varMap.containsKey(vKey) ? (VardiyaGun) varMap.get(vKey).clone() : new VardiyaGun(personel, null, tarih);
+							aylikPuantaj.getVgMap().put(key, gun2);
+							gun2.setTdClass("");
+							if (personel.getIseBaslamaTarihi().after(tarih) || personel.getSskCikisTarihi().before(tarih))
+								continue;
+							if (gun2.getId() != null)
+								aylikPuantaj.getVardiyalar().add(gun2);
+						}
+						cal.add(Calendar.DATE, 1);
+
+					}
+				} else if (raporSecim.equals("maxToplamMesai")) {
+					StringBuffer sb = new StringBuffer();
+					sb.append("SP_GET_FAZLA_MESAI_VARDIYA");
+					LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<String, Object>();
+					linkedHashMap.put("perList", ortakIslemler.getListIdStr(personelIdler));
+					linkedHashMap.put("basTarih", PdksUtil.convertToDateString(basTarih, "yyyyMMdd"));
+					linkedHashMap.put("bitTarih", PdksUtil.convertToDateString(bitTarih, "yyyyMMdd"));
+					linkedHashMap.put("format", null);
+					if (session != null)
+						linkedHashMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+					List<VardiyaGun> list = null;
+					try {
+						list = pdksEntityController.execSPList(linkedHashMap, sb, VardiyaGun.class);
+					} catch (Exception e) {
+						list = new ArrayList<VardiyaGun>();
+					}
+					if (!list.isEmpty()) {
+						TreeMap<String, VardiyaGun> gunMap = new TreeMap<String, VardiyaGun>();
+						for (VardiyaGun gun : list) {
+							cal.setTime(gun.getVardiyaDate());
+							cal.set(Calendar.DATE, 1);
+							AylikPuantaj aylikPuantaj = puantajMap.get(gun.getPdksPersonel().getId());
+							aylikPuantaj.getVardiyalar().add(gun);
+							Date xVardiyaDate = PdksUtil.getDate(cal.getTime());
+							String key = PdksUtil.convertToDateString(xVardiyaDate, "yyyyMMdd");
+							if (!gunMap.containsKey(key))
+								gunMap.put(key, new VardiyaGun(null, null, xVardiyaDate));
+							TreeMap<String, VardiyaGun> vgMap = aylikPuantaj.getVgMap();
+							VardiyaGun vardiyaGunPer = null;
+							if (vgMap.containsKey(key)) {
+								vardiyaGunPer = vgMap.get(key);
+							} else {
+								vardiyaGunPer = new VardiyaGun(gun.getPdksPersonel(), null, xVardiyaDate);
+								VardiyaSaat vardiyaSaat = new VardiyaSaat();
+								vardiyaSaat.setCalismaSuresi(0.0d);
+								vardiyaGunPer.setVardiyaSaat(vardiyaSaat);
+								vgMap.put(key, vardiyaGunPer);
+							}
+							VardiyaSaat vardiyaSaat = vardiyaGunPer.getVardiyaSaat(), vardiyaSaatDB = gun.getVardiyaSaat();
+							double sure = vardiyaSaatDB.getCalismaSuresi() - vardiyaSaatDB.getNormalSure();
+							vardiyaSaat.setCalismaSuresi(vardiyaSaat.getCalismaSuresi() + sure);
+							aylikPuantaj.setSaatToplami(aylikPuantaj.getSaatToplami() + sure);
+						}
+						vardiyaGunList.addAll(new ArrayList<VardiyaGun>(gunMap.values()));
+						for (Iterator iterator = aylikPuantajList.iterator(); iterator.hasNext();) {
+							AylikPuantaj aylikPuantaj = (AylikPuantaj) iterator.next();
+							if (aylikPuantaj.getVgMap().isEmpty())
+								iterator.remove();
+						}
+						gunMap = null;
+					}
 				}
+
 				if (raporSecim.equals("maxGunCalismaSaat"))
 					maxGunCalismaSaatKontrol();
 				else if (raporSecim.equals("maxHaftaCalismaSaat"))
 					maxHaftaCalismaSaatKontrol();
-				else
+				else if (!raporSecim.equals("maxToplamMesai"))
 					aylikPuantajList.clear();
-				tabAdi = "onayx";
-				tabAciklama = "";
+				for (SelectItem st : raporList) {
+					if (st.getValue().equals(raporSecim))
+						raporAdi = st.getLabel() + " Raporu";
+
+				}
 				if (!aylikPuantajList.isEmpty()) {
 					TreeMap<String, Liste> listeMap = new TreeMap<String, Liste>();
 					for (Iterator iterator = aylikPuantajList.iterator(); iterator.hasNext();) {
@@ -757,13 +862,9 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 							aylikPuantajList.addAll(fazlaMesaiList);
 						}
 					}
-					tabAdi = "onay1";
-				}
-				for (SelectItem st : raporList) {
-					if (st.getValue().equals(tabAdi))
-						tabAciklama = st.getLabel();
 
 				}
+
 				talepGoster = false;
 
 			}
@@ -800,7 +901,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 						double saat = gun.getVardiyaSaat().getCalismaSuresi();
 						if (saat >= maxGunCalismaSaat) {
 							sil = false;
-							break;
+							gun.setTdClass("font-weight: bold; color: red;");
 						}
 					}
 
@@ -869,6 +970,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			lastMap.put("tesisId", "" + tesisId);
 		if (seciliEkSaha3Id != null)
 			lastMap.put("bolumId", "" + seciliEkSaha3Id);
+		lastMap.put("raporSecim", raporSecim);
 
 		if ((authenticatedUser.isIK() || authenticatedUser.isAdmin()) && sicilNo != null && sicilNo.trim().length() > 0)
 			lastMap.put("sicilNo", sicilNo.trim());
@@ -922,6 +1024,13 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 
 	public String fazlaMesaiExcel() {
 		try {
+			String gorevYeriAciklama = getExcelAciklama();
+			ByteArrayOutputStream baosDosya = fazlaMesaiExcelDevam(gorevYeriAciklama, aylikPuantajList, vardiyaGunPerList);
+
+			if (baosDosya != null) {
+				String dosyaAdi = raporSecim + "_" + gorevYeriAciklama + PdksUtil.convertToDateString(basTarih, "yyyyMMdd") + "_" + PdksUtil.convertToDateString(bitTarih, "yyyyMMdd") + ".xlsx";
+				PdksUtil.setExcelHttpServletResponse(baosDosya, dosyaAdi);
+			}
 		} catch (Exception e) {
 			logger.error("Pdks hata in : \n");
 			e.printStackTrace();
@@ -950,31 +1059,26 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 	 * @param list2
 	 * @return
 	 */
-	protected ByteArrayOutputStream fazlaMesaiExcelDevam(String gorevYeriAciklama, List<PersonelFazlaMesai> list1, List<PersonelFazlaMesai> list2) {
-
+	protected ByteArrayOutputStream fazlaMesaiExcelDevam(String gorevYeriAciklama, List<AylikPuantaj> list1, List<VardiyaGun> list2) {
 		ByteArrayOutputStream baos = null;
 		Workbook wb = new XSSFWorkbook();
-		if (talepGoster) {
-			fontBold = ExcelUtil.createFont(wb, (short) 9, ExcelUtil.FONT_NAME, HSSFFont.BOLDWEIGHT_BOLD);
-			font = ExcelUtil.createFont(wb, (short) 8, ExcelUtil.FONT_NAME, HSSFFont.BOLDWEIGHT_NORMAL);
-		}
+
+		fontBold = ExcelUtil.createFont(wb, (short) 9, ExcelUtil.FONT_NAME, HSSFFont.BOLDWEIGHT_BOLD);
+		font = ExcelUtil.createFont(wb, (short) 8, ExcelUtil.FONT_NAME, HSSFFont.BOLDWEIGHT_NORMAL);
+
 		header = ExcelUtil.getStyleHeader(wb);
 		styleOdd = ExcelUtil.getStyleOdd(null, wb);
 		styleOddCenter = ExcelUtil.getStyleOdd(ExcelUtil.ALIGN_CENTER, wb);
-		styleOddTimeStamp = ExcelUtil.getStyleOdd(ExcelUtil.FORMAT_DATETIME, wb);
-		styleOddDate = ExcelUtil.getStyleOdd(ExcelUtil.FORMAT_DATE, wb);
 		styleOddTutar = ExcelUtil.getStyleOdd(ExcelUtil.FORMAT_TUTAR, wb);
 		styleOddNumber = ExcelUtil.getStyleOdd(ExcelUtil.FORMAT_NUMBER, wb);
 		styleEven = ExcelUtil.getStyleEven(null, wb);
 		styleEvenCenter = ExcelUtil.getStyleEven(ExcelUtil.ALIGN_CENTER, wb);
-		styleEvenTimeStamp = ExcelUtil.getStyleEven(ExcelUtil.FORMAT_DATETIME, wb);
-		styleEvenDate = ExcelUtil.getStyleEven(ExcelUtil.FORMAT_DATE, wb);
 		styleEvenTutar = ExcelUtil.getStyleEven(ExcelUtil.FORMAT_TUTAR, wb);
 		styleEvenNumber = ExcelUtil.getStyleEven(ExcelUtil.FORMAT_NUMBER, wb);
-		if (!list1.isEmpty())
-			sayfaOlustur(true, list1, wb);
-		if (!list2.isEmpty())
-			sayfaOlustur(false, list2, wb);
+		if (list1 != null && !list1.isEmpty())
+			sayfaAylikPuantajOlustur(list1, wb);
+		if (list2 != null && !list2.isEmpty())
+			sayfaVardiyaOlustur(list2, wb);
 
 		try {
 
@@ -991,26 +1095,35 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 
 	}
 
+	private void sayfaVardiyaOlustur(List<VardiyaGun> list, Workbook wb) {
+
+	}
+
 	/**
 	 * @param onayDurum
 	 * @param list
 	 * @param wb
 	 */
-	private void sayfaOlustur(boolean onayDurum, List<PersonelFazlaMesai> list, Workbook wb) {
-		Sheet sheet = ExcelUtil.createSheet(wb, onayDurum ? "Dönemsel Fazla Çalışma" : "Fazla Çalışma İptal", Boolean.TRUE);
+	private void sayfaAylikPuantajOlustur(List<AylikPuantaj> list, Workbook wb) {
+		boolean maxToplamMesaiDurum = raporSecim.equals("maxToplamMesai");
+		Sheet sheet = ExcelUtil.createSheet(wb, raporAdi, Boolean.TRUE);
 		CreationHelper factory = null;
+		drawing = sheet.createDrawingPatriarch();
 		// Drawing drawing = null;
 		// ClientAnchor anchor = null;
-		if (onayDurum && talepGoster) {
-			// drawing = sheet.createDrawingPatriarch();
-			factory = wb.getCreationHelper();
-			// anchor = factory.createClientAnchor();
-		}
+
+		// drawing = sheet.createDrawingPatriarch();
+		factory = wb.getCreationHelper();
+		anchor = factory.createClientAnchor();
+		// anchor = factory.createClientAnchor();
 
 		TreeMap<String, String> sirketMap = new TreeMap<String, String>();
+		List<VardiyaGun> vardiyaGunPersonelList = new ArrayList<VardiyaGun>();
 		for (Iterator iter = list.iterator(); iter.hasNext();) {
-			PersonelFazlaMesai personelFazlaMesai = (PersonelFazlaMesai) iter.next();
-			Personel personel = personelFazlaMesai.getVardiyaGun().getPdksPersonel();
+			AylikPuantaj aylikPuantaj = (AylikPuantaj) iter.next();
+			if (maxToplamMesaiDurum && aylikPuantaj.getVardiyalar() != null && !aylikPuantaj.getVardiyalar().isEmpty())
+				vardiyaGunPersonelList.addAll(aylikPuantaj.getVardiyalar());
+			Personel personel = aylikPuantaj.getPdksPersonel();
 			String tekSirketTesis = (personel.getSirket() != null ? personel.getSirket().getId() : "") + "_" + (personel.getTesis() != null ? personel.getTesis().getId() : "");
 			String tekSirketTesisAdi = (personel.getSirket() != null ? personel.getSirket().getAd() : "") + " " + (personel.getTesis() != null ? personel.getTesis().getAciklama() : "");
 			sirketMap.put(tekSirketTesis, tekSirketTesisAdi);
@@ -1020,47 +1133,51 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.personelNoAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Adı Soyadı");
+		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.sirketAciklama());
+		boolean tesisVar = tesisId == null && tesisList != null && tesisList.size() > 0;
+		if (tesisVar)
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.tesisAciklama());
 		if (seciliEkSaha3Id == null)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(bolumAciklama);
+		if (ekSaha4Tanim != null)
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ekSaha4Tanim.getAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.yoneticiAciklama());
-		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Vardiya Tarihi");
-		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Vardiya");
-		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Başlangıç Zamanı");
-		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Bitiş Zamanı");
-		if (onayDurum)
-			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Süre (Saat)");
-
-		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(onayDurum ? "Onay" : "Red" + " Nedeni");
-		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İşlem Yapan");
-		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İşlem Zamanı");
-		if (factory != null)
-			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Talep Bilgi");
+		for (VardiyaGun gun : vardiyaGunList) {
+			if (maxToplamMesaiDurum == false)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(PdksUtil.convertToDateString(gun.getVardiyaDate(), "d") + "\n" + PdksUtil.convertToDateString(gun.getVardiyaDate(), "EEE"));
+			else
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(PdksUtil.convertToDateString(gun.getVardiyaDate(), "yyyy") + "\n" + PdksUtil.convertToDateString(gun.getVardiyaDate(), "MMM"));
+		}
+		if (maxToplamMesaiDurum && vardiyaGunList.size() > 1)
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Toplam Fazla Çalışma");
 		boolean renk = true;
+		CellStyle styleRedOddTutar = ExcelUtil.getStyleOdd(ExcelUtil.FORMAT_TUTAR, wb);
+		CellStyle styleRedOddNumber = ExcelUtil.getStyleOdd(ExcelUtil.FORMAT_NUMBER, wb);
+		CellStyle styleRedEvenTutar = ExcelUtil.getStyleEven(ExcelUtil.FORMAT_TUTAR, wb);
+		CellStyle styleRedEvenNumber = ExcelUtil.getStyleEven(ExcelUtil.FORMAT_NUMBER, wb);
+
+		ExcelUtil.setFontColor(styleRedOddTutar, Color.RED);
+		ExcelUtil.setFontColor(styleRedOddNumber, Color.RED);
+		ExcelUtil.setFontColor(styleRedEvenTutar, Color.RED);
+		ExcelUtil.setFontColor(styleRedEvenNumber, Color.RED);
 		for (Iterator iter = list.iterator(); iter.hasNext();) {
-			PersonelFazlaMesai personelFazlaMesai = (PersonelFazlaMesai) iter.next();
-			FazlaMesaiTalep fmt = null;
-			if (factory != null)
-				fmt = personelFazlaMesai.getFazlaMesaiTalep();
-
-			VardiyaGun vardiyaGun = personelFazlaMesai.getVardiyaGun();
-			Vardiya vardiya = vardiyaGun.getVardiya();
-			Personel personel = vardiyaGun.getPdksPersonel();
-
-			CellStyle styleCenter = null, styleGenel = null, styleTutar = null, styleNumber = null, styleZaman = null, styleDate = null;
+			AylikPuantaj aylikPuantaj = (AylikPuantaj) iter.next();
+			Personel personel = aylikPuantaj.getPdksPersonel();
+			CellStyle styleCenter = null, styleGenel = null, styleDouble = null, styleNumber = null, styleRedDouble = null, styleRedNumber = null;
 			if (renk) {
 				styleGenel = styleOdd;
 				styleCenter = styleOddCenter;
-				styleDate = styleOddDate;
-				styleZaman = styleOddTimeStamp;
+				styleDouble = styleOddTutar;
 				styleNumber = styleOddNumber;
-				styleTutar = styleOddTutar;
+				styleRedDouble = styleRedOddTutar;
+				styleRedNumber = styleRedOddNumber;
 			} else {
 				styleGenel = styleEven;
 				styleCenter = styleEvenCenter;
-				styleDate = styleEvenDate;
-				styleZaman = styleEvenTimeStamp;
+				styleDouble = styleEvenTutar;
 				styleNumber = styleEvenNumber;
-				styleTutar = styleEvenTutar;
+				styleRedDouble = styleRedEvenTutar;
+				styleRedNumber = styleRedEvenNumber;
 			}
 			renk = !renk;
 			row++;
@@ -1070,57 +1187,54 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(personel.getSicilNo());
 				Cell personelCell = ExcelUtil.getCell(sheet, row, col++, styleGenel);
 				personelCell.setCellValue(personel.getAdSoyad());
-
+				ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getSirket().getAd());
+				if (tesisVar)
+					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getTesis() != null ? personel.getTesis().getAciklama() : "");
 				if (seciliEkSaha3Id == null)
 					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getEkSaha3() != null ? personel.getEkSaha3().getAciklama() : "");
+				if (ekSaha4Tanim != null)
+					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getEkSaha4() != null ? personel.getEkSaha4().getAciklama() : "");
 
 				ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getYoneticisi() != null ? personel.getYoneticisi().getAdSoyad() : "");
-				ExcelUtil.getCell(sheet, row, col++, styleDate).setCellValue(vardiyaGun.getVardiyaDate());
-				String str = vardiyaGun.getManuelGirisHTML();
-				if (vardiya.isCalisma())
-					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(str);
-				else
-					ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(str);
-				ExcelUtil.getCell(sheet, row, col++, styleZaman).setCellValue(personelFazlaMesai.getBasZaman());
-				ExcelUtil.getCell(sheet, row, col++, styleZaman).setCellValue(personelFazlaMesai.getBitZaman());
-				if (onayDurum) {
-					Double tutar = personelFazlaMesai.getFazlaMesaiSaati();
-					if (tutar.doubleValue() > tutar.longValue())
-						ExcelUtil.getCell(sheet, row, col++, styleTutar).setCellValue(tutar);
-					else
-						ExcelUtil.getCell(sheet, row, col++, styleNumber).setCellValue(tutar.longValue());
-				}
-				Cell cellFazlaMesaiOnayDurum = ExcelUtil.getCell(sheet, row, col++, styleGenel);
-				String aciklama = personelFazlaMesai.getFazlaMesaiOnayDurum() != null ? personelFazlaMesai.getFazlaMesaiOnayDurum().getAciklama() : "";
-				cellFazlaMesaiOnayDurum.setCellValue(aciklama);
-
-				ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personelFazlaMesai.getOlusturanUser() != null ? personelFazlaMesai.getOlusturanUser().getAdSoyad() : "");
-				if (personelFazlaMesai.getOlusturmaTarihi() != null)
-					ExcelUtil.getCell(sheet, row, col++, styleZaman).setCellValue(personelFazlaMesai.getOlusturmaTarihi());
-				else
-					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue("");
-				if (factory != null) {
-					if (fmt != null) {
-						List<String> sb = new ArrayList<String>();
-						sb.add("Mesai Başlangıç Zamanı : " + authenticatedUser.dateTimeFormatla(fmt.getBaslangicZamani()));
-						sb.add("Mesai Bitiş Zamanı : " + authenticatedUser.dateTimeFormatla(fmt.getBitisZamani()));
-						sb.add("Mesai Süresi (Saat) : " + authenticatedUser.sayiFormatliGoster(fmt.getMesaiSuresi()));
-						if (fmt.getMesaiNeden() != null)
-							sb.add("Mesai Nedeni : " + fmt.getMesaiNeden().getAciklama() + (PdksUtil.hasStringValue(fmt.getAciklama()) ? " [ " + fmt.getAciklama() + " ]" : ""));
-						sb.add("Onay'a Gönderen : " + fmt.getOlusturanUser().getAdSoyad());
-						sb.add("Onay'a Gönderme Zamanı : " + authenticatedUser.dateTimeFormatla(fmt.getOlusturmaTarihi()));
-						sb.add("Onaylayan : " + fmt.getGuncelleyenUser().getAdSoyad());
-						sb.add("Onaylama Zamanı : " + authenticatedUser.dateTimeFormatla(fmt.getGuncellemeTarihi()));
-						Cell fmtCell = ExcelUtil.getCell(sheet, row, col++, styleGenel);
-						talepCell(wb, factory, fmtCell, sb);
-						// RichTextString rt = talepCell(wb, factory, null, sb);
-						// if (rt != null)
-						// setCellComment(drawing, anchor, cellFazlaMesaiOnayDurum, rt);
-						sb = null;
+				for (VardiyaGun islemVardiyaGun : vardiyaGunList) {
+					vardiyaBul(aylikPuantaj, islemVardiyaGun);
+					VardiyaGun gun = vardiyaGun;
+					if (gun != null && (gun.getVardiya() != null || maxToplamMesaiDurum)) {
+						Double tutar = 0.0d;
+						Cell fmtCell = null;
+						boolean kirmizi = false;
+						if (gun.getVardiyaSaat() != null) {
+							tutar = gun.getVardiyaSaat().getCalismaSuresi();
+							kirmizi = PdksUtil.hasStringValue(gun.getTdClass());
+						}
+						if (tutar > 0.0d) {
+							if (PdksUtil.isDoubleValueNotLong(tutar))
+								fmtCell = ExcelUtil.getCell(sheet, row, col++, kirmizi == false ? styleDouble : styleRedDouble);
+							else
+								fmtCell = ExcelUtil.getCell(sheet, row, col++, kirmizi == false ? styleNumber : styleRedNumber);
+							fmtCell.setCellValue(tutar);
+						} else {
+							fmtCell = ExcelUtil.getCell(sheet, row, col++, styleCenter);
+							fmtCell.setCellValue("");
+						}
+						if (maxToplamMesaiDurum == false) {
+							List<String> sb = new ArrayList<String>();
+							String str = gun.getFazlaMesaiTitle();
+							if (str != null)
+								sb.add(str);
+							setCommentCell(wb, factory, fmtCell, sb);
+						}
 
 					} else
-						ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue("");
+						ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(maxToplamMesaiDurum ? "" : "-");
+
 				}
+				if (maxToplamMesaiDurum && vardiyaGunList.size() > 1) {
+					Double tutar = aylikPuantaj.getSaatToplami();
+					Cell fmtCell = ExcelUtil.getCell(sheet, row, col++, PdksUtil.isDoubleValueNotLong(tutar) ? styleRedDouble : styleRedNumber);
+					fmtCell.setCellValue(tutar);
+				}
+
 			} catch (Exception e) {
 				logger.error("Pdks hata in : \n");
 				e.printStackTrace();
@@ -1132,17 +1246,20 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		}
 		for (int i = 0; i <= col; i++)
 			sheet.autoSizeColumn(i);
+		if (!vardiyaGunPersonelList.isEmpty())
+			ortakIslemler.vardiyaGunExcelDevam(wb, vardiyaGunPersonelList, tesisVar ? ortakIslemler.tesisAciklama() : null, bolumAciklama, ekSaha4Tanim != null ? ekSaha4Tanim.getAciklama() : null);
+
+		vardiyaGunPersonelList = null;
 	}
 
 	/**
 	 * @param wb
 	 * @param factory
-	 * @param drawing
-	 * @param anchor
 	 * @param cell
 	 * @param titles
+	 * @return
 	 */
-	private RichTextString talepCell(Workbook wb, CreationHelper factory, Cell cell, List<String> titles) {
+	private RichTextString setCommentCell(Workbook wb, CreationHelper factory, Cell cell, List<String> titles) {
 		RichTextString rt = null;
 		if (titles != null && !titles.isEmpty()) {
 			for (Iterator iterator = titles.iterator(); iterator.hasNext();) {
@@ -1176,40 +1293,17 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 					b2 = bas[j];
 					rt.applyFont(b1, b2, fontBold);
 					b1 = uz[j];
-					// b1 = b2 + 1;
-					// b2 = uz[j];
-					// rt.applyFont(b1, b2, font);
 				} catch (Exception e) {
 					logger.error(j + " " + b1 + " " + b2 + " " + e);
 					e.printStackTrace();
 				}
 
 			}
-			if (cell != null)
-				cell.setCellValue(rt);
+			Comment comment = drawing.createCellComment(anchor);
+			comment.setString(rt);
+			cell.setCellComment(comment);
 		}
 		return rt;
-	}
-
-	/**
-	 * @param sheet
-	 * @param rowNo
-	 * @param columnNo
-	 * @param style
-	 * @param deger
-	 * @return
-	 */
-	public Cell setCell(Sheet sheet, int rowNo, int columnNo, CellStyle style, Double deger) {
-		Cell cell = ExcelUtil.getCell(sheet, rowNo, columnNo, style);
-
-		try {
-			if (deger != 0.0d) {
-				cell.setCellValue(authenticatedUser.sayiFormatliGoster(deger));
-			}
-
-		} catch (Exception e) {
-		}
-		return cell;
 	}
 
 	/**
@@ -1645,14 +1739,6 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		this.session = session;
 	}
 
-	public String getTabAdi() {
-		return tabAdi;
-	}
-
-	public void setTabAdi(String tabAdi) {
-		this.tabAdi = tabAdi;
-	}
-
 	public boolean isTalepGoster() {
 		return talepGoster;
 	}
@@ -1709,12 +1795,28 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		this.vardiyaGun = vardiyaGun;
 	}
 
-	public String getTabAciklama() {
-		return tabAciklama;
+	public String getRaporAdi() {
+		return raporAdi;
 	}
 
-	public void setTabAciklama(String tabAciklama) {
-		this.tabAciklama = tabAciklama;
+	public void setRaporAdi(String raporAdi) {
+		this.raporAdi = raporAdi;
+	}
+
+	public Tanim getEkSaha4Tanim() {
+		return ekSaha4Tanim;
+	}
+
+	public void setEkSaha4Tanim(Tanim ekSaha4Tanim) {
+		this.ekSaha4Tanim = ekSaha4Tanim;
+	}
+
+	public List<VardiyaGun> getVardiyaGunPerList() {
+		return vardiyaGunPerList;
+	}
+
+	public void setVardiyaGunPerList(List<VardiyaGun> vardiyaGunPerList) {
+		this.vardiyaGunPerList = vardiyaGunPerList;
 	}
 
 }
