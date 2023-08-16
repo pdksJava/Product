@@ -110,7 +110,8 @@
 							</c:if>
 						</a4j:outputPanel>
 						<a4j:outputPanel id="hareketTables">
-							<rich:tabPanel width="40%" headerAlignment="left" activeItem="#{fazlaCalismaRaporHome.tabAdi}" rendered="#{fazlaCalismaRaporHome.veriDolu()}">
+							<ui:fragment rendered="#{fazlaCalismaRaporHome.veriDolu()}">
+
 								<ui:fragment rendered="#{fazlaCalismaRaporHome.seciliBolum!=null}">
 									<DIV style="text-align: center; font-weight: bold; color: blue; font-size: 16px;">#{fazlaCalismaRaporHome.seciliBolum.aciklama}</DIV>
 								</ui:fragment>
@@ -228,11 +229,12 @@
 
 
 
-							</rich:tabPanel>
-							<ui:fragment rendered="#{fazlaCalismaRaporHome.veriDolu() }">
+
+
 								<h:commandLink value="#{messages['ortak.etiket.excelAktar']}" action="#{fazlaCalismaRaporHome.fazlaMesaiExcel}" target="blank">
 									<a4j:support event="oncomplete" onclick="#{rich:component('wait')}.show()" oncomplete=" #{rich:component('wait')}.hide()" />
 								</h:commandLink>
+
 							</ui:fragment>
 						</a4j:outputPanel>
 
