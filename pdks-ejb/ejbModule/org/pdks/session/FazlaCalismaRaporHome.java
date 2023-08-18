@@ -54,6 +54,7 @@ import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Tatil;
 import org.pdks.entity.VardiyaGun;
+import org.pdks.entity.VardiyaHafta;
 import org.pdks.entity.VardiyaSaat;
 import org.pdks.security.action.UserHome;
 import org.pdks.security.entity.User;
@@ -99,6 +100,10 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 	private List<PersonelDenklestirme> baslikDenklestirmeDonemiList;
 
 	private List<AylikPuantaj> aylikPuantajList;
+
+	private List<VardiyaHafta> vardiyaHaftaList;
+
+	private HashMap<String, Double> haftaCalismaMap;
 
 	private Sirket sirket;
 
@@ -215,7 +220,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			raporList.add(new SelectItem("maxGunCalismaSaat", "Günlük Çalışmayı Aşanlar"));
 		if (!ortakIslemler.getParameterKey("maxHaftaCalismaSaat").equals(""))
 			raporList.add(new SelectItem("maxHaftaCalismaSaat", "Haftalık Çalışmayı Aşanlar"));
-		if (authenticatedUser.isAdmin() && !ortakIslemler.getParameterKey("maxToplamMesai").equals(""))
+		if (!ortakIslemler.getParameterKey("maxToplamMesai").equals(""))
 			raporList.add(new SelectItem("maxToplamMesai", "Fazla Mesai Yapanlar"));
 		if (raporList.isEmpty())
 			raporSecim = null;
@@ -512,6 +517,14 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			vardiyaGunPerList = new ArrayList<VardiyaGun>();
 		else
 			vardiyaGunPerList.clear();
+		if (vardiyaHaftaList == null)
+			vardiyaHaftaList = new ArrayList<VardiyaHafta>();
+		else
+			vardiyaHaftaList.clear();
+		if (haftaCalismaMap == null)
+			haftaCalismaMap = new HashMap<String, Double>();
+		else
+			haftaCalismaMap.clear();
 
 		talepGoster = false;
 		return "";
@@ -627,18 +640,22 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		boolean devam = true;
 		if (basTarih.getTime() <= bitTarih.getTime()) {
 			Date sonGun = PdksUtil.tariheGunEkleCikar(basTarih, maxFazlaCalismaGun);
-
 			if (!raporSecim.equals("maxToplamMesai")) {
-				Long gun = PdksUtil.tarihFarki(basTarih, bitTarih);
+				Long gun = PdksUtil.tarihFarki(basTarih, bitTarih) + 1;
 				if (raporSecim.equals("maxGunCalismaSaat")) {
 					if (gun > 31) {
-						PdksUtil.addMessageAvailableWarn(" Bir aylık süreyi aşamazsınız!");
+						PdksUtil.addMessageAvailableWarn("Bir aylık süreyi aşamazsınız!");
 						devam = false;
 					}
 				} else if (raporSecim.equals("maxHaftaCalismaSaat")) {
-					long mod = (gun.longValue() + 1) % 7;
-					if (gun > 31 || mod != 0) {
-						PdksUtil.addMessageAvailableWarn(" Bir aylık süreyi  aşamazsınız ve gün sayısı 7'nin katları olmalıdır!");
+					Calendar cal = Calendar.getInstance();
+					cal.setTime(basTarih);
+					long mod = gun.longValue() % 7;
+					if (gun > 32 || mod != 0) {
+						PdksUtil.addMessageAvailableWarn("Bir aylık süreyi aşamazsınız ve gün sayısı 7'nin katları olmalıdır!");
+						devam = false;
+					} else if (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) {
+						PdksUtil.addMessageAvailableWarn("Başlangıç günü PAZARTESİ olmalıdır!");
 						devam = false;
 					}
 				}
@@ -747,81 +764,11 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				}
 				if (!ekSaha4Var)
 					ekSaha4Tanim = null;
-				Calendar cal = Calendar.getInstance();
+
 				if (raporSecim.equals("maxGunCalismaSaat") || raporSecim.equals("maxHaftaCalismaSaat")) {
-					TreeMap<String, VardiyaGun> varMap = ortakIslemler.getIslemVardiyalar(personelList, basTarih, bitTarih, false, session, false);
-
-					cal.setTime(basTarih);
-					while (bitTarih.getTime() >= cal.getTime().getTime()) {
-						Date tarih = cal.getTime();
-						VardiyaGun gun = new VardiyaGun(null, null, tarih);
-						vardiyaGunList.add(gun);
-						String key = gun.getVardiyaDateStr();
-						for (AylikPuantaj aylikPuantaj : aylikPuantajList) {
-							Personel personel = aylikPuantaj.getPdksPersonel();
-							String vKey = (personel != null ? personel.getSicilNo() : "") + "_" + key;
-							VardiyaGun gun2 = varMap.containsKey(vKey) ? (VardiyaGun) varMap.get(vKey).clone() : new VardiyaGun(personel, null, tarih);
-							aylikPuantaj.getVgMap().put(key, gun2);
-							gun2.setTdClass("");
-							if (personel.getIseBaslamaTarihi().after(tarih) || personel.getSskCikisTarihi().before(tarih))
-								continue;
-							if (gun2.getId() != null)
-								aylikPuantaj.getVardiyalar().add(gun2);
-						}
-						cal.add(Calendar.DATE, 1);
-
-					}
+					fazlaCalismaHazirla(personelIdler);
 				} else if (raporSecim.equals("maxToplamMesai")) {
-					StringBuffer sb = new StringBuffer();
-					sb.append("SP_GET_FAZLA_MESAI_VARDIYA");
-					LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<String, Object>();
-					linkedHashMap.put("perList", ortakIslemler.getListIdStr(personelIdler));
-					linkedHashMap.put("basTarih", PdksUtil.convertToDateString(basTarih, "yyyyMMdd"));
-					linkedHashMap.put("bitTarih", PdksUtil.convertToDateString(bitTarih, "yyyyMMdd"));
-					linkedHashMap.put("format", null);
-					if (session != null)
-						linkedHashMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-					List<VardiyaGun> list = null;
-					try {
-						list = pdksEntityController.execSPList(linkedHashMap, sb, VardiyaGun.class);
-					} catch (Exception e) {
-						list = new ArrayList<VardiyaGun>();
-					}
-					if (!list.isEmpty()) {
-						TreeMap<String, VardiyaGun> gunMap = new TreeMap<String, VardiyaGun>();
-						for (VardiyaGun gun : list) {
-							cal.setTime(gun.getVardiyaDate());
-							cal.set(Calendar.DATE, 1);
-							AylikPuantaj aylikPuantaj = puantajMap.get(gun.getPdksPersonel().getId());
-							aylikPuantaj.getVardiyalar().add(gun);
-							Date xVardiyaDate = PdksUtil.getDate(cal.getTime());
-							String key = PdksUtil.convertToDateString(xVardiyaDate, "yyyyMMdd");
-							if (!gunMap.containsKey(key))
-								gunMap.put(key, new VardiyaGun(null, null, xVardiyaDate));
-							TreeMap<String, VardiyaGun> vgMap = aylikPuantaj.getVgMap();
-							VardiyaGun vardiyaGunPer = null;
-							if (vgMap.containsKey(key)) {
-								vardiyaGunPer = vgMap.get(key);
-							} else {
-								vardiyaGunPer = new VardiyaGun(gun.getPdksPersonel(), null, xVardiyaDate);
-								VardiyaSaat vardiyaSaat = new VardiyaSaat();
-								vardiyaSaat.setCalismaSuresi(0.0d);
-								vardiyaGunPer.setVardiyaSaat(vardiyaSaat);
-								vgMap.put(key, vardiyaGunPer);
-							}
-							VardiyaSaat vardiyaSaat = vardiyaGunPer.getVardiyaSaat(), vardiyaSaatDB = gun.getVardiyaSaat();
-							double sure = vardiyaSaatDB.getCalismaSuresi() - vardiyaSaatDB.getNormalSure();
-							vardiyaSaat.setCalismaSuresi(vardiyaSaat.getCalismaSuresi() + sure);
-							aylikPuantaj.setSaatToplami(aylikPuantaj.getSaatToplami() + sure);
-						}
-						vardiyaGunList.addAll(new ArrayList<VardiyaGun>(gunMap.values()));
-						for (Iterator iterator = aylikPuantajList.iterator(); iterator.hasNext();) {
-							AylikPuantaj aylikPuantaj = (AylikPuantaj) iterator.next();
-							if (aylikPuantaj.getVgMap().isEmpty())
-								iterator.remove();
-						}
-						gunMap = null;
-					}
+					maxToplamMesaiHazirla(personelIdler, puantajMap);
 				}
 
 				if (raporSecim.equals("maxGunCalismaSaat"))
@@ -880,17 +827,160 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 
 	}
 
-	private void maxGunCalismaSaatKontrol() {
-		Double maxGunCalismaSaat = null;
-		try {
-			String str = ortakIslemler.getParameterKey("maxGunCalismaSaat");
-			if (PdksUtil.hasStringValue(str))
-				maxGunCalismaSaat = Double.parseDouble(str);
-			if (maxGunCalismaSaat < 0)
-				maxGunCalismaSaat = 0.0d;
-		} catch (Exception e) {
-			maxGunCalismaSaat = 0.0d;
+	/**
+	 * @param personelList
+	 * @throws Exception
+	 */
+	private void fazlaCalismaHazirla(List<Long> personelIdler) throws Exception {
+		Double calSure = 0.0d;
+		if (raporSecim.equals("maxGunCalismaSaat"))
+			calSure = getMaxGunCalismaSaat();
+		List<VardiyaGun> list = getVardiyaList(personelIdler, calSure);
+		if (!list.isEmpty()) {
+			// TreeMap<String, VardiyaGun> varMap = ortakIslemler.getIslemVardiyalar(personelIdler, basTarih, bitTarih, false, session, false);
+			TreeMap<String, VardiyaGun> varMap = new TreeMap<String, VardiyaGun>();
+			for (VardiyaGun gun : list)
+				if (gun.getVardiyaSaat().getCalismaSuresi() > 0.0d)
+					varMap.put(gun.getVardiyaKeyStr(), gun);
+
+			if (!varMap.isEmpty()) {
+				Calendar cal = Calendar.getInstance();
+				// Long gunAdet = PdksUtil.tarihFarki(basTarih, bitTarih) + 1;
+				boolean maxHaftaCalismaSaatDurum = raporSecim.equals("maxHaftaCalismaSaat");
+				cal.setTime(basTarih);
+				VardiyaHafta vardiyaHafta = null;
+				while (bitTarih.getTime() >= cal.getTime().getTime()) {
+					Date tarih = cal.getTime();
+					VardiyaGun gun = new VardiyaGun(null, null, tarih);
+					vardiyaGunList.add(gun);
+					if (maxHaftaCalismaSaatDurum) {
+						if (vardiyaHafta == null) {
+							vardiyaHafta = new VardiyaHafta();
+							vardiyaHafta.setBasTarih(tarih);
+							vardiyaHafta.setVardiyaGunler(new ArrayList<VardiyaGun>());
+							vardiyaHaftaList.add(vardiyaHafta);
+							vardiyaHafta.setHafta(vardiyaHaftaList.size());
+						}
+						vardiyaHafta.setBitTarih(tarih);
+						vardiyaHafta.getVardiyaGunler().add(gun);
+
+					}
+					String key = gun.getVardiyaDateStr();
+					for (AylikPuantaj aylikPuantaj : aylikPuantajList) {
+						Personel personel = aylikPuantaj.getPdksPersonel();
+						String vKey = (personel != null ? personel.getSicilNo() : "") + "_" + key;
+						VardiyaGun gun2 = varMap.containsKey(vKey) ? (VardiyaGun) varMap.get(vKey).clone() : new VardiyaGun(personel, null, tarih);
+						aylikPuantaj.getVgMap().put(key, gun2);
+						gun2.setTdClass("");
+						if (personel.getIseBaslamaTarihi().after(tarih) || personel.getSskCikisTarihi().before(tarih))
+							continue;
+						if (gun2.getId() != null) {
+							aylikPuantaj.getVardiyalar().add(gun2);
+							if (vardiyaHafta != null && gun2.getDurum() && gun2.getVardiyaSaat() != null) {
+								String str = vardiyaHafta.getHafta() + "_" + personel.getId();
+								Double sure = haftaCalismaMap.containsKey(str) ? haftaCalismaMap.get(str) : 0.0d;
+								sure += gun2.getVardiyaSaat().getCalismaSuresi();
+								haftaCalismaMap.put(str, sure);
+							}
+						}
+
+					}
+					if (maxHaftaCalismaSaatDurum && vardiyaHafta.getVardiyaGunler().size() == 7)
+						vardiyaHafta = null;
+					cal.add(Calendar.DATE, 1);
+				}
+				varMap = null;
+			}
 		}
+		list = null;
+	}
+
+	/**
+	 * @param personelIdler
+	 * @param calSure
+	 * @return
+	 */
+	private List<VardiyaGun> getVardiyaList(List<Long> personelIdler, Double calSure) {
+
+		StringBuffer sb = new StringBuffer();
+		sb.append("SP_GET_FAZLA_MESAI_VARDIYA");
+		LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<String, Object>();
+		linkedHashMap.put("perList", ortakIslemler.getListIdStr(personelIdler));
+		linkedHashMap.put("basTarih", PdksUtil.convertToDateString(basTarih, "yyyyMMdd"));
+		linkedHashMap.put("bitTarih", PdksUtil.convertToDateString(bitTarih, "yyyyMMdd"));
+		linkedHashMap.put("calSure", calSure);
+		linkedHashMap.put("format", null);
+		if (session != null)
+			linkedHashMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+		List<VardiyaGun> list = null;
+		try {
+			list = pdksEntityController.execSPList(linkedHashMap, sb, VardiyaGun.class);
+		} catch (Exception e) {
+			list = new ArrayList<VardiyaGun>();
+		}
+		return list;
+
+	}
+
+	/**
+	 * @param personelIdler
+	 * @param puantajMap
+	 */
+	private void maxToplamMesaiHazirla(List<Long> personelIdler, TreeMap<Long, AylikPuantaj> puantajMap) {
+		List<VardiyaGun> list = getVardiyaList(personelIdler, null);
+
+		if (!list.isEmpty()) {
+			Calendar cal = Calendar.getInstance();
+			TreeMap<String, VardiyaGun> gunMap = new TreeMap<String, VardiyaGun>();
+			for (VardiyaGun gun : list) {
+				cal.setTime(gun.getVardiyaDate());
+				cal.set(Calendar.DATE, 1);
+				AylikPuantaj aylikPuantaj = puantajMap.get(gun.getPdksPersonel().getId());
+				aylikPuantaj.getVardiyalar().add(gun);
+				Date xVardiyaDate = PdksUtil.getDate(cal.getTime());
+				String key = PdksUtil.convertToDateString(xVardiyaDate, "yyyyMMdd");
+				if (!gunMap.containsKey(key))
+					gunMap.put(key, new VardiyaGun(null, null, xVardiyaDate));
+				TreeMap<String, VardiyaGun> vgMap = aylikPuantaj.getVgMap();
+				VardiyaGun vardiyaGunPer = null;
+				if (vgMap.containsKey(key)) {
+					vardiyaGunPer = vgMap.get(key);
+				} else {
+					vardiyaGunPer = new VardiyaGun(gun.getPdksPersonel(), null, xVardiyaDate);
+					VardiyaSaat vardiyaSaat = new VardiyaSaat();
+					vardiyaSaat.setCalismaSuresi(0.0d);
+					vardiyaGunPer.setVardiyaSaat(vardiyaSaat);
+					vgMap.put(key, vardiyaGunPer);
+				}
+				VardiyaSaat vardiyaSaat = vardiyaGunPer.getVardiyaSaat(), vardiyaSaatDB = gun.getVardiyaSaat();
+				double sure = vardiyaSaatDB.getCalismaSuresi() - vardiyaSaatDB.getNormalSure();
+				vardiyaSaat.setCalismaSuresi(vardiyaSaat.getCalismaSuresi() + sure);
+				aylikPuantaj.setSaatToplami(aylikPuantaj.getSaatToplami() + sure);
+			}
+			vardiyaGunList.addAll(new ArrayList<VardiyaGun>(gunMap.values()));
+			for (Iterator iterator = aylikPuantajList.iterator(); iterator.hasNext();) {
+				AylikPuantaj aylikPuantaj = (AylikPuantaj) iterator.next();
+				if (aylikPuantaj.getVgMap().isEmpty())
+					iterator.remove();
+			}
+			gunMap = null;
+		}
+	}
+
+	/**
+	 * @param hafta
+	 * @param aylikPuantaj
+	 * @return
+	 */
+	public Double getCalismaSuresi(int hafta, AylikPuantaj aylikPuantaj) {
+		Personel personel = aylikPuantaj.getPdksPersonel();
+		String key = hafta + "_" + personel.getId();
+		Double double1 = haftaCalismaMap.containsKey(key) ? haftaCalismaMap.get(key) : null;
+		return double1;
+	}
+
+	private void maxGunCalismaSaatKontrol() {
+		Double maxGunCalismaSaat = getMaxGunCalismaSaat();
 		if (maxGunCalismaSaat > 0.0d) {
 			for (Iterator iterator = aylikPuantajList.iterator(); iterator.hasNext();) {
 				AylikPuantaj aylikPuantaj = (AylikPuantaj) iterator.next();
@@ -912,6 +1002,20 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		} else
 			aylikPuantajList.clear();
 
+	}
+
+	private Double getMaxGunCalismaSaat() {
+		Double maxGunCalismaSaat = null;
+		try {
+			String str = ortakIslemler.getParameterKey("maxGunCalismaSaat");
+			if (PdksUtil.hasStringValue(str))
+				maxGunCalismaSaat = Double.parseDouble(str);
+			if (maxGunCalismaSaat < 0)
+				maxGunCalismaSaat = 0.0d;
+		} catch (Exception e) {
+			maxGunCalismaSaat = 0.0d;
+		}
+		return maxGunCalismaSaat;
 	}
 
 	private void maxHaftaCalismaSaatKontrol() {
@@ -949,6 +1053,16 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				}
 				if (sil)
 					iterator.remove();
+				else
+					for (VardiyaHafta vardiyaHafta : vardiyaHaftaList) {
+						String str = vardiyaHafta.getHafta() + "_" + aylikPuantaj.getPdksPersonel().getId();
+						if (haftaCalismaMap.containsKey(str)) {
+							Double toplamSure = haftaCalismaMap.get(str);
+							if (toplamSure < maxHaftaCalismaSaat)
+								haftaCalismaMap.remove(str);
+						}
+
+					}
 			}
 		} else
 			aylikPuantajList.clear();
@@ -1121,8 +1235,9 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		List<VardiyaGun> vardiyaGunPersonelList = new ArrayList<VardiyaGun>();
 		for (Iterator iter = list.iterator(); iter.hasNext();) {
 			AylikPuantaj aylikPuantaj = (AylikPuantaj) iter.next();
-			if (maxToplamMesaiDurum && aylikPuantaj.getVardiyalar() != null && !aylikPuantaj.getVardiyalar().isEmpty())
+			if (aylikPuantaj.getVardiyalar() != null && !aylikPuantaj.getVardiyalar().isEmpty())
 				vardiyaGunPersonelList.addAll(aylikPuantaj.getVardiyalar());
+
 			Personel personel = aylikPuantaj.getPdksPersonel();
 			String tekSirketTesis = (personel.getSirket() != null ? personel.getSirket().getId() : "") + "_" + (personel.getTesis() != null ? personel.getTesis().getId() : "");
 			String tekSirketTesisAdi = (personel.getSirket() != null ? personel.getSirket().getAd() : "") + " " + (personel.getTesis() != null ? personel.getTesis().getAciklama() : "");
@@ -1142,12 +1257,25 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		if (ekSaha4Tanim != null)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ekSaha4Tanim.getAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.yoneticiAciklama());
-		for (VardiyaGun gun : vardiyaGunList) {
-			if (maxToplamMesaiDurum == false)
-				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(PdksUtil.convertToDateString(gun.getVardiyaDate(), "d") + "\n" + PdksUtil.convertToDateString(gun.getVardiyaDate(), "EEE"));
-			else
-				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(PdksUtil.convertToDateString(gun.getVardiyaDate(), "yyyy") + "\n" + PdksUtil.convertToDateString(gun.getVardiyaDate(), "MMM"));
+		if (vardiyaHaftaList.isEmpty()) {
+			for (VardiyaGun gun : vardiyaGunList) {
+				if (maxToplamMesaiDurum == false)
+					ExcelUtil.getCell(sheet, row, col++, header).setCellValue(PdksUtil.convertToDateString(gun.getVardiyaDate(), "d") + "\n" + PdksUtil.convertToDateString(gun.getVardiyaDate(), "EEE"));
+				else
+					ExcelUtil.getCell(sheet, row, col++, header).setCellValue(PdksUtil.convertToDateString(gun.getVardiyaDate(), "yyyy") + "\n" + PdksUtil.convertToDateString(gun.getVardiyaDate(), "MMM"));
+			}
+		} else {
+			CellStyle headerBlue = ExcelUtil.getStyleHeader(wb);
+			ExcelUtil.setFontColor(headerBlue, Color.BLUE);
+			for (VardiyaHafta vardiyaHafta : vardiyaHaftaList) {
+				for (VardiyaGun gun : vardiyaHafta.getVardiyaGunler()) {
+					ExcelUtil.getCell(sheet, row, col++, header).setCellValue(PdksUtil.convertToDateString(gun.getVardiyaDate(), "d") + "\n" + PdksUtil.convertToDateString(gun.getVardiyaDate(), "EEE"));
+
+				}
+				ExcelUtil.getCell(sheet, row, col++, headerBlue).setCellValue((vardiyaHaftaList.size() > 1 ? vardiyaHafta.getHafta() + ". " : "") + "Hafta\n Toplamı");
+			}
 		}
+
 		if (maxToplamMesaiDurum && vardiyaGunList.size() > 1)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Toplam Fazla Çalışma");
 		boolean renk = true;
@@ -1196,37 +1324,77 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getEkSaha4() != null ? personel.getEkSaha4().getAciklama() : "");
 
 				ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getYoneticisi() != null ? personel.getYoneticisi().getAdSoyad() : "");
-				for (VardiyaGun islemVardiyaGun : vardiyaGunList) {
-					vardiyaBul(aylikPuantaj, islemVardiyaGun);
-					VardiyaGun gun = vardiyaGun;
-					if (gun != null && (gun.getVardiya() != null || maxToplamMesaiDurum)) {
-						Double tutar = 0.0d;
-						Cell fmtCell = null;
-						boolean kirmizi = false;
-						if (gun.getVardiyaSaat() != null) {
-							tutar = gun.getVardiyaSaat().getCalismaSuresi();
-							kirmizi = PdksUtil.hasStringValue(gun.getTdClass());
-						}
-						if (tutar > 0.0d) {
-							if (PdksUtil.isDoubleValueNotLong(tutar))
-								fmtCell = ExcelUtil.getCell(sheet, row, col++, kirmizi == false ? styleDouble : styleRedDouble);
-							else
-								fmtCell = ExcelUtil.getCell(sheet, row, col++, kirmizi == false ? styleNumber : styleRedNumber);
-							fmtCell.setCellValue(tutar);
-						} else {
-							fmtCell = ExcelUtil.getCell(sheet, row, col++, styleCenter);
-							fmtCell.setCellValue("");
-						}
-						if (maxToplamMesaiDurum == false) {
-							List<String> sb = new ArrayList<String>();
-							String str = gun.getFazlaMesaiTitle();
-							if (str != null)
-								sb.add(str);
-							setCommentCell(wb, factory, fmtCell, sb);
+				if (vardiyaHaftaList.isEmpty()) {
+
+					for (VardiyaGun islemVardiyaGun : vardiyaGunList) {
+						vardiyaBul(aylikPuantaj, islemVardiyaGun);
+						VardiyaGun gun = vardiyaGun;
+						if (gun != null && (gun.getVardiya() != null || maxToplamMesaiDurum)) {
+							Double tutar = 0.0d;
+							Cell fmtCell = null;
+							boolean kirmizi = false;
+							if (gun.getVardiyaSaat() != null) {
+								tutar = gun.getVardiyaSaat().getCalismaSuresi();
+								kirmizi = PdksUtil.hasStringValue(gun.getTdClass());
+							}
+							if (tutar > 0.0d) {
+								if (PdksUtil.isDoubleValueNotLong(tutar))
+									fmtCell = ExcelUtil.getCell(sheet, row, col++, kirmizi == false ? styleDouble : styleRedDouble);
+								else
+									fmtCell = ExcelUtil.getCell(sheet, row, col++, kirmizi == false ? styleNumber : styleRedNumber);
+								fmtCell.setCellValue(tutar);
+							} else {
+								fmtCell = ExcelUtil.getCell(sheet, row, col++, styleCenter);
+								fmtCell.setCellValue("");
+							}
+							if (maxToplamMesaiDurum == false) {
+								List<String> sb = new ArrayList<String>();
+								String str = gun.getFazlaMesaiTitle();
+								if (str != null)
+									sb.add(str);
+								setCommentCell(wb, factory, fmtCell, sb);
+							}
+
+						} else
+							ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(maxToplamMesaiDurum ? "" : "-");
+
+					}
+				} else {
+					for (VardiyaHafta vardiyaHafta : vardiyaHaftaList) {
+						for (VardiyaGun islemVardiyaGun : vardiyaHafta.getVardiyaGunler()) {
+							vardiyaBul(aylikPuantaj, islemVardiyaGun);
+							VardiyaGun gun = vardiyaGun;
+							boolean yazildi = false;
+							if (gun != null && gun.getVardiya() != null) {
+								Double tutar = 0.0d;
+								Cell fmtCell = null;
+								if (gun.getVardiyaSaat() != null) {
+									tutar = gun.getVardiyaSaat().getCalismaSuresi();
+									if (tutar > 0.0d) {
+										yazildi = true;
+										fmtCell = ExcelUtil.getCell(sheet, row, col++, PdksUtil.isDoubleValueNotLong(tutar) ? styleDouble : styleNumber);
+										fmtCell.setCellValue(tutar);
+									}
+									String str = gun.getFazlaMesaiTitle();
+									if (str != null) {
+										List<String> sb = new ArrayList<String>();
+										sb.add(str);
+										setCommentCell(wb, factory, fmtCell, sb);
+										sb = null;
+									}
+								}
+							}
+							if (!yazildi)
+								ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue("");
+
 						}
 
-					} else
-						ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(maxToplamMesaiDurum ? "" : "-");
+						Double sure = getCalismaSuresi(vardiyaHafta.getHafta(), aylikPuantaj);
+						if (sure != null)
+							ExcelUtil.getCell(sheet, row, col++, PdksUtil.isDoubleValueNotLong(sure) ? styleRedDouble : styleRedNumber).setCellValue(sure);
+						else
+							ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue("");
+					}
 
 				}
 				if (maxToplamMesaiDurum && vardiyaGunList.size() > 1) {
@@ -1817,6 +1985,22 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 
 	public void setVardiyaGunPerList(List<VardiyaGun> vardiyaGunPerList) {
 		this.vardiyaGunPerList = vardiyaGunPerList;
+	}
+
+	public List<VardiyaHafta> getVardiyaHaftaList() {
+		return vardiyaHaftaList;
+	}
+
+	public void setVardiyaHaftaList(List<VardiyaHafta> vardiyaHaftaList) {
+		this.vardiyaHaftaList = vardiyaHaftaList;
+	}
+
+	public HashMap<String, Double> getHaftaCalismaMap() {
+		return haftaCalismaMap;
+	}
+
+	public void setHaftaCalismaMap(HashMap<String, Double> haftaCalismaMap) {
+		this.haftaCalismaMap = haftaCalismaMap;
 	}
 
 }

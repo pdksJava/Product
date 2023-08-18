@@ -232,7 +232,7 @@ public class OrtakIslemler implements Serializable {
 
 		}
 		if (maxGunCalismaAy == null)
-			maxGunCalismaAy = 2;
+			return "";
 		Double maxGunCalismaSaat = null;
 		try {
 			String str = getParameterKey("maxGunCalismaSaat");
