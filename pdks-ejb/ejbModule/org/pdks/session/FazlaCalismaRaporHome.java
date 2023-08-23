@@ -347,7 +347,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			String bitTarihStr = (String) req.getParameter("bitTarih");
 			String linkAdresKey = (String) req.getParameter("linkAdresKey");
 
-			String gorevTipiIdStr = null, gorevYeriIdStr = null, sirketIdStr = null, tesisIdStr = null;
+			String gorevTipiIdStr = null, gorevYeriIdStr = null, sirketIdStr = null, tesisIdStr = null, departmanIdStr = null;
 			LinkedHashMap<String, Object> veriLastMap = null;
 			if (linkAdresKey == null) {
 				veriLastMap = ortakIslemler.getLastParameter("fazlaCalismaRapor", session);
@@ -358,6 +358,8 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 						bitTarihStr = (String) veriLastMap.get("bitTarih");
 					if (veriLastMap.containsKey("sirketId"))
 						sirketIdStr = (String) veriLastMap.get("sirketId");
+					if (veriLastMap.containsKey("departmanId"))
+						departmanIdStr = (String) veriLastMap.get("departmanId");
 					if (veriLastMap.containsKey("tesisId"))
 						tesisIdStr = (String) veriLastMap.get("tesisId");
 					if (veriLastMap.containsKey("bolumId"))
@@ -406,6 +408,8 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				if (basTarihStr != null && bitTarihStr != null) {
 					basTarih = PdksUtil.convertToJavaDate(basTarihStr, "yyyyMMdd");
 					bitTarih = PdksUtil.convertToJavaDate(bitTarihStr, "yyyyMMdd");
+					if (departmanIdStr != null)
+						departmanId = Long.parseLong(departmanIdStr);
 					if (sirketIdStr != null) {
 						sirketId = Long.parseLong(sirketIdStr);
 						if (sirket != null) {
@@ -1121,7 +1125,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 					if ((gun.getDurum()) && (gun.getVardiyaSaat() != null)) {
 						double saat = gun.getVardiyaSaat().getCalismaSuresi();
 						if (maxGunCalismaSaatDurum) {
-							if (saat >= maxGunCalismaSaat.doubleValue()) {
+							if (saat > maxGunCalismaSaat.doubleValue()) {
 								sil = false;
 								gun.setTdClass("font-weight: bold; color: red;");
 							}
@@ -1209,13 +1213,13 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		lastMap.put("basTarih", PdksUtil.convertToDateString(basTarih, "yyyyMMdd"));
 		lastMap.put("bitTarih", PdksUtil.convertToDateString(bitTarih, "yyyyMMdd"));
 		if (departmanId != null)
-			lastMap.put("departmanId", departmanId);
+			lastMap.put("departmanId", departmanId + "");
 		if (sirketId != null)
-			lastMap.put("sirketId", sirketId);
+			lastMap.put("sirketId", sirketId + "");
 		if (tesisId != null)
-			lastMap.put("tesisId", tesisId);
+			lastMap.put("tesisId", tesisId + "");
 		if (seciliEkSaha3Id != null)
-			lastMap.put("bolumId", seciliEkSaha3Id);
+			lastMap.put("bolumId", seciliEkSaha3Id + "");
 		lastMap.put("raporSecim", raporSecim);
 
 		if (((authenticatedUser.isIK()) || (authenticatedUser.isAdmin())) && (sicilNo != null) && (sicilNo.trim().length() > 0))
