@@ -479,7 +479,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			e.printStackTrace();
 		}
 		kullaniciPersonel = ortakIslemler.getKullaniciPersonel(authenticatedUser);
-		if (kullaniciPersonel.booleanValue()) {
+		if (kullaniciPersonel) {
 			tesisList = null;
 			sicilNo = authenticatedUser.getPdksPersonel().getPdksSicilNo();
 		}
@@ -740,7 +740,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		sanalPersonelAciklama = ortakIslemler.sanalPersonelAciklama();
 		departmanBolumAyni = Boolean.FALSE;
 		saveLastParameter();
-		departmanBolumAyni = Boolean.valueOf((sirket != null) && (!sirket.isTesisDurumu()));
+		departmanBolumAyni = (sirket != null) && (!sirket.isTesisDurumu());
 		if (sicilNo != null)
 			sicilNo = sicilNo.trim();
 		listeTemizle();
@@ -1118,7 +1118,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				List<VardiyaGun> vardiyaGuns = aylikPuantaj.getVardiyalar();
 				boolean sil = true;
 				for (VardiyaGun gun : vardiyaGuns) {
-					if ((gun.getDurum().booleanValue()) && (gun.getVardiyaSaat() != null)) {
+					if ((gun.getDurum()) && (gun.getVardiyaSaat() != null)) {
 						double saat = gun.getVardiyaSaat().getCalismaSuresi();
 						if (maxGunCalismaSaatDurum) {
 							if (saat >= maxGunCalismaSaat.doubleValue()) {
@@ -1227,7 +1227,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 	}
 
 	public String getExcelAciklama() {
-		tekSirket = Boolean.valueOf((pdksSirketList != null) && (pdksSirketList.size() == 1));
+		tekSirket = (pdksSirketList != null) && (pdksSirketList.size() == 1);
 		String gorevYeriAciklama = "";
 		if (gorevYeri != null) {
 			gorevYeriAciklama = gorevYeri.getAciklama() + "_";
@@ -1254,7 +1254,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				gorevYeriAciklama = tesis.getAciklama() + "_";
 			if (ekSaha3 != null)
 				gorevYeriAciklama = gorevYeriAciklama + ekSaha3.getAciklama() + "_";
-		} else if ((sirketId != null) && (tekSirket.booleanValue())) {
+		} else if ((sirketId != null) && (tekSirket)) {
 			HashMap parametreMap = new HashMap();
 			parametreMap.put("id", sirketId);
 			if (session != null)
@@ -1335,7 +1335,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 	private void sayfaAylikPuantajOlustur(List<AylikPuantaj> list, Workbook wb) {
 		boolean maxToplamMesaiDurum = raporSecim.equals("maxToplamMesai");
 		boolean maxHaftaTatilCalismaGunDurum = raporSecim.equals("maxHaftaTatilCalismaGun");
-		Sheet sheet = ExcelUtil.createSheet(wb, raporAdi, Boolean.TRUE.booleanValue());
+		Sheet sheet = ExcelUtil.createSheet(wb, raporAdi, Boolean.TRUE);
 		CreationHelper factory = null;
 		drawing = sheet.createDrawingPatriarch();
 
@@ -1678,7 +1678,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				setDepartman(sirket.getDepartman());
 				if ((departman.isAdminMi()) && (sirket.isTesisDurumu())) {
 					try {
-						List list = fazlaMesaiOrtakIslemler.getFazlaMesaiBolumList(sirket, tesisId != null ? String.valueOf(tesisId) : null, new AylikPuantaj(basTarih, bitTarih), Boolean.TRUE.booleanValue(), session);
+						List list = fazlaMesaiOrtakIslemler.getFazlaMesaiBolumList(sirket, tesisId != null ? String.valueOf(tesisId) : null, new AylikPuantaj(basTarih, bitTarih), Boolean.TRUE, session);
 						setGorevYeriList(list);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -1686,7 +1686,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 					if (gorevYeriList.size() == 1)
 						seciliEkSaha3Id = ((Long) ((SelectItem) gorevYeriList.get(0)).getValue());
 				} else {
-					bolumDepartmanlari = fazlaMesaiOrtakIslemler.getFazlaMesaiBolumList(sirket, null, new AylikPuantaj(basTarih, bitTarih), Boolean.TRUE.booleanValue(), session);
+					bolumDepartmanlari = fazlaMesaiOrtakIslemler.getFazlaMesaiBolumList(sirket, null, new AylikPuantaj(basTarih, bitTarih), Boolean.TRUE, session);
 					if (bolumDepartmanlari.size() == 1)
 						seciliEkSaha3Id = ((Long) ((SelectItem) bolumDepartmanlari.get(0)).getValue());
 					setGorevYeriList(bolumDepartmanlari);
@@ -1916,11 +1916,11 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 	}
 
 	public boolean isTekSirket() {
-		return tekSirket.booleanValue();
+		return tekSirket;
 	}
 
 	public void setTekSirket(boolean tekSirket) {
-		this.tekSirket = Boolean.valueOf(tekSirket);
+		this.tekSirket = tekSirket;
 	}
 
 	public Boolean getModelGoster() {
