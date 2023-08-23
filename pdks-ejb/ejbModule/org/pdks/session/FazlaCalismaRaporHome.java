@@ -733,7 +733,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			HashMap map = new HashMap();
 			map.put("id", sirketId);
 			if (session != null)
-				map.put("session", session);
+				map.put(PdksEntityController.MAP_KEY_SESSION, session);
 			sirket = ((Sirket) pdksEntityController.getObjectByInnerObject(map, Sirket.class));
 		}
 		fazlaMesaiVardiyaGun = null;
@@ -777,7 +777,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				fields.put("t2", bitTarih);
 				fields.put("p", personelIdler);
 				if (session != null)
-					fields.put("session", session);
+					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 				personelList = pdksEntityController.getObjectBySQLList(sb, fields, Personel.class);
 			}
 
@@ -949,7 +949,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		linkedHashMap.put("calSure", calSure);
 		linkedHashMap.put("format", null);
 		if (session != null)
-			linkedHashMap.put("session", session);
+			linkedHashMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 		List list = null;
 		try {
 			list = pdksEntityController.execSPList(linkedHashMap, sb, VardiyaGun.class);
@@ -1063,7 +1063,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			sb.append(" AND I." + PersonelFazlaMesai.COLUMN_NAME_DURUM + "=1");
 			parametreMap.put("v", new ArrayList(gunMap.keySet()));
 			if (session != null)
-				parametreMap.put("session", session);
+				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<PersonelFazlaMesai> list = pdksEntityController.getObjectBySQLList(sb, parametreMap, PersonelFazlaMesai.class);
 			if (!list.isEmpty()) {
 				String patern = "yyyyMMdd" + (maxGeceCalismaSaatStr.indexOf(":") > 0 ? "HH:mm" : "HHmm");
@@ -1239,7 +1239,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				parametreMap.clear();
 				parametreMap.put("id", tesisId);
 				if (session != null)
-					parametreMap.put("session", session);
+					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 				tesis = (Tanim) pdksEntityController.getObjectByInnerObject(parametreMap, Tanim.class);
 			}
 
@@ -1247,7 +1247,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				parametreMap.clear();
 				parametreMap.put("id", seciliEkSaha3Id);
 				if (session != null)
-					parametreMap.put("session", session);
+					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 				ekSaha3 = (Tanim) pdksEntityController.getObjectByInnerObject(parametreMap, Tanim.class);
 			}
 			if (tesis != null)
@@ -1258,7 +1258,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			HashMap parametreMap = new HashMap();
 			parametreMap.put("id", sirketId);
 			if (session != null)
-				parametreMap.put("session", session);
+				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			Sirket sirket = (Sirket) pdksEntityController.getObjectByInnerObject(parametreMap, Sirket.class);
 			if (sirket != null)
 				gorevYeriAciklama = sirket.getAciklama() + "_";
@@ -1626,7 +1626,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				HashMap fields = new HashMap();
 				fields.put("id", sirketId);
 				if (session != null)
-					fields.put("session", session);
+					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 				sirket = ((Sirket) pdksEntityController.getObjectByInnerObject(fields, Sirket.class));
 			}
 			List<SelectItem> list = fazlaMesaiOrtakIslemler.getFazlaMesaiTesisList(sirket, new AylikPuantaj(basTarih, bitTarih), true, session);
@@ -1670,7 +1670,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				HashMap parametreMap = new HashMap();
 				parametreMap.put("id", sirketId);
 				if (session != null)
-					parametreMap.put("session", session);
+					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 				sirket = (Sirket) pdksEntityController.getObjectByInnerObject(parametreMap, Sirket.class);
 			}
 			setSirket(sirket);
