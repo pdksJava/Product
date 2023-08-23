@@ -82,7 +82,7 @@
 								<s:decorate template="/layout/edit.xhtml" rendered="#{fazlaCalismaRaporHome.kullaniciPersonel==false}">
 									<ui:define name="label">#{ortakIslemler.personelNoAciklama()}</ui:define>
 									<h:inputText value="#{fazlaCalismaRaporHome.sicilNo}">
-										<a4j:support event="onchange" status="ajaxStatus" ajaxSingle="true" />
+										<a4j:support event="onchange" status="ajaxStatus" ajaxSingle="true" action="#{fazlaCalismaRaporHome.listeTemizle()}" reRender="anaForm" />
 									</h:inputText>
 								</s:decorate>
 							</c:if>
@@ -137,7 +137,7 @@
 										</f:facet>
 										<h:outputText value="#{fazlaMesai.pdksPersonel.adSoyad}" />
 									</rich:column>
-									<rich:column style="width: 60px;width:autostretch ;white-space: nowrap;" rendered="#{fazlaCalismaRaporHome.tesisId==null}">
+									<rich:column style="width: 60px;width:autostretch ;white-space: nowrap;" rendered="#{fazlaCalismaRaporHome.sirket.tesisDurumu}">
 										<f:facet name="header">
 											<h:outputText value="#{ortakIslemler.tesisAciklama()}" />
 										</f:facet>
@@ -163,6 +163,12 @@
 											<h:outputText value="#{fazlaMesai.pdksPersonel.yoneticisi.adSoyad}" />
 
 										</ui:fragment>
+									</rich:column>
+									<rich:column style="width: 60px;width:autostretch ;white-space: nowrap;">
+										<f:facet name="header">
+											<h:outputText value="Görevi" />
+										</f:facet>
+										<h:outputText value="#{fazlaMesai.pdksPersonel.gorevTipi.aciklama}" />
 									</rich:column>
 									<c:choose>
 										<c:when test="#{fazlaCalismaRaporHome.vardiyaHaftaList.size()>0}">
@@ -196,6 +202,7 @@
 																			value="#{authenticatedUser.sayiFormatliGoster(fazlaCalismaRaporHome.vardiyaGun.vardiyaSaat.calismaSuresi)}" />
 																	</span>
 																</ui:fragment>
+
 															</DIV>
 															<rich:toolTip for="vardiya#{fazlaCalismaRaporHome.vardiyaGun.id}">
 																#{fazlaCalismaRaporHome.vardiyaGun.fazlaMesaiTitle}
@@ -216,10 +223,6 @@
 																#{vardiyaHafta.hafta}. 
 																</c:if> Hafta<br /> Toplamı
 															</SPAN>
-
-
-
-
 
 														</ui:fragment>
 													</f:facet>
@@ -261,15 +264,75 @@
 
 													<ui:fragment rendered="#{fazlaCalismaRaporHome.vardiyaBul(fazlaMesai,vardiya)!=null }">
 														<DIV id="vardiya#{fazlaCalismaRaporHome.vardiyaGun.id}">
+
 															<ui:fragment rendered="#{fazlaCalismaRaporHome.vardiyaGun.vardiyaSaat!=null}">
 																<span style="#{fazlaCalismaRaporHome.vardiyaGun.tdClass}"> <h:outputText
 																		value="#{authenticatedUser.sayiFormatliGoster(fazlaCalismaRaporHome.vardiyaGun.vardiyaSaat.calismaSuresi)}" />
 																</span>
 															</ui:fragment>
+															<ui:fragment rendered="#{fazlaCalismaRaporHome.vardiyaGun.vardiyaSaat==null and fazlaCalismaRaporHome.vardiyaGun.haftaTatil}">
+																<span style="color: green; font-size: 12px;"> <h:outputText value="#{fazlaCalismaRaporHome.vardiyaGun.vardiyaAciklama}" />
+																</span>
+															</ui:fragment>
 														</DIV>
 														<rich:toolTip for="vardiya#{fazlaCalismaRaporHome.vardiyaGun.id}">
-												#{fazlaCalismaRaporHome.vardiyaGun.fazlaMesaiTitle}
-												</rich:toolTip>
+												#{fazlaCalismaRaporHome.vardiyaGun.fazlaMesaiTitle}  
+												<ui:fragment rendered="#{fazlaCalismaRaporHome.vardiyaGun.vardiyaSaat!=null and not empty fazlaCalismaRaporHome.fazlaMesailer}">
+																<br />
+																<rich:dataTable rowClasses="acik,koyu" value="#{fazlaCalismaRaporHome.fazlaMesailer}" var="ms" style="width: 80%;" rows="50"
+																	rowKeyVar="row">
+
+																	<f:facet name="header">
+																		<h:outputText value="Fazla Mesailer" />
+																	</f:facet>
+
+																	<rich:column style="text-align: center;width: 30px;">
+																		<f:facet name="header">
+																			<h:outputText value="Başlangıç Zamanı" />
+																		</f:facet>
+
+																		<h:outputText value="#{authenticatedUser.dateTimeFormatla(ms.basZaman)}" />
+																	</rich:column>
+																	<rich:column style="text-align: center;width: 30px;">
+																		<f:facet name="header">
+																			<h:outputText value="Bitiş Zamanı" />
+																		</f:facet>
+
+																		<h:outputText value="#{authenticatedUser.dateTimeFormatla(ms.bitZaman)}" />
+																	</rich:column>
+																	<rich:column style="text-align: center;width: 30px;">
+																		<f:facet name="header">
+																			<h:outputText value="Süre" />
+																		</f:facet>
+
+																		<h:outputText value="#{authenticatedUser.sayiFormatliGoster(ms.fazlaMesaiSaati)}" />
+																	</rich:column>
+																	<rich:column style=" width: 50px;">
+																		<f:facet name="header">
+																			<h:outputText value="Neden" />
+																		</f:facet>
+
+																		<h:outputText value="#{ms.fazlaMesaiOnayDurum.aciklama}" />
+																	</rich:column>
+																	<rich:column style=" width: 50px;">
+																		<f:facet name="header">
+																			<h:outputText value="Onaylayan" />
+																		</f:facet>
+
+																		<h:outputText value="#{ms.olusturanUser.adSoyad}" />
+																	</rich:column>
+
+																	<rich:column style="text-align: center;width: 30px;">
+																		<f:facet name="header">
+																			<h:outputText value="Onay Zamanı" />
+																		</f:facet>
+
+																		<h:outputText value="#{authenticatedUser.dateTimeFormatla(ms.olusturmaTarihi)}" />
+																	</rich:column>
+																</rich:dataTable>
+
+															</ui:fragment>
+														</rich:toolTip>
 													</ui:fragment>
 
 
