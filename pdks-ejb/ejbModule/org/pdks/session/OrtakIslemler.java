@@ -472,7 +472,7 @@ public class OrtakIslemler implements Serializable {
 		if (veriOlustur)
 			wb = new XSSFWorkbook();
 
-		Sheet sheet = ExcelUtil.createSheet(wb, "Fazla Mesai Vardiya", Boolean.TRUE);
+		Sheet sheet = ExcelUtil.createSheet(wb, "Vardiyalar", Boolean.TRUE);
 		CellStyle header = ExcelUtil.getStyleHeader(wb);
 		CellStyle styleOdd = ExcelUtil.getStyleOdd(null, wb);
 		CellStyle styleOddCenter = ExcelUtil.getStyleOdd(ExcelUtil.ALIGN_CENTER, wb);
@@ -532,9 +532,9 @@ public class OrtakIslemler implements Serializable {
 				if (tesisAciklama != null)
 					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(sirket.getTesisDurum() && personel.getTesis() != null ? personel.getTesis().getAciklama() : "");
 				ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getEkSaha3() != null ? personel.getEkSaha3().getAciklama() : "");
-				if (altBolumAciklama != null)  
+				if (altBolumAciklama != null)
 					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getEkSaha4() != null ? personel.getEkSaha4().getAciklama() : "");
-				 
+
 				ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getYoneticisi() != null ? personel.getYoneticisi().getAdSoyad() : "");
 				ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getGorevTipi() != null ? personel.getGorevTipi().getAciklama() : "");
 				Cell cell = ExcelUtil.getCell(sheet, row, col++, styleCenter);
@@ -549,7 +549,7 @@ public class OrtakIslemler implements Serializable {
 				}
 
 				cell.setCellValue(gun.getVardiyaZamanAdi());
-				if (sure != null)
+				if (sure != null && sure.doubleValue() != 0.0d)
 					ExcelUtil.getCell(sheet, row, col++, PdksUtil.isDoubleValueNotLong(sure) ? styleDouble : styleNumber).setCellValue(sure.doubleValue());
 				else {
 					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue("");
