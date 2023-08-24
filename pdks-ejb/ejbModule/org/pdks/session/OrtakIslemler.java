@@ -15570,26 +15570,39 @@ public class OrtakIslemler implements Serializable {
 		List<VardiyaGun> izinVardiyaGunList = new ArrayList<VardiyaGun>();
 		if (izinler != null && vardiyaGunList != null) {
 			boolean izinVar = false;
-			for (Iterator<VardiyaGun> iterator = vardiyaGunList.iterator(); iterator.hasNext();) {
-				VardiyaGun vardiyaGun = iterator.next();
+			try {
+				for (Iterator<VardiyaGun> iterator = vardiyaGunList.iterator(); iterator.hasNext();) {
+					VardiyaGun vardiyaGun = iterator.next();
+					vardiyaGun.setIzinler(null);
+					vardiyaGun.setIzin(null);
+					Vardiya vardiya = vardiyaGun.getVardiya();
+					if (vardiyaGun.getVardiyaKeyStr().equals("20230704"))
+						logger.debug("");
+					if (vardiya == null) {
+						Personel personel = vardiyaGun.getPdksPersonel();
 
-				vardiyaGun.setIzinler(null);
-				vardiyaGun.setIzin(null);
-				if (vardiyaGun.getVardiya() == null)
-					continue;
-				// Personel izinleri vardiya gününe ekleniyor
-				if (izinler != null) {
-					for (Iterator<PersonelIzin> iterator3 = izinler.iterator(); iterator3.hasNext();) {
-						PersonelIzin personelIzin = iterator3.next();
-						setIzinDurum(vardiyaGun, personelIzin);
+						boolean calisiyor = personel != null && personel.isCalisiyorGun(vardiyaGun.getVardiyaDate());
+						if (!calisiyor)
+							continue;
 					}
-					if (vardiyaGun.getIzin() != null && vardiyaGun.getVardiya().isHaftaTatil()) {
-						if (!vardiyaGun.getIzin().getIzinTipi().getPersonelGirisTipi().equals(IzinTipi.GIRIS_TIPI_YOK))
-							izinVar = true;
+
+					// Personel izinleri vardiya gününe ekleniyor
+					if (izinler != null) {
+						for (Iterator<PersonelIzin> iterator3 = izinler.iterator(); iterator3.hasNext();) {
+							PersonelIzin personelIzin = iterator3.next();
+							setIzinDurum(vardiyaGun, personelIzin);
+						}
+						if (vardiya != null && vardiyaGun.getIzin() != null && vardiya.isHaftaTatil()) {
+							if (!vardiyaGun.getIzin().getIzinTipi().getPersonelGirisTipi().equals(IzinTipi.GIRIS_TIPI_YOK))
+								izinVar = true;
+						}
 					}
+					if (vardiya != null && vardiyaGun.getIzin() != null && vardiyaGun.getVardiya().isIzin())
+						izinVardiyaGunList.add(vardiyaGun);
 				}
-				if (vardiyaGun.getIzin() != null && vardiyaGun.getVardiya().isIzin())
-					izinVardiyaGunList.add(vardiyaGun);
+
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 
 			if (izinVar) {
