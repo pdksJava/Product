@@ -1460,7 +1460,7 @@ public class PdksVeriOrtakAktar implements Serializable {
 					personelList = PdksUtil.sortListByAlanAdi(personelList, "iseBaslamaTarihi", Boolean.FALSE);
 				TreeMap<String, Personel> personelMap = new TreeMap<String, Personel>();
 				for (Personel personel : personelList) {
-					if ((tarih1 == null || personel.getSskCikisTarihi().getTime() >= tarih1.getTime()) && (tarih2 == null || personel.getIseBaslamaTarihi().getTime() <= tarih2.getTime())) {
+					if ((tarih1 == null || personel.getSskCikisTarihi().getTime() >=PdksUtil.getDate(tarih1).getTime()) && (tarih2 == null || personel.getIseBaslamaTarihi().getTime() <= PdksUtil.getDate(tarih2).getTime())) {
 						personelMap.put(personel.getPdksSicilNo(), personel);
 					}
 				}
