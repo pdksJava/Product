@@ -15484,7 +15484,7 @@ public class OrtakIslemler implements Serializable {
 							}
 
 						}
-						if (denklestirmeAy.getDurum() && bagliKapiVar && vardiyaGun.isAyinGunu()) {
+						if (bagliKapiVar && denklestirmeAy.getDurum() && vardiyaGun.isAyinGunu()) {
 							int adet = hareketList.size();
 							boolean hareketHatali = false;
 							if (adet > 0 && adet % 2 == 0) {
@@ -15731,7 +15731,6 @@ public class OrtakIslemler implements Serializable {
 								map.put("pdks", 1);
 								try {
 									pdksEntityController.execSP(map, sb);
-
 								} catch (Exception e) {
 									pdksLog.setGuncellemeZamani(guncellemeZamani);
 									pdksLog.setKapiId(kapiKGS.getKgsId());
