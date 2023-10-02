@@ -193,7 +193,7 @@ public class WSLoggingOutInterceptor extends AbstractSoapInterceptor {
 								}
 								if (!sonucMap.isEmpty()) {
 									ServiceData serviceData = new ServiceData(fonksiyonAdi);
-									LinkedHashMap<String, String> map = getChangeMap();
+									LinkedHashMap<String, String> map = WSLoggingOutInterceptor.getChangeMap();
 									serviceData.setInputData(getString(map, sonucMap.get("data")));
 									serviceData.setOutputData(getString(map, sonucMap.get("return")));
 									try {
@@ -234,17 +234,6 @@ public class WSLoggingOutInterceptor extends AbstractSoapInterceptor {
 			return str;
 		}
 
-		/**
-		 * @return
-		 */
-		private LinkedHashMap<String, String> getChangeMap() {
-			LinkedHashMap<String, String> map = new LinkedHashMap<String, String>();
-			map.put("&amp;", "&");
-			map.put("&lt;", "<");
-			map.put("&gt;", ">");
-			return map;
-		}
-
 		public String getXML() {
 			return xml;
 		}
@@ -252,5 +241,16 @@ public class WSLoggingOutInterceptor extends AbstractSoapInterceptor {
 		@Override
 		public void onFlush(CachedOutputStream arg0) {
 		}
+	}
+
+	/**
+	 * @return
+	 */
+	public static LinkedHashMap<String, String> getChangeMap() {
+		LinkedHashMap<String, String> map = new LinkedHashMap<String, String>();
+		map.put("&amp;", "&");
+		map.put("&lt;", "<");
+		map.put("&gt;", ">");
+		return map;
 	}
 }
