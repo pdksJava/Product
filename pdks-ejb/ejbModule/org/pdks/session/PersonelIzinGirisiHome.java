@@ -495,17 +495,17 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 		sb.append("SELECT P." + Personel.COLUMN_NAME_ID + " from " + Personel.TABLE_NAME + " P WITH(nolock)  ");
 		// sb.append(" WHERE P." + Personel.COLUMN_NAME_DOGUM_TARIHI + " IS NOT NULL  ");
 		String whereStr = " WHERE  ";
-		if (adi.trim().length() > 0) {
+		if (PdksUtil.hasStringValue(adi)) {
 			sb.append(whereStr + " P." + Personel.COLUMN_NAME_AD + " LIKE :ad");
 			whereStr = " AND ";
 			parametreMap.put("ad", adi.trim() + "%");
 		}
-		if (soyadi.trim().length() > 0) {
+		if (PdksUtil.hasStringValue(soyadi)) {
 			sb.append(whereStr + " P." + Personel.COLUMN_NAME_SOYAD + " LIKE :soyad");
 			whereStr = " AND ";
 			parametreMap.put("soyad", soyadi.trim() + "%");
 		}
-		if (sicilNo.trim().length() > 0) {
+		if (PdksUtil.hasStringValue(sicilNo)) {
 			sb.append(whereStr + " P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " =:sicilNo");
 			whereStr = " AND ";
 			parametreMap.put("sicilNo", ortakIslemler.getSicilNo(sicilNo.trim()));
@@ -551,7 +551,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 
 		List<String> perNoList = new ArrayList<String>(ortakIslemler.getYetkiTumPersonelNoList());
 		if (linkAdres != null) {
-			if (sicilNo.trim().length() > 0 && !perNoList.contains(sicilNo.trim()))
+			if (PdksUtil.hasStringValue(sicilNo) && !perNoList.contains(sicilNo.trim()))
 				perNoList.add(sicilNo.trim());
 		}
 		if (parametreMap.isEmpty()) {
@@ -1184,7 +1184,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 		setEkSaha4(null);
 		fillEkSahaTanim();
 		dosyaTipleri = ortakIslemler.getParameterKey("dosyaTipleri");
-		if (dosyaTipleri == null || dosyaTipleri.equals(""))
+		if (!PdksUtil.hasStringValue(dosyaTipleri))
 			dosyaTipleri = "doc,docx,pd";
 		fillGirisEkSahaTanim();
 		if (visibled)
@@ -1337,7 +1337,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 		}
 		mailIzin = null;
 		setOnayimaGelenIzinler(new ArrayList());
-		if (mId != null && mId.trim().length() > 0) {
+		if (PdksUtil.hasStringValue(mId)) {
 			try {
 				HashMap parametreMap = new HashMap();
 				parametreMap.put("id", new Long(mId));
@@ -2031,7 +2031,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 				String iptalAciklama = "";
 				if (redSebebiTanim != null) {
 					iptalAciklama = redSebebiTanim.getAciklama();
-					if (redSebebi != null && redSebebi.trim().length() > 0) {
+					if (PdksUtil.hasStringValue(redSebebi)) {
 						iptalAciklama += " - " + redSebebi.trim();
 					}
 					iptalAciklama = iptalAciklama + " nedeniyle ";
@@ -2223,7 +2223,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 			PdksUtil.addMessageError("Hata " + e.getMessage());
 		}
 		List<PersonelIzin> izinList = null;
-		if (sicilNoList.isEmpty() && !sicilNo.equals("") && (authenticatedUser.isIK() || authenticatedUser.isAdmin())) {
+		if (sicilNoList.isEmpty() && PdksUtil.hasStringValue(sicilNo) && (authenticatedUser.isIK() || authenticatedUser.isAdmin())) {
 			HashMap map = new HashMap();
 			StringBuffer sb = new StringBuffer();
 			sb.append("SELECT P." + Personel.COLUMN_NAME_ID + " from " + Personel.TABLE_NAME + " P WITH(nolock) ");
@@ -2250,7 +2250,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 		if (!sicilNoList.isEmpty() || isGirisSSK()) {
 			if (isGirisSSK()) {
 				sicilNoList.clear();
-				if (!sicilNo.trim().equals(""))
+				if (PdksUtil.hasStringValue(sicilNo))
 					sicilNoList.add(ortakIslemler.getSicilNo(sicilNo));
 			}
 			if (isGirisSSK() || (sicilNoList != null && !sicilNoList.isEmpty())) {
@@ -2553,7 +2553,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 
 	private void hekimCCList() {
 		String hekimCCMail = ortakIslemler.getParameterKey("hekimCCMail");
-		if (hekimCCMail != null && !hekimCCMail.equals("")) {
+		if (PdksUtil.hasStringValue(hekimCCMail)) {
 			List<String> hekimCCListesi = Arrays.asList(hekimCCMail.split(","));
 			for (Iterator iterator = hekimCCListesi.iterator(); iterator.hasNext();) {
 				String str = (String) iterator.next();
@@ -3062,10 +3062,10 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 
 				}
 			}
-			if (!durum.equals("") && !izinTipi.getTakvimGunumu())
+			if (PdksUtil.hasStringValue(durum) && !izinTipi.getTakvimGunumu())
 				durum = isHaftaTatilKontrolIzin(personelIzin);
 		}
-		if (!durum.equals("") && (izinTipi.isSenelikIzin() || izinTipi.isMazeretIzin())) {
+		if (PdksUtil.hasStringValue(durum) && (izinTipi.isSenelikIzin() || izinTipi.isMazeretIzin())) {
 			List tarihAraligiIzinList = null;
 			HashMap param = new HashMap();
 			param.put("izinSahibi=", izinSahibi);
@@ -3090,40 +3090,38 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 			boolean kesisenTarihteIzinVar = Boolean.FALSE;
 			// bu durumda vekil transfer gibi islem yapiacak
 			if (tarihAraligiIzinList != null && (getHesapTipi() == PersonelIzin.HESAP_TIPI_GUN || saatFark >= 24)) {
-
-				for (Iterator iterator = tarihAraligiIzinList.iterator(); iterator.hasNext();) {
-					PersonelIzin tempIzin = (PersonelIzin) iterator.next();
-					if (tempIzin.getIzinTipi().isSenelikIzin() || tempIzin.getIzinTipi().isMazeretIzin()) {
-						double saatIzinFark = Math.abs(PdksUtil.getSaatFarki(tempIzin.getBitisZamani(), tempIzin.getBaslangicZamani()));
-						if (saatIzinFark < 24)
-							continue;
-						double saatFark1 = Math.abs(PdksUtil.getSaatFarki(personelIzin.getBitisZamani(), tempIzin.getBaslangicZamani()));
-						if (saatFark1 < 24) {
-							kesisenTarihteIzinVar = Boolean.TRUE;
-							PdksUtil.addMessageWarn("İki izin arası 1 günden az olamaz! " + PdksUtil.convertToDateString(personelIzin.getBitisZamani(), "yyy/MM/dd") + "-" + PdksUtil.convertToDateString(tempIzin.getBaslangicZamani(), "yyy/MM/dd"));
-						} else {
-							double saatFark2 = Math.abs(PdksUtil.getSaatFarki(tempIzin.getBitisZamani(), personelIzin.getBaslangicZamani()));
-							if (saatFark2 < 24) {
+				if (!authenticatedUser.isIK()) {
+ 					for (Iterator iterator = tarihAraligiIzinList.iterator(); iterator.hasNext();) {
+						PersonelIzin tempIzin = (PersonelIzin) iterator.next();
+						if (tempIzin.getIzinTipi().isSenelikIzin() || tempIzin.getIzinTipi().isMazeretIzin()) {
+							double saatIzinFark = Math.abs(PdksUtil.getSaatFarki(tempIzin.getBitisZamani(), tempIzin.getBaslangicZamani()));
+							if (saatIzinFark < 24)
+								continue;
+							double saatFark1 = Math.abs(PdksUtil.getSaatFarki(personelIzin.getBitisZamani(), tempIzin.getBaslangicZamani()));
+							if (saatFark1 < 24) {
 								kesisenTarihteIzinVar = Boolean.TRUE;
-								PdksUtil.addMessageWarn("İki izin arası 1 günden az olamaz! " + PdksUtil.convertToDateString(tempIzin.getBitisZamani(), "yyy/MM/dd") + "-" + PdksUtil.convertToDateString(personelIzin.getBaslangicZamani(), "yyy/MM/dd"));
+								PdksUtil.addMessageWarn("İki izin arası 1 günden az olamaz! " + PdksUtil.convertToDateString(personelIzin.getBitisZamani(), "yyy/MM/dd") + "-" + PdksUtil.convertToDateString(tempIzin.getBaslangicZamani(), "yyy/MM/dd"));
+							} else {
+								double saatFark2 = Math.abs(PdksUtil.getSaatFarki(tempIzin.getBitisZamani(), personelIzin.getBaslangicZamani()));
+								if (saatFark2 < 24) {
+									kesisenTarihteIzinVar = Boolean.TRUE;
+									PdksUtil.addMessageWarn("İki izin arası 1 günden az olamaz! " + PdksUtil.convertToDateString(tempIzin.getBitisZamani(), "yyy/MM/dd") + "-" + PdksUtil.convertToDateString(personelIzin.getBaslangicZamani(), "yyy/MM/dd"));
 
-							}
-
-						}
-						if (kesisenTarihteIzinVar)
-							break;
+								}
+ 							}
+							if (kesisenTarihteIzinVar)
+								break;
+ 						}
 
 					}
-
 				}
 			}
-
 			if (kesisenTarihteIzinVar) {
 				durum = "";
 			}
 		}
 
-		if (!durum.equals("")) {
+		if (PdksUtil.hasStringValue(durum)) {
 			List tarihAraligiIzinList = null;
 			HashMap param = new HashMap();
 			param.put("izinSahibi=", izinSahibi);
@@ -3172,13 +3170,13 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 
 		if (izinTipi == null && guncellenecekIzin != null && guncellenecekIzin.getIzinTipi() != null)
 			personelIzin.setIzinTipi(guncellenecekIzin.getIzinTipi());
-		if (getHesapTipi() == PersonelIzin.HESAP_TIPI_GUN && !durum.equals("")) {
+		if (getHesapTipi() == PersonelIzin.HESAP_TIPI_GUN && PdksUtil.hasStringValue(durum)) {
 			boolean ardisikIzinVar = ardisikIzinKontrol(getInstance());
 			if (ardisikIzinVar)
 				durum = "";
 		}
 
-		if (!durum.equals("")) {
+		if (PdksUtil.hasStringValue(durum)) {
 
 			Date basDate = PdksUtil.getDate(personelIzin.getBaslangicZamani()), bitDate = PdksUtil.getDate(personelIzin.getBitisZamani());
 			if (izinTipi.isSenelikIzin()) {
@@ -3265,7 +3263,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 			}
 		}
 		double izinSuresiGunSaat = personelIzin.getIzinSuresi();
-		if (!durum.equals("") && izinTipi.isBireyselMolaIzin()) {
+		if (PdksUtil.hasStringValue(durum) && izinTipi.isBireyselMolaIzin()) {
 			String basTarihi = PdksUtil.convertToDateString(personelIzin.getBaslangicZamani(), "yyyyMMdd");
 			String bitTarihi = PdksUtil.convertToDateString(personelIzin.getBitisZamani(), "yyyyMMdd");
 			HashMap param = new HashMap();
@@ -3312,7 +3310,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 
 		// KONTROL istedigi kadar izni kalmis mi , bakiye kontrolu yapilmasi
 		// gereken izinler icin bu kontrol yapilir.
-		if (!durum.equals("") && !izinTipi.getBakiyeDevirTipi().equals(IzinTipi.BAKIYE_DEVIR_YOK)) {
+		if (PdksUtil.hasStringValue(durum) && !izinTipi.getBakiyeDevirTipi().equals(IzinTipi.BAKIYE_DEVIR_YOK)) {
 			// dusulecek izin gunu once gecmis yillardan izin varsa eritilir
 
 			List<Integer> izinDurumList = new ArrayList<Integer>();
@@ -3485,7 +3483,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 			}
 
 		}
-		if (!durum.equals("")) {
+		if (PdksUtil.hasStringValue(durum)) {
 			Integer izinHesapTipi = izinTipi.getHesapTipi();
 			String mesaj = "Bir defada girilecek " + izinTipi.getIzinTipiTanim().getAciklama() + " süresi ";
 			Double izinSure = personelIzin.getIzinSuresi();
@@ -3543,11 +3541,11 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 					}
 				}
 			}
-			if (!durum.equals(""))
+			if (PdksUtil.hasStringValue(durum))
 				durum = izniSistemKaydet(personelIzin, updateUser, izinDetayList);
 
 		}
-		setBasarili(!durum.equals(""));
+		setBasarili(PdksUtil.hasStringValue(durum));
 
 		return durum;
 	}
@@ -3726,7 +3724,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 				PdksUtil.addMessageError("İzin kaydetme hatası ");
 			durum = "";
 		}
-		basarili = !durum.equals("");
+		basarili = PdksUtil.hasStringValue(durum);
 		if (basarili) {
 			try {
 				session.flush();
@@ -4333,11 +4331,17 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 			Date tarih = null;
 			StringBuffer sb = new StringBuffer();
 			Double yemekMolasiYuzdesi = ortakIslemler.getYemekMolasiYuzdesi(null, session);
+			boolean cumaBasla = false;
+			if (izinTipi.isCumaCumartesiTekIzinSaysin() && izinTipi.isOffDahilMi())
+				cumaBasla = PdksUtil.getDateField(izinBasTarih, Calendar.DAY_OF_WEEK) == Calendar.FRIDAY;
+			int cumartesi = 0;
 			ortakIslemler.setVardiyaYemekList(new ArrayList<VardiyaGun>(vardiyalar.values()), yemekGenelList);
 			while (PdksUtil.tarihKarsilastirNumeric(personelIzin.getBitisZamani(), vardiyaDate) >= durum) {
 				pdksVardiyaGun.setVardiyaDate(vardiyaDate);
 				tarih = (Date) vardiyaDate.clone();
 				int haftaGunu = PdksUtil.getDateField(vardiyaDate, Calendar.DAY_OF_WEEK);
+				if (cumaBasla && haftaGunu == Calendar.SATURDAY)
+					++cumartesi;
 				tatilGunuKey = PdksUtil.convertToDateString(vardiyaDate, "yyyyMMdd");
 				vardiyaKey = pdksVardiyaGun.getVardiyaKeyStr();
 
@@ -4369,7 +4373,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 									String arifeSenelikIzinGun = ortakIslemler.getParameterKey("arifeSenelikIzinGun");
 									try {
 										eklenecekGun = null;
-										if (!arifeSenelikIzinGun.equals(""))
+										if (PdksUtil.hasStringValue(arifeSenelikIzinGun))
 											eklenecekGun = Double.parseDouble(arifeSenelikIzinGun);
 
 									} catch (Exception e) {
@@ -4461,6 +4465,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 				cal.add(Calendar.DATE, 1);
 				vardiyaDate = cal.getTime();
 			}
+
 			if (!authenticatedUser.isIKAdmin() && sb.length() > 0) {
 				String str = sb.toString();
 				sb = null;
@@ -4491,7 +4496,13 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 				}
 			}
 			artiklarMap = null;
-
+			if (cumartesi == 1 && izinSuresiSaatGun == 2) {
+				izinSuresiSaatGun = 1;
+				cal.setTime(personelIzin.getBaslangicZamani());
+				cal.add(Calendar.DATE, 1);
+				Date bitisZamani = cal.getTime();
+				personelIzin.setBitisZamani(bitisZamani);
+			}
 		} else if (personelIzin.getIzinTipi().getTakvimGunumu()) {
 			// 2 tarih arasindaki gun sayısı kadar izinden dusulur
 			// takvim gunu secilen bir izni saatlik girilecek sekilde

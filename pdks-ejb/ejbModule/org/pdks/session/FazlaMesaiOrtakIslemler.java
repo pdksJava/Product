@@ -142,7 +142,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 				if (!tanim.getKodu().equals(BordroDetayTipi.TANIMSIZ.value())) {
 					BordroDetayTipi bordroTipi = null;
 					try {
-						if (tanim.getKodu().trim().length() > 0)
+						if (PdksUtil.hasStringValue(tanim.getKodu()))
 							bordroTipi = BordroDetayTipi.fromValue(tanim.getKodu().trim());
 					} catch (Exception e) {
 					}
@@ -261,30 +261,23 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 											artiGun = 0.0d;
 
 									}
-									if (izinTipi.getUcretli()) {
-										if (vardiyaGun.isHaftaIci() && resmiTatil == false)
-											izinGunAdet += 1.0d;
+									if (izinTipi.getUcretli())
+										izinGunAdet += 1;
 
-									}
 								}
 								izinKodu = izinTipi.getIzinTipiTanim().getErpKodu();
-								if (izinTipi.isUcretsizIzinTipi()) {
-									izinKodu = BordroDetayTipi.UCRETSIZ_IZIN.value();
-									calismaGun = 0;
-								}
 
-								else {
-									if (!izinGrupMap.containsKey(izinKodu))
-										izinKodu = null;
-									else
-										izinKodu = izinGrupMap.get(izinKodu);
-								}
+								if (!izinGrupMap.containsKey(izinKodu))
+									izinKodu = null;
+								else
+									izinKodu = izinGrupMap.get(izinKodu);
+
 							} else
 								izinKodu = vardiya.getStyleClass();
 							if (artiGun > 0.0d && izinKodu != null) {
 								BordroDetayTipi bordroTipi = null;
 								try {
-									if (izinKodu.trim().length() > 0)
+									if (PdksUtil.hasStringValue(izinKodu))
 										bordroTipi = BordroDetayTipi.fromValue(izinKodu);
 								} catch (Exception e) {
 								}
@@ -302,7 +295,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 								if (!tatil.isYarimGunMu()) {
 									resmiTatilAdet += calismaGun;
 									calismaGun = 0;
-								} else if (!arifeGunuBordroYarim.equals("")) {
+								} else if (PdksUtil.hasStringValue(arifeGunuBordroYarim)) {
 									calismaGun = 0.5d;
 									resmiTatilAdet += calismaGun;
 								}
@@ -366,8 +359,12 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 						artikAdet = 0;
 
 					}
-					if (izinGunAdet > 0)
+					if (izinGunAdet > 0) {
 						detayMap.put(BordroDetayTipi.IZIN_GUN, izinGunAdet);
+						if (calismaModeli.isSaatlikOdeme() == false)
+							normalGunAdet -= izinGunAdet;
+					}
+
 					if (normalCalisma != 0)
 						detayMap.put(BordroDetayTipi.SAAT_NORMAL, normalCalisma);
 					if (resmiTatilSaat > 0)
@@ -533,7 +530,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 
 			Double maxCalismaSaat = null;
 			try {
-				if (!maxCalismaSaatStr.equals(""))
+				if (PdksUtil.hasStringValue(maxCalismaSaatStr))
 					maxCalismaSaat = Double.parseDouble(maxCalismaSaatStr);
 			} catch (Exception e) {
 			}
@@ -652,9 +649,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 		List<String> list = new ArrayList<String>();
 		try {
 			String maxToplamMesaiStr = ortakIslemler.getParameterKey("maxToplamMesai");
-			// if (authenticatedUser.isIK() && maxToplamMesaiStr.equals(""))
-			// maxToplamMesaiStr = "270";
-			if (!maxToplamMesaiStr.equals("")) {
+			if (PdksUtil.hasStringValue(maxToplamMesaiStr)) {
 				Double maxToplamMesai = null;
 				try {
 					maxToplamMesai = Double.parseDouble(maxToplamMesaiStr);
@@ -1739,7 +1734,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 			}
 			String key = ortakIslemler.getParameterKey("izinPersonelOzetGoster");
 
-			boolean devam = (authenticatedUser.isAdmin() && izinGoster) || key.equals("1") || (authenticatedUser.isIK() && !key.equals("")), htToplamiGuncelle = false;
+			boolean devam = (authenticatedUser.isAdmin() && izinGoster) || key.equals("1") || (authenticatedUser.isIK() && PdksUtil.hasStringValue(key)), htToplamiGuncelle = false;
 			if (vgList != null && (authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || devam)) {
 				TreeMap<String, Vardiya> izinTipiVardiyaMap = new TreeMap<String, Vardiya>();
 				TreeMap<Long, TreeMap<String, List<VardiyaGun>>> izinTipiPersonelVardiyaMap = new TreeMap<Long, TreeMap<String, List<VardiyaGun>>>();

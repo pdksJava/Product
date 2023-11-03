@@ -346,6 +346,7 @@ public class DevamsizlikRaporuHome extends EntityHome<VardiyaGun> implements Ser
 			} catch (Exception e) {
 			}
 			vardiyaList = new ArrayList<VardiyaGun>(vardiyaMap.values());
+			ortakIslemler.sonrakiGunVardiyalariAyikla(date, vardiyaList);
 			// butun personeller icin hareket cekerken bu en kucuk tarih ile en
 			// buyuk tarih araligini kullanacaktir
 			// bu araliktaki tum hareketleri cekecektir.
@@ -521,14 +522,14 @@ public class DevamsizlikRaporuHome extends EntityHome<VardiyaGun> implements Ser
 
 									} else {
 										String aciklama = getVardiyaAciklama(vardiyaGun);
-										yaz = (aciklama == null || !aciklama.equals("")) || gelenGoster || izinDurum;
+										yaz = (aciklama == null || PdksUtil.hasStringValue(aciklama)) || gelenGoster || izinDurum;
 									}
 
 									vardiyaGun.setNormalSure(calismaSaati);
 								}
 							} else {
 								String aciklama = getVardiyaAciklama(vardiyaGun);
-								yaz = (aciklama == null || !aciklama.equals("")) || gelenGoster;
+								yaz = (aciklama == null || PdksUtil.hasStringValue(aciklama)) || gelenGoster;
 							}
 
 						}

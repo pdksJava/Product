@@ -64,7 +64,7 @@ public class Personel extends BaseObject {
 	public static final String COLUMN_NAME_SSK_CIKIS_TARIHI = "SSK_CIKIS_TARIHI";
 	public static final String COLUMN_NAME_CALISMA_MODELI = "CALISMA_MODELI_ID";
 	public static final String COLUMN_NAME_ISKUR_SABLON = "ISKUR_SABLON_ID";
-	
+
 	public static final String COLUMN_NAME_MAIL_TAKIP = "MAIL_TAKIP";
 
 	public static final String STATU_HEKIM = "2";
@@ -170,9 +170,9 @@ public class Personel extends BaseObject {
 	@Transient
 	public String getSicilNo() {
 		String kSicilNo = pdksSicilNo;
-		if (kSicilNo == null || kSicilNo.trim().length() == 0)
+		if (PdksUtil.hasStringValue(kSicilNo) == false)
 			kSicilNo = personelKGS != null ? personelKGS.getSicilNo() : "";
-		String sicilNo = erpSicilNo.equals("") ? kSicilNo : erpSicilNo;
+		String sicilNo = !PdksUtil.hasStringValue(erpSicilNo) ? kSicilNo : erpSicilNo;
 		return sicilNo.trim();
 	}
 
@@ -852,11 +852,11 @@ public class Personel extends BaseObject {
 	public String getPersonelExtraAciklama() {
 		StringBuffer sb = new StringBuffer();
 		if (personelExtra != null) {
-			if (personelExtra.getIlce() != null && personelExtra.getIlce().trim().length() > 0)
+			if (PdksUtil.hasStringValue(personelExtra.getIlce()))
 				sb.append(personelExtra.getIlce().trim() + " ");
-			if (personelExtra.getCepTelefon() != null && personelExtra.getCepTelefon().trim().length() > 0)
+			if (PdksUtil.hasStringValue(personelExtra.getCepTelefon()))
 				sb.append(personelExtra.getCepTelefon().trim() + " ");
-			if (personelExtra.getOzelNot() != null && personelExtra.getOzelNot().trim().length() > 0)
+			if (PdksUtil.hasStringValue(personelExtra.getOzelNot()))
 				sb.append(personelExtra.getOzelNot().trim() + " ");
 		}
 		String str = sb.toString();
@@ -970,7 +970,7 @@ public class Personel extends BaseObject {
 
 	@Transient
 	public List<String> getEMailCCList() {
-		if (mailGrubuCC != null && (emailCC == null || emailCC.equals("")))
+		if (mailGrubuCC != null && (!PdksUtil.hasStringValue(emailCC)))
 			emailCC = mailGrubuCC.getEmail();
 		List<String> mailList = PdksUtil.getListFromString(emailCC, null);
 		return mailList;
@@ -978,7 +978,7 @@ public class Personel extends BaseObject {
 
 	@Transient
 	public List<String> getEMailHareketList() {
-		if (hareketMailGrubu != null && (hareketMail == null || hareketMail.equals("")))
+		if (hareketMailGrubu != null && (!PdksUtil.hasStringValue(hareketMail)))
 			hareketMail = hareketMailGrubu.getEmail();
 		List<String> mailList = PdksUtil.getListFromString(hareketMail, null);
 		return mailList;
@@ -986,7 +986,7 @@ public class Personel extends BaseObject {
 
 	@Transient
 	public List<String> getEMailBCCList() {
-		if (mailGrubuBCC != null && (emailBCC == null || emailBCC.equals("")))
+		if (mailGrubuBCC != null && (!PdksUtil.hasStringValue(emailBCC)))
 			emailBCC = mailGrubuBCC.getEmail();
 		List<String> mailList = PdksUtil.getListFromString(emailBCC, null);
 		return mailList;
@@ -1004,7 +1004,7 @@ public class Personel extends BaseObject {
 	}
 
 	public static String getIseGirisTarihiColumn() {
-		String str = grubaGirisTarihiAlanAdi != null && grubaGirisTarihiAlanAdi.trim().length() > 0 ? grubaGirisTarihiAlanAdi : COLUMN_NAME_ISE_BASLAMA_TARIHI;
+		String str = PdksUtil.hasStringValue(grubaGirisTarihiAlanAdi) ? grubaGirisTarihiAlanAdi : COLUMN_NAME_ISE_BASLAMA_TARIHI;
 		return str;
 	}
 

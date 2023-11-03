@@ -235,7 +235,7 @@ public class PersonelKulllaniciExcelUpdateHome extends EntityHome<PersonelView> 
 
 						String yoneticiSicilNo = getSheetStringValue(sheet, j, hucre);
 						if (sicilNo != null && yoneticiSicilNo != null) {
-							if (!yoneticiSicilNo.equals("") && !yoneticiList.contains(yoneticiSicilNo))
+							if (PdksUtil.hasStringValue(yoneticiSicilNo) && !yoneticiList.contains(yoneticiSicilNo))
 								yoneticiList.add(yoneticiSicilNo);
 							yoneticiSicilMap.put(sicilNo, yoneticiSicilNo);
 						}
@@ -465,7 +465,7 @@ public class PersonelKulllaniciExcelUpdateHome extends EntityHome<PersonelView> 
 
 	public List<String> ccAdresList(String adres) {
 		List<String> adresler = new ArrayList<String>();
-		if (adres != null && adres.trim().length() > 0) {
+		if (PdksUtil.hasStringValue(adres)) {
 			if (adres.indexOf(",") > 0)
 				adresler.addAll(Arrays.asList(adres.split(",")));
 			else
@@ -483,7 +483,7 @@ public class PersonelKulllaniciExcelUpdateHome extends EntityHome<PersonelView> 
 				for (String adres : ccAdresList) {
 					try {
 						String eMail = PdksUtil.getInternetAdres(adres);
-						if (eMail != null && !eMail.equals(""))
+						if (PdksUtil.hasStringValue(eMail))
 							map1.put(eMail, eMail);
 					} catch (Exception e) {
 						logger.error("PDKS hata in : \n");
@@ -504,7 +504,7 @@ public class PersonelKulllaniciExcelUpdateHome extends EntityHome<PersonelView> 
 
 			for (Iterator iterator = ccAdresList.iterator(); iterator.hasNext();) {
 				String adres = (String) iterator.next();
-				if (adres.trim().length() > 0)
+				if (PdksUtil.hasStringValue(adres))
 					sb.append((sb.length() > 0 ? "," : "") + adres.trim());
 			}
 		}

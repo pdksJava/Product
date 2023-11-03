@@ -1,4 +1,4 @@
-package org.pdks.session;
+package com.pdks.notUse;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
@@ -56,7 +56,6 @@ import org.pdks.entity.Departman;
 import org.pdks.entity.DepartmanDenklestirmeDonemi;
 import org.pdks.entity.Dosya;
 import org.pdks.entity.FazlaMesaiTalep;
-import org.pdks.entity.IsKurVardiyaGun;
 import org.pdks.entity.IzinTipi;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
@@ -77,6 +76,12 @@ import org.pdks.entity.VardiyaSablonu;
 import org.pdks.entity.YemekIzin;
 import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.User;
+import org.pdks.session.ExcelUtil;
+import org.pdks.session.FazlaMesaiOrtakIslemler;
+import org.pdks.session.OrtakIslemler;
+import org.pdks.session.PdksEntityController;
+import org.pdks.session.PdksUtil;
+import org.pdks.session.PersonelIzinGirisiHome;
 import org.primefaces.event.FileUploadEvent;
 import org.richfaces.event.UploadEvent;
 import org.richfaces.model.UploadItem;
@@ -502,7 +507,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 	 */
 	@Transactional
 	public String guncelle(VardiyaPlan plan) {
-		vardiyaGuncelle = ikRole || !ortakIslemler.getParameterKey("vardiyaGuncelle").equals("");
+		vardiyaGuncelle = ikRole || ortakIslemler.getParameterKeyHasStringValue("vardiyaGuncelle");
 		setVardiyaPlan(plan);
 		fillVardiyaSablonList(plan.getPersonel());
 		fillVardiyaList();
@@ -1257,7 +1262,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 		sablonGuncelle = authenticatedUser == null && denklestirmeAyDurum && personelAylikPuantaj.isKaydet() && aylikPuantaj.isKaydet();
 		if (sablonGuncelle) {
 			String sablonGuncelleStr = ortakIslemler.getParameterKey("sablonGuncellemeyenDepartmanlar");
-			if (sablonGuncelleStr != null && sablonGuncelleStr.trim().length() > 0) {
+			if (PdksUtil.hasStringValue(sablonGuncelleStr)) {
 				List<String> depList = Arrays.asList(sablonGuncelleStr.split(","));
 				sablonGuncelle = !depList.contains(personel.getSirket().getDepartman().getId().toString());
 			}
@@ -2693,7 +2698,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 
 		}
 		if (adminRole || islemYapan.getYetkiTumPersonelNoList().contains(sicilNo))
-			if (sicilNo.trim().length() > 0)
+			if (PdksUtil.hasStringValue(sicilNo))
 				perList.add(sicilNo);
 
 		ArrayList<Long> perIdler = new ArrayList<Long>();
@@ -3201,7 +3206,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 			lastMap.put("departmanId", "" + aramaSecenekleri.getDepartmanId());
 		if (aramaSecenekleri.getSirketId() != null)
 			lastMap.put("sirketId", "" + aramaSecenekleri.getSirketId());
-		if ((ikRole) && sicilNo != null && sicilNo.trim().length() > 0)
+		if ((ikRole) && PdksUtil.hasStringValue(sicilNo))
 			lastMap.put("sicilNo", sicilNo.trim());
 		try {
 			ortakIslemler.saveLastParameter(lastMap, session);

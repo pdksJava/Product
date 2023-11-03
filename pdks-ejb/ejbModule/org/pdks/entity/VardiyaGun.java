@@ -25,6 +25,8 @@ import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.pdks.session.PdksUtil;
 
+import com.pdks.notUse.IsKurVardiyaGun;
+
 @Entity(name = VardiyaGun.TABLE_NAME)
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = { VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI, VardiyaGun.COLUMN_NAME_PERSONEL }) })
 public class VardiyaGun extends BaseObject {
@@ -1203,7 +1205,7 @@ public class VardiyaGun extends BaseObject {
 	@Transient
 	public String getTdClassYaz() {
 		String classAdi = tdClass;
-		if (vardiya != null && vardiya.getStyleClass() != null && vardiya.getStyleClass().trim().length() > 0)
+		if (vardiya != null && PdksUtil.hasStringValue(vardiya.getStyleClass()))
 			classAdi = vardiya.getStyleClass();
 		return classAdi;
 	}
@@ -1539,9 +1541,9 @@ public class VardiyaGun extends BaseObject {
 							ekle = vardiyaGorev.getBolumKat().getKodu();
 						if (durum) {
 							if (this.getVardiyaGorev().isOzelIstek())
-								ekle += (ekle.equals("") ? "" : " - ") + "Ö";
+								ekle += (!PdksUtil.hasStringValue(ekle) ? "" : " - ") + "Ö";
 							else if (this.getVardiyaGorev().isEgitim())
-								ekle += (ekle.equals("") ? "" : " - ") + "E";
+								ekle += (!PdksUtil.hasStringValue(ekle) ? "" : " - ") + "E";
 
 						}
 						aciklama = aciklama + " (" + ekle + " )";
@@ -1623,9 +1625,9 @@ public class VardiyaGun extends BaseObject {
 							ekle = vardiyaGorev.getBolumKat().getKodu();
 						if (durum) {
 							if (this.getVardiyaGorev().isOzelIstek())
-								ekle += (ekle.equals("") ? "" : " - ") + "Ö";
+								ekle += (!PdksUtil.hasStringValue(ekle) ? "" : " - ") + "Ö";
 							else if (this.getVardiyaGorev().isEgitim())
-								ekle += (ekle.equals("") ? "" : " - ") + "E";
+								ekle += (!PdksUtil.hasStringValue(ekle) ? "" : " - ") + "E";
 
 						}
 						if (vardiyaGorev.isShiftGorevli())
@@ -1681,9 +1683,7 @@ public class VardiyaGun extends BaseObject {
 
 	@Transient
 	public void addLinkAdresler(String value) {
-		if (value != null && value.trim().length() > 0) {
-			if (this.getVardiyaDateStr().equals("20210901"))
-				logger.debug(this.getId());
+		if (PdksUtil.hasStringValue(value)) {
 			if (linkAdresler == null)
 				linkAdresler = new ArrayList<String>();
 			if (!linkAdresler.contains(value))
@@ -1886,7 +1886,9 @@ public class VardiyaGun extends BaseObject {
 	public String getSortBolumKey() {
 		Personel yonetici = this.getPersonel().getPdksYonetici();
 		Tanim bolum = this.getPersonel().getEkSaha3(), altBolum = this.getPersonel().getEkSaha4();
-		String sortKey = (yonetici != null ? "_" + yonetici.getAdSoyad() : "") + "_" + (bolum != null ? "_" + bolum.getAciklama() : "") + "_" + (altBolum != null ? "_" + altBolum.getAciklama() : "") + "_" + this.getPersonel().getAdSoyad() + "_" + this.getVardiyaKeyStr();
+		CalismaModeli calismaModeli = this.getPersonel().getCalismaModeli();
+		String sortKey = (yonetici != null ? "_" + yonetici.getAdSoyad() : "") + "_" + (bolum != null ? "_" + bolum.getAciklama() : "") + "_" + (calismaModeli != null ? "_" + calismaModeli.getAciklama() : "");
+		sortKey += "_" + (altBolum != null ? "_" + altBolum.getAciklama() : "") + "_" + this.getPersonel().getAdSoyad() + "_" + this.getVardiyaKeyStr();
 		return sortKey;
 	}
 

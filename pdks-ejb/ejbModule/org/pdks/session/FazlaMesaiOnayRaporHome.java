@@ -182,7 +182,7 @@ public class FazlaMesaiOnayRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		ay = -1;
 		fazlaMesaiVardiyaGun = null;
 		String maxFazlaMesaiRaporGunStr = ortakIslemler.getParameterKey("maxFazlaMesaiOnayGun");
-		if (!maxFazlaMesaiRaporGunStr.equals(""))
+		if (PdksUtil.hasStringValue(maxFazlaMesaiRaporGunStr))
 			try {
 				maxFazlaMesaiOnayGun = Integer.parseInt(maxFazlaMesaiRaporGunStr);
 			} catch (Exception e) {
@@ -782,7 +782,7 @@ public class FazlaMesaiOnayRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		if (seciliEkSaha3Id != null)
 			lastMap.put("bolumId", "" + seciliEkSaha3Id);
 
-		if ((authenticatedUser.isIK() || authenticatedUser.isAdmin()) && sicilNo != null && sicilNo.trim().length() > 0)
+		if ((authenticatedUser.isIK() || authenticatedUser.isAdmin()) && PdksUtil.hasStringValue(sicilNo))
 			lastMap.put("sicilNo", sicilNo.trim());
 		try {
 

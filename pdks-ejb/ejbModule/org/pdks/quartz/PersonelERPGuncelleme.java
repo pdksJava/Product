@@ -123,7 +123,7 @@ public class PersonelERPGuncelleme {
 				logger.error("personelERPGuncelle hata " + e.getMessage() + " " + new Date());
 				if (hataGonder)
 					try {
-						zamanlayici.mailGonder(session, "ERP personel bilgileri güncellemesi", "ERP personel bilgileri güncelleme tamamlanmadı." + e.getMessage() + " ( " + hataKonum + " )", null, Boolean.TRUE);
+						zamanlayici.mailGonder(session, null, "ERP personel bilgileri güncellemesi", "ERP personel bilgileri güncelleme tamamlanmadı." + e.getMessage() + " ( " + hataKonum + " )", null, Boolean.TRUE);
 
 					} catch (Exception e2) {
 						logger.error("personelERPGuncellemeTimer 2 : " + e2.getMessage());
@@ -204,9 +204,9 @@ public class PersonelERPGuncelleme {
 		}
 		if (mailGonder) {
 			if (dosya != null)
-				zamanlayici.mailGonderDosya(session, "SAP personel bilgileri güncellemesi", "SAP personel bilgileri güncelleme tamamlandı.", null, dosya, Boolean.TRUE);
+				zamanlayici.mailGonderDosya(session, null, "SAP personel bilgileri güncellemesi", "SAP personel bilgileri güncelleme tamamlandı.", null, dosya, Boolean.TRUE);
 			else
-				zamanlayici.mailGonder(session, "SAP personel bilgileri güncellemesi", "SAP personel bilgileri güncelleme tamamlandı.", null, Boolean.TRUE);
+				zamanlayici.mailGonder(session, null, "SAP personel bilgileri güncellemesi", "SAP personel bilgileri güncelleme tamamlandı.", null, Boolean.TRUE);
 		}
 		logger.info("personelERPGuncelle bitti " + new Date());
 	}
@@ -356,7 +356,7 @@ public class PersonelERPGuncelleme {
 				Personel pdksPersonel = (Personel) iterator.next();
 
 				try {
-					if (pdksPersonel.getSicilNo().trim().length() == 0) {
+					if (PdksUtil.hasStringValue(pdksPersonel.getSicilNo()) == false) {
 						iterator.remove();
 						continue;
 					}
@@ -513,7 +513,7 @@ public class PersonelERPGuncelleme {
 						if (user.getMailGrubuCC() != null) {
 							String mail = mailMap.get(user.getMailGrubuCC().getEmail());
 							if (!mail.equals(user.getMailGrubuCC().getEmail())) {
-								if (!mail.equals("")) {
+								if (PdksUtil.hasStringValue(mail)) {
 									user.setEmailCC(mail);
 									saveMailGrubuList.add(user.getMailGrubuCC());
 								} else if (user.getMailGrubuCC().getId() != null) {
@@ -527,7 +527,7 @@ public class PersonelERPGuncelleme {
 						if (user.getMailGrubuBCC() != null) {
 							String mail = mailMap.get(user.getMailGrubuBCC().getEmail());
 							if (!mail.equals(user.getMailGrubuBCC().getEmail())) {
-								if (!mail.equals("")) {
+								if (PdksUtil.hasStringValue(mail)) {
 									user.setEmailBCC(mail);
 									saveMailGrubuList.add(user.getMailGrubuBCC());
 								} else if (user.getMailGrubuBCC().getId() != null) {
@@ -540,7 +540,7 @@ public class PersonelERPGuncelleme {
 						if (user.getHareketMailGrubu() != null) {
 							String mail = mailMap.get(user.getHareketMailGrubu().getEmail());
 							if (!mail.equals(user.getHareketMailGrubu().getEmail())) {
-								if (!mail.equals("")) {
+								if (PdksUtil.hasStringValue(mail)) {
 									user.setEmailBCC(mail);
 									saveMailGrubuList.add(user.getHareketMailGrubu());
 								} else if (user.getHareketMailGrubu().getId() != null) {
