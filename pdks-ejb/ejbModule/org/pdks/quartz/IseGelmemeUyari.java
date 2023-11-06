@@ -13,6 +13,7 @@ import java.util.TreeMap;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -337,10 +338,11 @@ public class IseGelmemeUyari implements Serializable {
 					} catch (Exception e) {
 					}
 
-					// ortakIslemler.fazlaMesaiSaatiAyarla(vardiyalar);
-					Date vardiyaBas = null;
 					List<VardiyaGun> vardiyaList = new ArrayList<VardiyaGun>(vardiyalar.values());
 					ortakIslemler.sonrakiGunVardiyalariAyikla(tarih, vardiyaList, session);
+
+					Date vardiyaBas = null;
+
 					HareketKGS arifeCikis = null;
 					Date vardiyaBitTar = (Date) tarih.clone();
 					// İlk vardiya başlangıç zamanı okunuyor
@@ -352,7 +354,6 @@ public class IseGelmemeUyari implements Serializable {
 							iterator.remove();
 							continue;
 						}
-
 						if (pdksVardiyaGun.getIslemVardiya() != null && pdksVardiyaGun.getIslemVardiya().getVardiyaTelorans2BitZaman().getTime() > vardiyaBitTar.getTime())
 							vardiyaBitTar = (Date) pdksVardiyaGun.getIslemVardiya().getVardiyaTelorans2BitZaman().clone();
 						// Long yoneticisiId = pdksVardiyaGun.getPersonel().getYoneticisi().getId();
@@ -935,7 +936,7 @@ public class IseGelmemeUyari implements Serializable {
 						wb.write(baos);
 						MailFile mailFile = new MailFile();
 						mailFile.setIcerik(baos.toByteArray());
-						mailFile.setDisplayName("Işe Gelmeme Durum_" + PdksUtil.convertToDateString(islemTarihi, "yyyy-MM-dd") + ".xlsx");
+						mailFile.setDisplayName("Işe Gelmeme Durum_" + PdksUtil.convertToDateString(islemTarihi, "yyyyMMdd") + ".xlsx");
 						mail.getAttachmentFiles().add(mailFile);
 						mailSatu = ortakIslemler.mailSoapServisGonder(true, mail, renderer, renderAdres, session);
 					} catch (Exception e) {
@@ -995,10 +996,13 @@ public class IseGelmemeUyari implements Serializable {
 			}
 
 			Sirket sirket = personel.getSirket();
+			Long departmanId = null;
+			if (sirket.getDepartman() != null)
+				departmanId = sirket.getDepartman().getId();
 			Tanim tesis = sirket.isTesisDurumu() ? personel.getTesis() : null;
 			if (tesisList != null && tesis != null && !tesisList.contains(tesis.getId()))
 				continue;
-			String key = (sirket.getSirketGrup() == null ? sirket.getAd() : sirket.getSirketGrup().getAciklama()) + (tesis != null ? "_" + tesis.getAciklama() : "");
+			String key = (departmanId != null ? departmanId : 0L) + "_" + (sirket.getSirketGrup() == null ? sirket.getAd() : sirket.getSirketGrup().getAciklama()) + (tesis != null ? "_" + tesis.getAciklama() : "");
 			List<VardiyaGun> ozelList = sirketParcalaMap.containsKey(key) ? sirketParcalaMap.get(key) : new ArrayList<VardiyaGun>();
 			if (ozelList.isEmpty()) {
 				Liste liste = new Liste(key, ozelList);
@@ -1203,15 +1207,17 @@ public class IseGelmemeUyari implements Serializable {
 
 						else
 							ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue("");
-
+						Cell hareketCell = null;
 						if (hataliHareketGundeVar) {
 							StringBuffer sbMesaj = new StringBuffer();
 							if (vg.getHareketler() != null && !vg.getHareketler().isEmpty()) {
 								for (HareketKGS hareketKGS : vg.getHareketler()) {
-									sbMesaj.append(hareketKGS.getKapiView().getAciklama() + " " + (hareketKGS.getZaman() != null ? user.getTarihFormatla(hareketKGS.getZaman(), PdksUtil.getDateFormat() + " H:mm") : "") + "\n");
+									sbMesaj.append((sbMesaj.length() > 0 ? "\n" : "") + hareketKGS.getKapiView().getAciklama() + " " + (hareketKGS.getZaman() != null ? user.getTarihFormatla(hareketKGS.getZaman(), PdksUtil.getDateFormat() + " H:mm") : ""));
 								}
 							}
-							ExcelUtil.getCell(sheet, row, col++, style).setCellValue(sbMesaj.toString());
+							hareketCell = ExcelUtil.getCell(sheet, row, col++, style);
+							hareketCell.setCellValue(sbMesaj.toString());
+
 						}
 
 						if (izinGirisVar) {
@@ -1223,6 +1229,9 @@ public class IseGelmemeUyari implements Serializable {
 							ExcelUtil.getCell(sheet, row, col++, style).setCellValue(sbMesaj.toString());
 
 						}
+						if (hareketCell != null)
+							hareketCell.getRow().setHeight((short) -1);
+
 					}
 					renk = !renk;
 
@@ -1279,6 +1288,7 @@ public class IseGelmemeUyari implements Serializable {
 					}
 					for (int i = 0; i < uz; i++)
 						sheet.autoSizeColumn(i);
+
 				}
 				sheetSatirMap.put(sirketIdStr, row);
 				sheetSutunMap.put(sirketIdStr, uz);
@@ -1562,7 +1572,7 @@ public class IseGelmemeUyari implements Serializable {
 						wb.write(baos);
 						MailFile mailFile = new MailFile();
 						mailFile.setIcerik(baos.toByteArray());
-						mailFile.setDisplayName("Işe Gelmeme Durum_" + sirket.getAd() + "_" + PdksUtil.convertToDateString(tarih, "yyyy-MM-dd") + "_" + personel.getPdksSicilNo() + "_" + personel.getAdSoyad() + ".xlsx");
+						mailFile.setDisplayName("Işe Gelmeme Durum_" + sirket.getAd() + "_" + PdksUtil.convertToDateString(islemTarihi, "yyyyMMdd") + "_" + personel.getPdksSicilNo() + "_" + personel.getAdSoyad() + ".xlsx");
 						mail.getAttachmentFiles().add(mailFile);
 					} else
 						iterator.remove();
