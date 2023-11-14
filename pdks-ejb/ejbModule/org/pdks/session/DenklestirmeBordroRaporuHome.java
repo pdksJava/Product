@@ -586,8 +586,10 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 				}
 				// sb.append(" INNER JOIN " + PersonelDenklestirmeBordro.TABLE_NAME + " B ON B." + PersonelDenklestirmeBordro.COLUMN_NAME_PERSONEL_DENKLESTIRME + "=V." + PersonelDenklestirme.COLUMN_NAME_ID);
 				sb.append(" WHERE v." + PersonelDenklestirme.COLUMN_NAME_DONEM + "=" + denklestirmeAy.getId());
-				if (sicilDolu == false && (hataliVeriGetir == null || hataliVeriGetir == false))
-					sb.append(" AND (V." + PersonelDenklestirme.COLUMN_NAME_DURUM + "=1   OR V." + PersonelDenklestirme.COLUMN_NAME_DENKLESTIRME_DURUM + "=1 OR CM." + CalismaModeli.COLUMN_NAME_FAZLA_CALISMA_GORUNTULENSIN + "=1) AND V." + PersonelDenklestirme.COLUMN_NAME_ONAYLANDI + "=1");
+				if (sicilDolu == false && (hataliVeriGetir == null || hataliVeriGetir == false)) {
+					sb.append(" AND V." + PersonelDenklestirme.COLUMN_NAME_DURUM + "=1  AND V." + PersonelDenklestirme.COLUMN_NAME_ONAYLANDI + "=1");
+					sb.append(" AND ( V." + PersonelDenklestirme.COLUMN_NAME_DENKLESTIRME_DURUM + "=1 OR CM." + CalismaModeli.COLUMN_NAME_FAZLA_CALISMA_GORUNTULENSIN + "=1 )");
+				}
 				fields.put(PdksEntityController.MAP_KEY_MAP, "getId");
 				if (session != null)
 					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
