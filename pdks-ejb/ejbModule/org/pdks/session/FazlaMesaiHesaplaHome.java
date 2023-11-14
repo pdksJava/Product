@@ -928,7 +928,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 		bordroAlanKapat();
 		eksikMaasGoster = false;
 		saveLastParameter();
-		boolean testDurum = PdksUtil.getTestDurum() && false;
+		boolean testDurum = PdksUtil.getTestDurum() && PdksUtil.getCanliSunucuDurum() == false;
+		testDurum = false;
 		Date basTarih = new Date();
 		if (testDurum)
 			logger.info("fillPersonelDenklestirmeDevam 0000 " + basTarih);
@@ -999,9 +1000,12 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 			sicilNo = ortakIslemler.getSicilNo(sicilNo);
 			List<Personel> donemPerList = fazlaMesaiOrtakIslemler.getFazlaMesaiPersonelList(sirket, tesisId != null ? String.valueOf(tesisId) : null, seciliEkSaha3Id, seciliEkSaha4Id, denklestirmeAy != null ? new AylikPuantaj(denklestirmeAy) : null, sadeceFazlaMesai, session);
 			sicilNo = ortakIslemler.getSicilNo(sicilNo);
+			if (testDurum)
+				logger.info("fillPersonelDenklestirmeDevam 1000 " + basTarih);
+			List<Long> perIdList = new ArrayList<Long>();
 			for (Personel personel : donemPerList) {
 				if (PdksUtil.hasStringValue(sicilNo) == false || sicilNo.trim().equals(personel.getPdksSicilNo().trim()))
-					perList.add(personel.getPdksSicilNo());
+					perIdList.add(personel.getId());
 			}
 
 			if (authenticatedUser.getDepartman().isAdminMi() == false && (authenticatedUser.isSuperVisor() || authenticatedUser.isProjeMuduru())) {
@@ -1031,12 +1035,12 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 			}
 
 			List<PersonelDenklestirme> personelDenklestirmeler = null;
-			if (!perList.isEmpty())
-				personelDenklestirmeler = getPdksPersonelDenklestirmeler(perList);
+			if (!perIdList.isEmpty())
+				personelDenklestirmeler = getPdksPersonelDenklestirmeler(perIdList);
 			else
 				personelDenklestirmeler = new ArrayList<PersonelDenklestirme>();
 
-			HashMap<String, Personel> gorevliPersonelMap = new HashMap<String, Personel>();
+			HashMap<Long, Personel> gorevliPersonelMap = new HashMap<Long, Personel>();
 			if (seciliEkSaha3Id != null) {
 				List<Long> gorevYerileri = new ArrayList<Long>();
 				gorevYerileri.add(seciliEkSaha3Id);
@@ -1048,7 +1052,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 						continue;
 					perNo = perNo.trim();
 					if (!perList.contains(perNo) && (PdksUtil.hasStringValue(sicilNo) == false || sicilNo.equals(perNo)))
-						gorevliPersonelMap.put(personel.getPdksSicilNo().trim(), personel);
+						gorevliPersonelMap.put(personel.getId(), personel);
 				}
 
 				if (!gorevliPersonelMap.isEmpty()) {
@@ -1058,6 +1062,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 				}
 
 			}
+			if (testDurum)
+				logger.info("fillPersonelDenklestirmeDevam 2000 " + basTarih);
 
 			HashMap<Long, PersonelDenklestirme> personelDenklestirmeMap = new HashMap<Long, PersonelDenklestirme>();
 			TreeMap<Long, PersonelDenklestirme> personelDenklestirmeDonemMap = new TreeMap<Long, PersonelDenklestirme>();
@@ -1124,7 +1130,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 					sabahVardiyalar = PdksUtil.getListByString(sabahVardiyaKisaAdlari, null);
 				else
 					sabahVardiyalar = Arrays.asList(new String[] { "S", "Sİ", "SI" });
-
+				if (testDurum)
+					logger.info("fillPersonelDenklestirmeDevam 3000 " + basTarih);
 				devamlilikPrimIzinTipleri = PdksUtil.getListByString(ortakIslemler.getParameterKey("devamlilikPrimIzinTipleri"), null);
 				String gunduzVardiyaVar = ortakIslemler.getParameterKey("gunduzVardiyaVar");
 				if (gunduzVardiyaVar.equals("1")) {
@@ -1143,7 +1150,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 				if (session != null)
 					map.put(PdksEntityController.MAP_KEY_SESSION, session);
 				List<Personel> perListesi = pdksEntityController.getObjectByInnerObjectList(map, Personel.class);
-				TreeMap<String, Tatil> tatilGunleriMap = ortakIslemler.getTatilGunleri(perListesi, PdksUtil.tariheGunEkleCikar(denklestirmeDonemi.getBaslangicTarih(), -1), PdksUtil.tariheGunEkleCikar(denklestirmeDonemi.getBitisTarih(), 1), session);
+				TreeMap<String, Tatil> tatilGunleriMap = ortakIslemler.getTatilGunleri(perListesi, ortakIslemler.tariheGunEkleCikar(cal, denklestirmeDonemi.getBaslangicTarih(), -1), ortakIslemler.tariheGunEkleCikar(cal, denklestirmeDonemi.getBitisTarih(), 1), session);
 				boolean ayBitmedi = denklestirmeDonemi.getBitisTarih().getTime() >= PdksUtil.getDate(bugun).getTime();
 				List<PersonelDenklestirmeTasiyici> list = null;
 				if (testDurum)
@@ -1156,7 +1163,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 						session.flush();
 						session.clear();
 						denklestirmeDonemi.setDurum(Boolean.FALSE);
-						tatilGunleriMap = ortakIslemler.getTatilGunleri(perListesi, PdksUtil.tariheGunEkleCikar(denklestirmeDonemi.getBaslangicTarih(), -1), PdksUtil.tariheGunEkleCikar(denklestirmeDonemi.getBitisTarih(), 1), session);
+						tatilGunleriMap = ortakIslemler.getTatilGunleri(perListesi, ortakIslemler.tariheGunEkleCikar(cal, denklestirmeDonemi.getBaslangicTarih(), -1), ortakIslemler.tariheGunEkleCikar(cal, denklestirmeDonemi.getBitisTarih(), 1), session);
 						list = ortakIslemler.personelDenklestir(denklestirmeDonemi, tatilGunleriMap, searchKey, perList, Boolean.TRUE, Boolean.FALSE, ayBitmedi, session);
 
 					}
@@ -1320,7 +1327,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 				devamlilikPrimi = denklestirmeMantiksalBilgiBul(PersonelDenklestirmeDinamikAlan.TIPI_DENKLESTIRME_DEVAMLILIK_PRIMI);
 				if (devamlilikPrimi != null)
 					setDenklestirmeDinamikDurum(denklestirmeIdList, devamlilikPrimiMap);
-				Date izinCalismayanMailSonGun = PdksUtil.tariheGunEkleCikar(aylikPuantajSablon.getSonGun(), -5);
+				Date izinCalismayanMailSonGun = ortakIslemler.tariheGunEkleCikar(cal, aylikPuantajSablon.getSonGun(), -5);
 				izinCalismayanMailGonder = bugun.after(izinCalismayanMailSonGun) || authenticatedUser.isAdmin();
 				List<AylikPuantaj> puantajDenklestirmeList = new ArrayList<AylikPuantaj>();
 				for (Iterator iterator1 = list.iterator(); iterator1.hasNext();) {
@@ -1340,6 +1347,9 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 				boolean yoneticiKontrolEtme = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || PdksUtil.hasStringValue(yoneticiPuantajKontrolStr) == false;
 				if (!yoneticiKontrolEtme)
 					yoneticiKontrolEtme = yoneticiRolVarmi;
+				if (testDurum)
+					logger.info("fillPersonelDenklestirmeDevam 6000 " + new Date());
+
 				ortakIslemler.yoneticiPuantajKontrol(puantajDenklestirmeList, Boolean.TRUE, session);
 				boolean kayitVar = false;
 				aksamCalismaSaati = null;
@@ -1363,7 +1373,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 				HashMap<Long, Boolean> personelDurumMap = getPersonelDurumMap(aylikPuantajSablon, puantajDenklestirmeList);
 				String denklesmeyenBakiyeDurum = denklestirmeAyDurum ? ortakIslemler.getParameterKey("denklesmeyenBakiyeDurum") : "";
 				String izinCalismaUyariDurum = denklestirmeAyDurum ? ortakIslemler.getParameterKey("izinCalismaUyariDurum") : "";
-				Date sonGun = PdksUtil.tariheGunEkleCikar(aylikPuantajSablon.getSonGun(), 1);
+				Date sonGun = ortakIslemler.tariheGunEkleCikar(cal, aylikPuantajSablon.getSonGun(), 1);
 				personelHareketDurum = userHome.hasPermission("personelHareket", "view");
 				personelFazlaMesaiDurum = userHome.hasPermission("personelFazlaMesai", "view");
 				vardiyaPlaniDurum = userHome.hasPermission("vardiyaPlani", "view");
@@ -1927,7 +1937,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 					if (calisiyor) {
 						kayitVar = true;
 						boolean eksikCalismaVar = false;
-						if (denklestirmeAyDurum && puantaj.isFazlaMesaiHesapla() && perCalismaModeli != null && perCalismaModeli.isFazlaMesaiVarMi() == false) {
+						if (denklestirmeAyDurum && puantaj.isFazlaMesaiHesapla() && perCalismaModeli != null && hataliPuantajGoster && bordroPuantajEkranindaGoster) {
 							eksikCalismaVar = puantaj.getPlanlananSure() > puantaj.getSaatToplami() + perCalismaModeli.getHaftaIci();
 						}
 						if (PdksUtil.hasStringValue(sicilNo) || denklestirmeAyDurum == false || hataliPuantajGoster == false || puantaj.isFazlaMesaiHesapla() == false || eksikCalismaVar)
@@ -2200,6 +2210,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 					}
 
 				}
+				if (testDurum)
+					logger.info("fillPersonelDenklestirmeDevam 7000 " + new Date());
 				if (uyariHaftaTatilMesai)
 					PdksUtil.addMessageWarn("Hafta tatil günleri güncellendi, 'Fazla Mesai Getir' tekrar çalıştırın.");
 
@@ -2222,6 +2234,9 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 					else
 						PdksUtil.addMessageAvailableWarn("Geçen aydan devreden negatif bakiye denkleştirilemedi!");
 				}
+				if (testDurum)
+					logger.info("fillPersonelDenklestirmeDevam 8000 " + new Date());
+
 				if (denklestirmeAyDurum) {
 					List<String> vGunList = ciftBolumCalisanKontrol(puantajList);
 					if (!izinMap.isEmpty())
@@ -2256,6 +2271,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 					}
 					fList = null;
 				}
+				if (testDurum)
+					logger.info("fillPersonelDenklestirmeDevam 9000 " + new Date());
 
 				paramsMap = null;
 				if (!saveGenelList.isEmpty()) {
@@ -2328,6 +2345,9 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 		if (pageSize < 20 || pageSize > puantajList.size())
 			pageSize = puantajList.size() + 1;
 		hatalariAyikla = false;
+		if (testDurum)
+			logger.info("fillPersonelDenklestirmeDevam 9100 " + new Date());
+
 		if (denklestirmeAyDurum) {
 
 			if (puantajList.size() > pageSize) {
@@ -2352,7 +2372,7 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 			cal.add(Calendar.MONTH, 1);
 			cal.set(Calendar.DATE, 1);
 			Date tarih = PdksUtil.getDate(cal.getTime());
-			Date tarihLast = PdksUtil.tariheGunEkleCikar(denklestirmeAy.getOtomatikOnayIKTarih(), 10);
+			Date tarihLast = ortakIslemler.tariheGunEkleCikar(cal, denklestirmeAy.getOtomatikOnayIKTarih(), 10);
 			cal = Calendar.getInstance();
 			Date toDay = cal.getTime();
 			if (toDay.after(tarih) && (toDay.before(denklestirmeAy.getOtomatikOnayIKTarih())) || (authenticatedUser.isTestLogin() && toDay.before(tarihLast))) {
@@ -2399,6 +2419,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 
 		}
 		modelGoster = ortakIslemler.getModelGoster(denklestirmeAy, session);
+		if (testDurum)
+			logger.info("fillPersonelDenklestirmeDevam 9200 " + new Date());
 		if (!modelGoster) {
 			HashMap<Boolean, Long> sanalDurum = new HashMap<Boolean, Long>();
 			if (puantajList != null)
@@ -2426,6 +2448,8 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 					break;
 			}
 		}
+		if (testDurum)
+			logger.info("fillPersonelDenklestirmeDevam 9300 " + new Date());
 		setAylikPuantajList(puantajList);
 	}
 
@@ -3949,18 +3973,17 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 	}
 
 	/**
-	 * @param siciller
+	 * @param perIdList
 	 * @return
 	 */
-	private List<PersonelDenklestirme> getPdksPersonelDenklestirmeler(List<String> siciller) {
+	private List<PersonelDenklestirme> getPdksPersonelDenklestirmeler(List<Long> perIdList) {
 		HashMap fields = new HashMap();
 		StringBuffer sb = new StringBuffer();
 		sb.append("SELECT S.* from " + PersonelDenklestirme.TABLE_NAME + " S WITH(nolock) ");
-		sb.append(" INNER JOIN  " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + "=S." + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
-		sb.append(" AND P." + Personel.getIseGirisTarihiColumn() + " IS NOT NULL AND P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " IS NOT NULL ");
-		sb.append(" AND P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " :p");
-		sb.append(" WHERE S." + PersonelDenklestirme.COLUMN_NAME_DONEM + "=" + denklestirmeAy.getId());
-		fields.put("p", siciller);
+		// sb.append(" INNER JOIN  " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + "=S." + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
+		// sb.append(" AND P." + Personel.getIseGirisTarihiColumn() + " IS NOT NULL AND P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " IS NOT NULL ");
+		sb.append(" WHERE S." + PersonelDenklestirme.COLUMN_NAME_DONEM + "=" + denklestirmeAy.getId() + " AND S." + PersonelDenklestirme.COLUMN_NAME_PERSONEL + " :p");
+		fields.put("p", perIdList);
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 		List<PersonelDenklestirme> list = pdksEntityController.getObjectBySQLList(sb, fields, PersonelDenklestirme.class);

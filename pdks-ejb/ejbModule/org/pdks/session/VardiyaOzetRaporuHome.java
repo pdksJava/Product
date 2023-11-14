@@ -3,6 +3,7 @@ package org.pdks.session;
 import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -246,14 +247,28 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 
 	}
 
-	public void vardiyaListeOlustur() throws Exception {
+	public String vardiyaListeOlustur() {
+		try {
+			clearVardiyaList();
+			if (ortakIslemler.ileriTarihSeciliDegil(date))
+				vardiyaListeList();
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
+		return "";
+
+	}
+
+	private void vardiyaListeList() {
 		/*
 		 * yetkili oldugu Tum personellerin uzerinden dönülür,tek tarih icin cekilir. Vardiyadaki calismasi gereken saat ile hareketten calistigi saatler karsilastirilir. Eksik varsa izin var mi diye bakilir. Diyelim 4 saat eksik calisti 2 saat mazeret buldu. Hala 2 saat eksik vardir. Bunu
 		 * gosteririrz. Diyelim hic mazeret girmemiş 4 saat gösteririz
 		 */
 		clearVardiyaList();
 		session.clear();
-		Date oncekiGun = PdksUtil.tariheGunEkleCikar(date, -1);
+		Calendar cal = Calendar.getInstance();
+		Date oncekiGun = ortakIslemler.tariheGunEkleCikar(cal, date, -1);
 		HashMap map = new HashMap();
 		map.put("durum=", Boolean.TRUE);
 		if (PdksUtil.hasStringValue(sicilNo))
@@ -288,10 +303,18 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 		}
 
 		if (!tumPersoneller.isEmpty()) {
-			Date basTarih = PdksUtil.tariheGunEkleCikar(date, -1);
+			Date basTarih = ortakIslemler.tariheGunEkleCikar(cal, date, -1);
 			Date bitTarih = date;
-			List<VardiyaGun> vardiyaGunList = getVardiyalariOku(oncekiGun, tumPersoneller, basTarih, bitTarih);
-			Collections.reverse(vardiyaList);
+			List<VardiyaGun> vardiyaGunList = null;
+			try {
+				vardiyaGunList = getVardiyalariOku(oncekiGun, tumPersoneller, basTarih, bitTarih);
+				Collections.reverse(vardiyaList);
+
+			} catch (Exception e) {
+				vardiyaGunList = new ArrayList<VardiyaGun>();
+				logger.error(e);
+				e.printStackTrace();
+			}
 			// butun personeller icin hareket cekerken bu en kucuk tarih ile en
 			// buyuk tarih araligini kullanacaktir
 			// bu araliktaki tum hareketleri cekecektir.
@@ -315,8 +338,8 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 					List<IzinTipi> izinler = pdksEntityController.getObjectByInnerObjectList(parametreMap, IzinTipi.class);
 					if (!izinler.isEmpty()) {
 						HashMap parametreMap2 = new HashMap();
-						parametreMap2.put("baslangicZamani<=", PdksUtil.tariheGunEkleCikar(bitTarih, 1));
-						parametreMap2.put("bitisZamani>=", PdksUtil.tariheGunEkleCikar(basTarih, -1));
+						parametreMap2.put("baslangicZamani<=", ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 1));
+						parametreMap2.put("bitisZamani>=", ortakIslemler.tariheGunEkleCikar(cal, basTarih, -1));
 						parametreMap2.put("izinTipi", izinler);
 						parametreMap2.put("izinSahibi", tumPersoneller.clone());
 						if (session != null)
@@ -396,7 +419,7 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 						tarih1 = date;
 
 					if (tarih2 == null)
-						tarih2 = PdksUtil.tariheGunEkleCikar(date, 1);
+						tarih2 = ortakIslemler.tariheGunEkleCikar(cal, date, 1);
 				}
 			}
 			if (!vardiyaGunList.isEmpty()) {
@@ -414,9 +437,16 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 				if (tarih1 != null && tarih2 != null && !vardiyaGunList.isEmpty()) {
 
 					List<Long> kapiIdler = ortakIslemler.getPdksDonemselKapiIdler(tarih1, tarih2, session);
+					kgsList = null;
 					if (kapiIdler != null && !kapiIdler.isEmpty())
-						kgsList = ortakIslemler.getPdksHareketBilgileri(Boolean.TRUE, kapiIdler, (List<Personel>) tumPersoneller.clone(), PdksUtil.tariheGunEkleCikar(tarih1, -1), PdksUtil.tariheGunEkleCikar(tarih2, 1), HareketKGS.class, session);
-					else
+						try {
+							kgsList = ortakIslemler.getPdksHareketBilgileri(Boolean.TRUE, kapiIdler, (List<Personel>) tumPersoneller.clone(), ortakIslemler.tariheGunEkleCikar(cal, tarih1, -1), ortakIslemler.tariheGunEkleCikar(cal, tarih2, 1), HareketKGS.class, session);
+
+						} catch (Exception e) {
+							logger.error(e);
+							e.printStackTrace();
+						}
+					if (kgsList == null)
 						kgsList = new ArrayList<HareketKGS>();
 					HashMap<Long, List<HareketKGS>> hMap = new HashMap<Long, List<HareketKGS>>();
 					if (!kgsList.isEmpty()) {
