@@ -184,7 +184,7 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 					value = "izin";
 
 				}
-				if (value.equals("") && gunler.containsKey(gun)) {
+				if (PdksUtil.hasStringValue(value) == false && gunler.containsKey(gun)) {
 					key = personel.getSicilNo() + "_" + gunler.get(gun);
 					if (vardiyaMap.containsKey(key)) {
 						VardiyaGun pdksVardiyaGun = vardiyaMap.get(key);
@@ -391,7 +391,24 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 			if (session != null)
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<PersonelIzin> personelizinList = pdksEntityController.getObjectByInnerObjectListInLogic(parametreMap, PersonelIzin.class);
-			vardiyaMap = ortakIslemler.getVardiyalar((List<Personel>) personelList.clone(), basDate, bitDate, Boolean.FALSE, session, Boolean.TRUE);
+			HashMap<Long, List<PersonelIzin>> izinMap = new HashMap<Long, List<PersonelIzin>>();
+			for (Iterator iterator = personelizinList.iterator(); iterator.hasNext();) {
+				PersonelIzin personelIzin = (PersonelIzin) iterator.next();
+				IzinTipi izinTipi = personelIzin.getIzinTipi();
+				if (izinTipi.getBakiyeIzinTipi() != null)
+					iterator.remove();
+				else {
+					Long key = personelIzin.getIzinSahibi().getId();
+					List<PersonelIzin> list = izinMap.containsKey(key) ? izinMap.get(key) : new ArrayList<PersonelIzin>();
+					if (list.isEmpty())
+						izinMap.put(key, list);
+					list.add(personelIzin);
+				}
+
+			}
+			
+			
+			vardiyaMap = ortakIslemler.getVardiyalar((List<Personel>) personelList.clone(), basDate, bitDate, izinMap, Boolean.FALSE, session, Boolean.TRUE);
 			if (!personelizinList.isEmpty()) {
 				TreeMap<String, Tatil> tatilGunleriMap = ortakIslemler.getTatilGunleri(personelList, basDate, bitDate, session);
 
@@ -403,7 +420,7 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 					}
 					IzinTipi izinTipi = personelIzin.getIzinTipi();
 					long baslangicZamani = Long.parseLong(PdksUtil.convertToDateString(personelIzin.getBaslangicZamani(), "yyyyMMdd"));
-					long bitZamani = Long.parseLong(PdksUtil.convertToDateString(PdksUtil.tariheGunEkleCikar((Date) personelIzin.getBitisZamani().clone(), -1), "yyyyMMdd"));
+					long bitZamani = Long.parseLong(PdksUtil.convertToDateString(ortakIslemler.tariheGunEkleCikar(cal, (Date) personelIzin.getBitisZamani().clone(), -1), "yyyyMMdd"));
 					Personel personel = personelIzin.getIzinSahibi();
 					for (Iterator iterator2 = gunler.keySet().iterator(); iterator2.hasNext();) {
 						Integer gun = (Integer) iterator2.next();

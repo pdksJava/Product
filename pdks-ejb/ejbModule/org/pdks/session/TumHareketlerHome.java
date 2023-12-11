@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -314,8 +315,8 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 				sirketId = null;
 		}
 		boolean admin = ikRole || authenticatedUser.isAdmin() || authenticatedUser.isGenelMudur();
-		if (sicilNo.trim().length() > 0 || adi.trim().length() > 0 || soyadi.trim().length() > 0) {
-			if (sicilNo.trim().length() > 0)
+		if (PdksUtil.hasStringValue(sicilNo) || PdksUtil.hasStringValue(adi) || PdksUtil.hasStringValue(soyadi)) {
+			if (PdksUtil.hasStringValue(sicilNo))
 				sicilNo = ortakIslemler.getSicilNo(sicilNo);
 			// if (authenticatedUser.isAdmin() || (authenticatedUser.isIK() && authenticatedUser.getDepartman().isAdminMi()) || yetkiTumPersonelNoList.contains(sicilNo)) {
 			HashMap map = new HashMap();
@@ -327,12 +328,12 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 				else if (departmanId != null)
 					map.put("pdksPersonel.sirket.departman.id=", departmanId);
 			}
-			if (sicilNo.trim().length() > 0)
+			if (PdksUtil.hasStringValue(sicilNo))
 				map.put("pdksPersonel.pdksSicilNo=", sicilNo);
 			else {
-				if (adi.trim().length() > 0)
+				if (PdksUtil.hasStringValue(adi))
 					map.put("pdksPersonel.ad like ", "%" + adi.trim() + "%");
-				if (soyadi.trim().length() > 0)
+				if (PdksUtil.hasStringValue(soyadi))
 					map.put("pdksPersonel.soyad like ", "%" + soyadi.trim() + "%");
 			}
 
@@ -388,6 +389,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 			devam = Boolean.FALSE;
 
 		if (devam) {
+			Calendar cal = Calendar.getInstance();
 			parametreMap.clear();
 			StringBuffer sb = null;
 			if ((personelId == null || personelId.isEmpty()) && (sirketId != null || departmanId != null)) {
@@ -399,7 +401,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 					ArrayList<String> list = authenticatedUser.getYetkiTumPersonelNoList();
 					parametreMap.put("ys", list);
 				}
-				if (sicilNo.trim().length() > 0) {
+				if (PdksUtil.hasStringValue(sicilNo)) {
 					sb.append(" AND  P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + "=:sicilNo");
 					parametreMap.put("sicilNo", sicilNo);
 				} else if (admin) {
@@ -447,14 +449,14 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 				parametreMap.put("p", (ArrayList) personelId.clone());
 			}
 
-			parametreMap.put("vardiyaBit", PdksUtil.tariheGunEkleCikar(PdksUtil.getDate(bitTarih), 1));
+			parametreMap.put("vardiyaBit", ortakIslemler.tariheGunEkleCikar(cal, PdksUtil.getDate(bitTarih), 1));
 			parametreMap.put("vardiyaBas", basTarih);
 			if (session != null)
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			try {
 				logger.debug(PdksUtil.setTurkishStr(authenticatedUser.getAdSoyad() + " Hareket bilgileri okunuyor."));
 				if (personelId != null && !personelId.isEmpty()) {
-					kgsList = ortakIslemler.getHareketBilgileri(new ArrayList<Long>(kapiMap.keySet()), personelId, basTarih, PdksUtil.tariheGunEkleCikar(PdksUtil.getDate(bitTarih), 1), BasitHareket.class, session);
+					kgsList = ortakIslemler.getHareketBilgileri(new ArrayList<Long>(kapiMap.keySet()), personelId, basTarih, ortakIslemler.tariheGunEkleCikar(cal, PdksUtil.getDate(bitTarih), 1), BasitHareket.class, session);
 				} else {
 					List list = pdksEntityController.getObjectBySQLList(sb, parametreMap, null);
 					kgsList = ortakIslemler.getHareketIdBilgileri(list, null, basTarih, bitTarih, session);
@@ -603,13 +605,13 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 		} else
 			setHareketList(new ArrayList<HareketKGS>());
 		setZipVeri(null);
-		if (!hareketList.isEmpty() && sicilNo.trim().length() == 0 && (authenticatedUser.isAdmin() || ikRole)) {
-			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		if (!hareketList.isEmpty() && PdksUtil.hasStringValue(sicilNo) == false && (authenticatedUser.isAdmin() || ikRole)) {
+
 			String dosyaAdi = "tumHareketler" + (authenticatedUser.getShortUsername() != null ? authenticatedUser.getShortUsername().trim() : "");
 			try {
 				logger.debug(PdksUtil.setTurkishStr(authenticatedUser.getAdSoyad() + " " + dosyaAdi + " dosyasi olusturuluyor."));
 				if (!PdksUtil.getTestDurum()) {
-					textZipDosyaOlustur(bos, dosyaAdi);
+					zipVeri = textZipDosyaOlustur(dosyaAdi + ".txt");
 					logger.debug(PdksUtil.setTurkishStr(authenticatedUser.getAdSoyad() + " " + dosyaAdi + " dosyasi mail gonderiliyor."));
 					if (zipVeri != null) {
 						// ortakIslemler.mailGonder(renderer, "/email/hareketMail.xhtml");
@@ -638,6 +640,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 
 			} catch (Exception e) {
 				logger.error(e);
+				e.printStackTrace();
 			}
 
 		}
@@ -648,14 +651,11 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 		String dosyaAdi = "tumHareketler" + (authenticatedUser.getShortUsername() != null ? authenticatedUser.getShortUsername().trim() : "");
 		try {
 			if (zipVeri == null) {
-				ByteArrayOutputStream bos = new ByteArrayOutputStream();
 				String zipDosyaAdi = "tumHareketler" + (authenticatedUser.getShortUsername() != null ? authenticatedUser.getShortUsername().trim() : "");
-				textZipDosyaOlustur(bos, zipDosyaAdi);
-				bos = null;
+				zipVeri = textZipDosyaOlustur(zipDosyaAdi + ".txt");
 			}
 			byte[] bytes = zipVeri;
 			if (bytes != null) {
-
 				HttpServletResponse response = (HttpServletResponse) FacesContext.getCurrentInstance().getExternalContext().getResponse();
 				ServletOutputStream sos = response.getOutputStream();
 				response.setContentType("application/zip");
@@ -678,15 +678,13 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 	}
 
 	/**
-	 * @param bos
 	 * @param dosyaAdi
 	 * @return
 	 * @throws IOException
 	 * @throws FileNotFoundException
 	 */
-	private byte[] textZipDosyaOlustur(ByteArrayOutputStream bos, String dosyaAdi) throws IOException, FileNotFoundException {
+	private byte[] textZipDosyaOlustur(String dosyaAdi) throws Exception {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
 		StringBuffer sb = new StringBuffer();
 		sb.append("Zaman|" + ortakIslemler.sirketAciklama() + "|Adı Soyadı|" + ortakIslemler.personelNoAciklama() + "|Kapi|");
 		if (guncellenmis) {
@@ -734,24 +732,8 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 			}
 
 		}
-
-		byte[] bytes = baos.toByteArray();
-
-		ZipOutputStream zos = new ZipOutputStream(bos);
-
-		ZipEntry zipEntry = new ZipEntry(dosyaAdi + ".txt");
-		zos.putNextEntry(zipEntry);
-
-		int length = bytes.length;
-		zos.write(bytes, 0, length);
-		zos.closeEntry();
-		zos.close();
-		bos.close();
-		bos.flush();
-		byte[] bytesZip = null;
-		zos.write(bytesZip);
-		setZipVeri(bytesZip);
-		return bytes;
+		byte[] bytesZip = PdksUtil.getFileZip(dosyaAdi, baos.toByteArray());
+		return bytesZip;
 	}
 
 	public String zipAktar() {
@@ -907,7 +889,10 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 		CellStyle styleEvenTimeStamp = ExcelUtil.getStyleEven(ExcelUtil.FORMAT_DATETIME, wb);
 		int row = 0;
 		int col = 0;
-		boolean yonetici = authenticatedUser.isAdmin() || ikRole;
+		boolean admin = authenticatedUser.isAdmin();
+		boolean yonetici = admin || ikRole;
+		if (admin)
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Id");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Zaman");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.sirketAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.personelNoAciklama());
@@ -948,7 +933,8 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 				ex.printStackTrace();
 
 			}
-
+			if (admin)
+				ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(hareket.getId());
 			try {
 				ExcelUtil.getCell(sheet, row, col++, styleTimeStamp).setCellValue(hareket.getZaman());
 				String sirket = "";

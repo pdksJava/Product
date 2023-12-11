@@ -138,7 +138,7 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 
 		modelGoster = Boolean.FALSE;
 		sanalPersonelAciklama = ortakIslemler.sanalPersonelAciklama();
-		if (!sanalPersonelAciklama.equals("")) {
+		if (PdksUtil.hasStringValue(sanalPersonelAciklama)) {
 			sanalPersonelDurum = 0;
 		}
 
@@ -615,11 +615,12 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.tesisAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(bolumAciklama);
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.yoneticiAciklama());
+
 		if (modelGoster)
-			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Çalışma Modeli");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.calismaModeliAciklama());
 		if (bordroAltAlani)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Bordro Alt Birimi");
-		if (!sanalPersonelAciklama.equals(""))
+		if (PdksUtil.hasStringValue(sanalPersonelAciklama))
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(sanalPersonelAciklama);
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Durum");
 
@@ -666,7 +667,7 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 			}
 			if (bordroAltAlani)
 				ExcelUtil.getCell(sheet, row, col++, style).setCellValue(personel.getBordroAltAlan() != null ? personel.getBordroAltAlan().getAciklama() : "");
-			if (!sanalPersonelAciklama.equals(""))
+			if (PdksUtil.hasStringValue(sanalPersonelAciklama))
 				ExcelUtil.getCell(sheet, row, col++, style).setCellValue(authenticatedUser.getYesNo(personel.getSanalPersonel()));
 			ExcelUtil.getCell(sheet, row, col++, style).setCellValue(mesai.getId() != null ? "Puantaj Onaylanmadı" : "Plan Oluşturulmadı");
 			if (izinTipiVardiyaList != null) {
@@ -747,10 +748,10 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(bolumAciklama);
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.yoneticiAciklama());
 		if (modelGoster)
-			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Çalışma Modeli");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.calismaModeliAciklama());
 		if (bordroAltAlani)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Bordro Alt Birimi");
-		if (!sanalPersonelAciklama.equals(""))
+		if (PdksUtil.hasStringValue(sanalPersonelAciklama))
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(sanalPersonelAciklama);
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Normal Mesai");
 		if (maasKesintiGoster)
@@ -823,7 +824,7 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 			}
 			if (personelERP)
 				ExcelUtil.getCell(sheet, row, col++, style).setCellValue(personel.getBordroAltAlan() != null ? personel.getBordroAltAlan().getAciklama() : "");
-			if (!sanalPersonelAciklama.equals(""))
+			if (PdksUtil.hasStringValue(sanalPersonelAciklama))
 				ExcelUtil.getCell(sheet, row, col++, style).setCellValue(authenticatedUser.getYesNo(personel.getSanalPersonel()));
 			if (mesai.getOdenecekSure() != null && mesai.getOdenecekSure().doubleValue() > 0)
 				ExcelUtil.getCell(sheet, row, col++, tutarStyle).setCellValue(User.getYuvarla(mesai.getOdenecekSure()));
@@ -1079,9 +1080,10 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 		sirket = null;
 		personelDenklestirmeler = null;
 		modelGoster = ortakIslemler.getModelGoster(denklestirmeAy, session);
+		Calendar cal = Calendar.getInstance();
 		if (denklestirmeAy != null) {
 			basGun = PdksUtil.getYilAyBirinciGun(yil, ay);
-			bitGun = PdksUtil.tariheAyEkleCikar(basGun, 1);
+			bitGun = ortakIslemler.tariheAyEkleCikar(cal, basGun, 1);
 
 			fields.clear();
 			StringBuffer sb = new StringBuffer();
@@ -1151,7 +1153,7 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 			List<PersonelDenklestirme> erpAktarilanlar = new ArrayList<PersonelDenklestirme>();
 			for (Iterator iterator = personelDenklestirmeList.iterator(); iterator.hasNext();) {
 				PersonelDenklestirme denklestirme = (PersonelDenklestirme) iterator.next();
-				if (!denklestirme.isOnaylandi() || !denklestirme.isDenklestirme())
+				if (!denklestirme.isOnaylandi() || !denklestirme.isDenklestirmeDurum())
 					iterator.remove();
 				else {
 					if (denklestirme.getPersonel().getSirket().isErp()) {
@@ -1201,7 +1203,7 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 					personelDenklestirmeList = PdksUtil.sortObjectStringAlanList(personelDenklestirmeList, "getSortKey", null);
 				List<Long> perIdList = new ArrayList<Long>();
 				Date basTarih = PdksUtil.convertToJavaDate(denklestirmeAy.getYil() + "-" + denklestirmeAy.getAy() + "-01", "yyyy-M-dd");
-				Date bitTarih = PdksUtil.tariheAyEkleCikar(basTarih, 1);
+				Date bitTarih = ortakIslemler.tariheAyEkleCikar(cal, basTarih, 1);
 
 				for (PersonelDenklestirme personelDenklestirme : personelDenklestirmeList) {
 					perIdList.add(personelDenklestirme.getPersonelId());
@@ -1226,7 +1228,7 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 				} catch (Exception e) {
 					logger.error(sb.toString());
 				}
-				TreeMap<String, Object> ozetMap = fazlaMesaiOrtakIslemler.getIzinOzetMap(vgList, null, false);
+				TreeMap<String, Object> ozetMap = fazlaMesaiOrtakIslemler.getIzinOzetMap(authenticatedUser, vgList, null, false);
 				izinTipiVardiyaList = ozetMap.containsKey("izinTipiVardiyaList") ? (List<Vardiya>) ozetMap.get("izinTipiVardiyaList") : new ArrayList<Vardiya>();
 				izinTipiPersonelVardiyaMap = ozetMap.containsKey("izinTipiPersonelVardiyaMap") ? (TreeMap<String, TreeMap<String, List<VardiyaGun>>>) ozetMap.get("izinTipiPersonelVardiyaMap") : new TreeMap<String, TreeMap<String, List<VardiyaGun>>>();
 				izinTipiPersonelMap = ozetMap.containsKey("izinTipiPersonelMap") ? (TreeMap<Long, Personel>) ozetMap.get("izinTipiPersonelMap") : new TreeMap<Long, Personel>();

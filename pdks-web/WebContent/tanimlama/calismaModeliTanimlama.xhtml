@@ -132,7 +132,12 @@
 							</f:facet>
 							<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.hareketKaydiVardiyaBul)}" />
 						</rich:column>
-
+						<rich:column rendered="#{calismaModeliHome.otomatikFazlaCalismaOnaylansinVar}">
+							<f:facet name="header">
+								<h:outputText value="Fazla Çalışma Otomatik Onaylansın" />
+							</f:facet>
+							<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.otomatikFazlaCalismaOnaylansin)}" />
+						</rich:column>
 						<rich:column rendered="#{ortakIslemler.getParameterKey('haftaTatilDurum')=='1'}">
 							<f:facet name="header">
 								<h:outputText value="Hafta Sonu Fazla Mesai Ode" />
@@ -180,7 +185,7 @@
 
 		<rich:modalPanel id="editPanel" autosized="true" width="650">
 			<f:facet name="header">
-				<h:outputText value="Çalışma Modeli Güncelle" />
+				<h:outputText value="#{ortakIslemler.calismaModeliAciklama()} Güncelle" />
 			</f:facet>
 			<f:facet name="controls">
 				<h:panelGroup>
@@ -199,7 +204,7 @@
 				<h:panelGrid columns="1">
 					<h:panelGrid columns="2" id="calismaModeliGiris">
 						<s:decorate template="/layout/edit.xhtml">
-							<ui:define name="label">Çalışma modeli adı</ui:define>
+							<ui:define name="label">#{ortakIslemler.calismaModeliAciklama()} adı</ui:define>
 							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.aciklama}" disabled="#{authenticatedUser.admin==false}" size="35"
 								requiredMessage="Şablon Adı giriniz" />
 						</s:decorate>
@@ -295,9 +300,16 @@
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml"
-							rendered="#{calismaModeliHome.hareketKaydiVardiyaBul or calismaModeliHome.calismaModeli.hareketKaydiVardiyaBul}">
+							rendered="#{calismaModeliHome.otomatikFazlaCalismaOnaylansinVar or calismaModeliHome.calismaModeli.otomatikFazlaCalismaOnaylansin}">
 							<ui:define name="label">Hareket Kayıtlarından Vardiya Bul</ui:define>
 							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.hareketKaydiVardiyaBul}" disabled="#{authenticatedUser.admin==false}">
+
+							</h:selectBooleanCheckbox>
+						</s:decorate>
+						<s:decorate template="/layout/edit.xhtml"
+							rendered="#{calismaModeliHome.otomatikFazlaCalismaOnaylansinVar or calismaModeliHome.calismaModeli.otomatikFazlaCalismaOnaylansin}">
+							<ui:define name="label">Fazla Çalışma Otomatik Onaylansın</ui:define>
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.otomatikFazlaCalismaOnaylansin}" disabled="#{authenticatedUser.admin==false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>

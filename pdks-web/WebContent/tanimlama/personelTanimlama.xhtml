@@ -57,7 +57,7 @@
 				<rich:panel>
 					<DIV class="#{authenticatedUser.scroolClass}" id="#{authenticatedUser.scroolDiv}">
 						<rich:dataTable rowClasses="acik,koyu" headerClass="headerWrap" columnClasses="columnWrap" value="#{pdksPersonelHome.tanimsizPersonelList}"
-							var="personelView" rows="50" rowKeyVar="row" id="personelViewTable">
+							rendered="#{not empty pdksPersonelHome.tanimsizPersonelList}" var="personelView" rows="50" rowKeyVar="row" id="personelViewTable">
 							<f:facet name="header">
 								<h:outputText value="Personeller" />
 							</f:facet>
@@ -103,8 +103,8 @@
 								</rich:toolTip>
 								</ui:fragment>
 							</rich:column>
-							<rich:column>
-								<f:facet name="header" filterBy="#{user.firstname}">
+							<rich:column filterBy="#{personelView.pdksPersonelAciklama}" filterEvent="onkeyup">
+								<f:facet name="header">
 									<h:outputText value="PDKS Adı Soyadı" />
 								</f:facet>
 								<h:outputText title="#{personelView.pdksPersonelAciklama}" value="#{personelView.personelKGS.adSoyad}" id="adSoyad" />
@@ -172,7 +172,7 @@
 							</rich:column>
 							<rich:column>
 								<f:facet name="header">
-									<h:outputText value="Çalışma Modeli" />
+									<h:outputText value="#{ortakIslemler.calismaModeliAciklama()}" />
 								</f:facet>
 								<h:outputText value="#{personelView.pdksPersonel.calismaModeli.aciklama}" id="calismaModeli" />
 							</rich:column>
@@ -437,10 +437,7 @@
 				</h:panelGroup>
 			</f:facet>
 			<h:form>
-				<a4j:outputPanel ajaxRendered="true">
-					<h:messages id="messages" styleClass="message" errorClass="errormsg" infoClass="infomsg" warnClass="warnmsg" />
-				</a4j:outputPanel>
-				<a4j:outputPanel id="dosyaPanel">
+				<a4j:outputPanel id="dosyaPanel" ajaxRendered="true">
 					<rich:panel header="Dosya Ekleme" rendered="#{authenticatedUser.admin }">
 						<h:panelGrid columns="2" style="width:700px;">
 							<rich:fileUpload id="fileUpload" fileUploadListener="#{pdksPersonelHome.listenerPersonelDosya}" listHeight="50px" listWidth="300px"
@@ -476,7 +473,9 @@
 								</ui:fragment>
 							</a4j:outputPanel>
 						</h:panelGrid>
-
+						<a4j:outputPanel ajaxRendered="true">
+							<h:messages id="messages" styleClass="message" errorClass="errormsg" infoClass="infomsg" warnClass="warnmsg" />
+						</a4j:outputPanel>
 						<ui:fragment rendered="#{pdksPersonelHome.personelDosya.dosyaIcerik!=null}">
 							<rich:dataTable rowClasses="acik,koyu" headerClass="headerWrap" columnClasses="columnWrap" value="#{pdksPersonelHome.personelERPReturnList}"
 								rendered="#{not empty pdksPersonelHome.personelERPReturnList}" var="personelHata" rows="50" rowKeyVar="row" id="personelHataViewTable">
@@ -809,7 +808,7 @@
 											</h:selectOneMenu>
 										</s:decorate>
 										<s:decorate template="/layout/edit.xhtml" id="modeller">
-											<ui:define name="label">Çalışma Modeli</ui:define>
+											<ui:define name="label">#{ortakIslemler.calismaModeliAciklama()}</ui:define>
 											<h:selectOneMenu value="#{pdksPersonelHome.instance.calismaModeli}" required="#{pdksPersonelHome.instance.pdks}"
 												disabled="#{pdksPersonelHome.calismaModeliList.size()==1 and pdksPersonelHome.instance.calismaModeli!=null}">
 												<s:selectItems var="comp" value="#{pdksPersonelHome.calismaModeliList}" label="#{comp.aciklama}" noSelectionLabel="Lütfen seçiniz" />
@@ -860,7 +859,7 @@
 										<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.instance.sirket.erp==false}">
 											<ui:define name="label">#{ortakIslemler.yoneticiAciklama()}</ui:define>
 											<h:selectOneMenu id="toComp" value="#{pdksPersonelHome.instance.yoneticisi}"
-												disabled="#{pdksPersonelHome.instance.sirket.erp and  (ortakIslemler.getParameterKey('yoneticiERPKontrol')=='' or ortakIslemler.getParameterKey('yoneticiERPKontrol')=='1')}">
+												disabled="#{pdksPersonelHome.instance.sirket.erp and (ortakIslemler.getParameterKey('yoneticiERPKontrol')=='' or ortakIslemler.getParameterKey('yoneticiERPKontrol')=='1')}">
 												<s:selectItems var="comp" value="#{pdksPersonelHome.pdksPersonelList}" label="#{comp.adSoyad}" noSelectionLabel="Lütfen seçiniz" />
 												<a4j:support event="onchange" />
 												<s:convertEntity />
@@ -877,7 +876,7 @@
 										<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.yoneticiRolVarmi and pdksPersonelHome.instance.sirket.erp}">
 											<ui:define name="label">#{ortakIslemler.yoneticiAciklama()}</ui:define>
 											<h:selectOneMenu id="toComp" value="#{pdksPersonelHome.asilYonetici1}"
-												disabled="#{ortakIslemler.getParameterKey('yoneticiERP1Kontrol')=='' and pdksPersonelHome.personelERPGuncelleme!='M' and pdksPersonelHome.instance.sanalPersonel==false and pdksPersonelHome.instance.sirket.erp and (ortakIslemler.getParameterKey('yoneticiERPKontrol')=='' or ortakIslemler.getParameterKey('yoneticiERPKontrol')=='1')}">
+												disabled="#{pdksPersonelHome.personelERPGuncelleme!='M' and pdksPersonelHome.instance.sanalPersonel==false and pdksPersonelHome.instance.sirket.erp and (ortakIslemler.getParameterKey('yoneticiERPKontrol')=='' or ortakIslemler.getParameterKey('yoneticiERPKontrol')=='1')}">
 												<s:selectItems var="comp" value="#{pdksPersonelHome.yoneticiList}" label="#{comp.adSoyad}" noSelectionLabel="Lütfen seçiniz" />
 												<s:convertEntity />
 											</h:selectOneMenu>
@@ -1128,7 +1127,7 @@
 										<h:outputText value="#{p1.pdksSicilNo}" />
 									</rich:column>
 									<rich:column>
-										<f:facet name="header" filterBy="#{user.firstname}" filterEvent="onkeyup">
+										<f:facet name="header">
 											<h:outputText value="PDKS Adı Soyadı" />
 										</f:facet>
 										<h:outputText value="#{p1.adSoyad}" />

@@ -27,10 +27,12 @@ import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimeUtility;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.In;
 import org.jboss.seam.annotations.Name;
+import org.pdks.entity.ServiceData;
 import org.pdks.security.entity.User;
 import org.pdks.session.PdksEntityController;
 import org.pdks.session.PdksUtil;
@@ -199,12 +201,11 @@ public class MailManager implements Serializable {
 		if (subject != null)
 			logger.debug(subject + " in " + new Date());
 		StringBuffer sb = new StringBuffer();
-		if (mailObject.getSmtpUser() == null || mailObject.getSmtpUser().equals(""))
+		if (!PdksUtil.hasStringValue(mailObject.getSmtpUser()))
 			sb.append("Mail user belirtiniz!");
-		if (mailObject.getSmtpPassword() == null || mailObject.getSmtpPassword().equals(""))
+		if (!PdksUtil.hasStringValue(mailObject.getSmtpPassword()))
 			sb.append("Mail şifre belirtiniz!");
-
-		if (mailObject.getSubject() == null || mailObject.getSubject().equals(""))
+		if (!PdksUtil.hasStringValue(mailObject.getSubject()))
 			sb.append("Konu belirtiniz!");
 		if (sb.length() > 0)
 			mailStatu.setHataMesai(sb.toString());
@@ -252,7 +253,7 @@ public class MailManager implements Serializable {
 	 * @return
 	 * @throws Exception
 	 */
-	public MailStatu ePostaGonder(MailObject mailObject) throws Exception {
+	public MailStatu ePostaGonder(MailObject mailObject, Session sessionDB) throws Exception {
 		MailStatu mailStatu = new MailStatu();
 		Properties props = null;
 
@@ -396,7 +397,7 @@ public class MailManager implements Serializable {
 						if (mailObject.getToList() != null && mailObject.getToList().size() == 1) {
 							MailPersonel mailPersonel = mailObject.getToList().get(0);
 							mesajAlan = mailPersonel.getAdiSoyadi();
-							if (mesajAlan != null && mesajAlan.trim().length() == 0)
+							if (mesajAlan != null && PdksUtil.hasStringValue(mesajAlan) == false)
 								mesajAlan = null;
 
 						}
@@ -424,7 +425,7 @@ public class MailManager implements Serializable {
 						} catch (Exception e2) {
 						}
 					}
-
+					saveLog(mailObject, parameterMap, sessionDB);
 					for (File file : dosyalar) {
 						if (file.exists())
 							file.delete();
@@ -448,6 +449,98 @@ public class MailManager implements Serializable {
 		if (mailStatu.isDurum() == false && mailStatu.getHataMesai() == null)
 			mailStatu.setHataMesai("Hata oluştu!!");
 		return mailStatu;
+	}
+
+	/**
+	 * @param jsonMailStrings
+	 * @param object
+	 * @param gson
+	 * @return
+	 */
+	private String getJsonObject(String jsonMailStrings, Object object, Gson gson) {
+		String str = null;
+		if (object != null) {
+			if (gson == null)
+				gson = new Gson();
+			str = PdksUtil.toPrettyFormat(gson.toJson(object));
+			HashMap<String, String> map = new HashMap<String, String>();
+			if (PdksUtil.hasStringValue(jsonMailStrings)) {
+				List<String> list = PdksUtil.getListByString(jsonMailStrings, "|");
+				for (String string : list) {
+					if (string.indexOf("_") > 0 && string.length() > 2) {
+						String[] veri = string.split("_");
+						if (veri.length == 2) {
+							map.put(veri[0], veri[1]);
+						} else if (veri.length == 1)
+							map.put(veri[0], " ");
+					}
+				}
+				list = null;
+			} else {
+				map.put("\\u003c", "<");
+				map.put("\\u003e", ">");
+				map.put("\\u0026", "&");
+				map.put("\\u003d", "=");
+				map.put("\\u0027", "'");
+			}
+
+			for (String pattern : map.keySet()) {
+				if (str.indexOf(pattern) > 0)
+					str = PdksUtil.replaceAllManuel(str, pattern, map.get(pattern));
+			}
+		}
+		return str;
+	}
+
+	/**
+	 * @param mailObject
+	 * @param sessionDB
+	 */
+	private void saveLog(MailObject mail, HashMap<String, String> map, Session sessionDB) {
+		try {
+			if (sessionDB != null) {
+				MailObject mailObject = (MailObject) mail.clone();
+				mailObject.setSmtpPassword("");
+				ServiceData serviceData = new ServiceData("ePostaGonder");
+				Gson gson = new Gson();
+				serviceData.setInputData(mailObject.getSubject());
+				if (pdksEntityController != null) {
+					try {
+						List<MailFile> attachmentFiles = new ArrayList<MailFile>();
+						for (MailFile mailFile : mailObject.getAttachmentFiles()) {
+							if (mailFile.getIcerik() != null && mailFile.getDisplayName() != null && mailFile.getDisplayName().indexOf(".") > 0) {
+								String ext = FilenameUtils.getExtension(mailFile.getDisplayName());
+								if (ext != null) {
+									MailFile mailFileNew = new MailFile();
+									mailFileNew.setDisplayName(mailFile.getDisplayName());
+									if (ext.equalsIgnoreCase("txt") || ext.equalsIgnoreCase("xml"))
+										mailFileNew.setFile(new String(mailFile.getIcerik()));
+									attachmentFiles.add(mailFileNew);
+									continue;
+								}
+							}
+							attachmentFiles.add(mailFile);
+						}
+						if (!attachmentFiles.isEmpty()) {
+							mailObject.getAttachmentFiles().clear();
+							mailObject.getAttachmentFiles().addAll(attachmentFiles);
+						}
+						attachmentFiles = null;
+						String jsonMailStrings = map.containsKey("jsonMailStrings") ? map.get("jsonMailStrings") : null;
+						serviceData.setOutputData(getJsonObject(jsonMailStrings, mailObject, gson));
+						pdksEntityController.save(serviceData, sessionDB);
+					} catch (Exception ex) {
+
+					}
+				} else
+					sessionDB.flush();
+				gson = null;
+			}
+
+		} catch (Exception e) {
+			logger.error(e);
+		}
+
 	}
 
 	/**
@@ -581,7 +674,7 @@ public class MailManager implements Serializable {
 				if (pasifList.contains(mailPersonel.getEPosta())) {
 					if (sb.length() > 0)
 						sb.append(", ");
-					sb.append((mailPersonel.getAdiSoyadi() != null && mailPersonel.getAdiSoyadi().trim().length() > 0 ? "<" + mailPersonel.getAdiSoyadi().trim() + "> " : "") + mailPersonel.getEPosta());
+					sb.append((PdksUtil.hasStringValue(mailPersonel.getAdiSoyadi()) ? "<" + mailPersonel.getAdiSoyadi().trim() + "> " : "") + mailPersonel.getEPosta());
 					iterator.remove();
 				}
 			}
@@ -603,7 +696,7 @@ public class MailManager implements Serializable {
 				if (email.indexOf("@") > 0) {
 					try {
 						InternetAddress ia = new InternetAddress(email);
-						if (mailUser.getAdiSoyadi() != null && mailUser.getAdiSoyadi().trim().length() > 0)
+						if (PdksUtil.hasStringValue(mailUser.getAdiSoyadi()))
 							ia.setPersonal(mailUser.getAdiSoyadi(), "UTF-8");
 						adreslerList.add(ia);
 						mailList.add(email);

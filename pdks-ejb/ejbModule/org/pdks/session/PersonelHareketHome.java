@@ -627,7 +627,6 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 			try {
 				String aciklama = kgsHareket.getKapiView().getKapi().getAciklama() + " güncellendi.";
 				KapiView terminalKapi = terminalKapiManuelUpdate(kgsHareket.getTerminalKapi());
-			 
 
 				pdksEntityController.hareketSil(kgsId, pdksId, authenticatedUser, neden.getId(), "", kgsHareket.getKgsSirketId(), session);
 				pdksId = pdksEntityController.hareketEkle(terminalKapi, kgsHareket.getPersonel(), kgsHareket.getZaman(), authenticatedUser, neden.getId(), aciklama, session);
@@ -731,7 +730,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 					PdksUtil.addMessageWarn(PdksUtil.convertToDateString(tarih, "d MMMMM yyyy HH:mm") + " tarihden büyük kayıt giremezsiniz");
 				}
 			}
-			if (authenticatedUser.isAdmin() || !islemTipi.equals("")) {
+			if (authenticatedUser.isAdmin() || PdksUtil.hasStringValue(islemTipi)) {
 				Date bugun = Calendar.getInstance().getTime();
 				long kgsId = 0, pdksId = 0;
 				if (islemTipi.equals("E")) {
@@ -751,8 +750,6 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 						kgsId = id;
 					else
 						pdksId = id;
-
-					 
 
 					if (islemTipi.equals("G")) {
 
@@ -784,7 +781,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 			logger.error("Pdks hata out : " + e.getMessage());
 
 		}
-		if (islemTipi == null || !islemTipi.equals("")) {
+		if (islemTipi == null || PdksUtil.hasStringValue(islemTipi)) {
 
 			fillHareketList();
 		}
@@ -816,14 +813,14 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 		denklestirmeAyDurum = fazlaMesaiOrtakIslemler.getDurum(denklestirmeAy);
 		List<HareketKGS> hareket1List = new ArrayList<HareketKGS>();
 		String sicilNo = ortakIslemler.getSicilNo(aramaSecenekleri.getSicilNo());
-		if (sicilNo.trim().equals("") && aramaSecenekleri.getSirketId() == null) {
+		if (PdksUtil.hasStringValue(sicilNo) == false && aramaSecenekleri.getSirketId() == null) {
 			if (ikRole)
 				PdksUtil.addMessageWarn("" + ortakIslemler.sirketAciklama() + " seçiniz!");
 		} else {
 			saveLastParameter();
 			List<String> sicilNoList = ortakIslemler.getAramaPersonelSicilNo(aramaSecenekleri, Boolean.FALSE, session);
 			terminalDegistir = false;
-			if ((fazlaMesaiVardiyaGun != null || visibled != null) && !sicilNo.equals("") && !sicilNoList.contains(sicilNo))
+			if ((fazlaMesaiVardiyaGun != null || visibled != null) && PdksUtil.hasStringValue(sicilNo) && !sicilNoList.contains(sicilNo))
 				sicilNoList.add(sicilNo);
 			List<Personel> perList = null;
 
@@ -865,7 +862,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 					try {
 						if (kapiIdler != null && !kapiIdler.isEmpty()) {
 							if (islemVardiyaGun == null)
-								list = ortakIslemler.getHareketBilgileri(kapiIdler, personeller, PdksUtil.getDate(tarih), PdksUtil.getDate(PdksUtil.tariheGunEkleCikar(tarih, 1)), HareketKGS.class, session);
+								list = ortakIslemler.getHareketBilgileri(kapiIdler, personeller, PdksUtil.getDate(tarih), PdksUtil.getDate(ortakIslemler.tariheGunEkleCikar(cal, tarih, 1)), HareketKGS.class, session);
 							else {
 								Vardiya vardiya = islemVardiyaGun.getIslemVardiya();
 								Date bitTarih = vardiya.getVardiyaFazlaMesaiBitZaman(), basTarih = vardiya.getVardiyaFazlaMesaiBasZaman();
@@ -882,7 +879,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 						list = new ArrayList<HareketKGS>();
 
 					}
-					if (aramaSecenekleri.getSicilNo() != null && aramaSecenekleri.getSicilNo().trim().length() > 0) {
+					if (PdksUtil.hasStringValue(aramaSecenekleri.getSicilNo())) {
 						if (personeller.size() == 1) {
 							map1.clear();
 							map1.put("personelKGS.id", personeller.get(0));
@@ -932,7 +929,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 								KapiView terminalKapi = terminalKapiManuelUpdate(terminalGirisCikisMap.get(kgsHareket.getKapiView().getId()).getTerminal());
 								kgsHareket.setTerminalKapi(terminalKapi);
 							} else
-								logger.error(kgsHareket.getKapiView().getKapi().getAciklama());
+								logger.error(kgsHareket.getKapiView().getKapi().getAciklama() + " " + kgsHareket.getId());
 						}
 						hareketMap.put(kgsHareket.getId(), kgsHareket.getId());
 						HareketKGS hareket = (HareketKGS) kgsHareket.clone();
@@ -1000,11 +997,11 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 			lastMap.put("ekSaha3Id", "" + aramaSecenekleri.getEkSaha3Id());
 		if (aramaSecenekleri.getEkSaha4Id() != null)
 			lastMap.put("ekSaha4Id", "" + aramaSecenekleri.getEkSaha4Id());
-		if (aramaSecenekleri.getSicilNo() != null && aramaSecenekleri.getSicilNo().trim().length() > 0)
+		if (PdksUtil.hasStringValue(aramaSecenekleri.getSicilNo()))
 			lastMap.put("sicilNo", "" + aramaSecenekleri.getSicilNo().trim());
-		if (aramaSecenekleri.getAd() != null && aramaSecenekleri.getAd().trim().length() > 0)
+		if (PdksUtil.hasStringValue(aramaSecenekleri.getAd()))
 			lastMap.put("ad", "" + aramaSecenekleri.getAd().trim());
-		if (aramaSecenekleri.getSoyad() != null && aramaSecenekleri.getSoyad().trim().length() > 0)
+		if (PdksUtil.hasStringValue(aramaSecenekleri.getSoyad()))
 			lastMap.put("soyad", "" + aramaSecenekleri.getSoyad().trim());
 		if (tarih != null)
 			lastMap.put("tarih", PdksUtil.convertToDateString(tarih, "yyyy-MM-dd"));
@@ -1062,8 +1059,9 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 		TreeMap<String, VardiyaGun> vardiyaMap = null;
 		List<Personel> personeller = new ArrayList<Personel>();
 		try {
+			Calendar cal = Calendar.getInstance();
 			personeller.add(personel);
-			vardiyaMap = ortakIslemler.getIslemVardiyalar(personeller, PdksUtil.tariheGunEkleCikar(tarih, -3), PdksUtil.tariheGunEkleCikar(tarih, 3), true, session, Boolean.FALSE);
+			vardiyaMap = ortakIslemler.getIslemVardiyalar(personeller, ortakIslemler.tariheGunEkleCikar(cal, tarih, -3), ortakIslemler.tariheGunEkleCikar(cal, tarih, 3), true, session, Boolean.FALSE);
 
 		} catch (Exception e) {
 			vardiyaMap = new TreeMap<String, VardiyaGun>();

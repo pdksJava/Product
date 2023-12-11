@@ -93,7 +93,7 @@ public class AylikPuantaj implements Serializable, Cloneable {
 
 	private Double izinSuresi = 0d, saatlikIzinSuresi = 0d, eksikCalismaSure = 0d, gecenAyFazlaMesai = 0d, hesaplananSure = 0d, devredenSure = 0d, aksamVardiyaSaatSayisi = 0d, kesilenSure = 0d;
 
-	private boolean fazlaMesaiHesapla = Boolean.FALSE, vardiyaSua = Boolean.FALSE, denklestirilmeyenDevredenVar = Boolean.FALSE;
+	private boolean fazlaMesaiHesapla = Boolean.FALSE, vardiyaSua = Boolean.FALSE, eksikGunVar = Boolean.FALSE, denklestirilmeyenDevredenVar = Boolean.FALSE;
 
 	private CalismaModeli calismaModeli;
 
@@ -104,6 +104,8 @@ public class AylikPuantaj implements Serializable, Cloneable {
 	private TreeMap<Long, PersonelDenklestirmeDinamikAlan> dinamikAlanMap;
 
 	private PersonelDenklestirmeDinamikAlan personelDenklestirmeDinamikAlan;
+
+	private User loginUser;
 
 	public AylikPuantaj(PersonelDenklestirmeBordro bordro) {
 		super();
@@ -319,7 +321,7 @@ public class AylikPuantaj implements Serializable, Cloneable {
 		this.sonGun = sonGun;
 	}
 
-	public void setPersonelDenklestirme(PersonelDenklestirmeTasiyici denklestirme) {
+	public void setPersonelDenklestirmeTasiyici(PersonelDenklestirmeTasiyici denklestirme) {
 		pdksPersonel = denklestirme.getPersonel();
 		TreeMap<String, VardiyaGun> map = bosVardiya();
 		if (denklestirme.getPersonelDenklestirmeleri() != null) {
@@ -716,16 +718,21 @@ public class AylikPuantaj implements Serializable, Cloneable {
 
 	public void setFazlaMesaiHesapla(boolean value) {
 		if (value) {
-			if (personelDenklestirmeAylik == null || personelDenklestirmeAylik.isDenklestirme() == false)
+			if (personelDenklestirmeAylik == null || personelDenklestirmeAylik.isDenklestirmeDurum() == false || personelDenklestirmeAylik.isOnaylandi() == false)
 				value = false;
-			else if (pdksPersonel != null) {
+			else if (pdksPersonel != null && yonetici == null) {
 				Personel yoneticisi = pdksPersonel.getYoneticisi();
 				if (yoneticisi != null && (yonetici == null || yonetici.getId() == null)) {
 					String dateStr = (yil * 100 + ay) + "01";
 					Date basTarih = PdksUtil.convertToJavaDate(dateStr, "yyyyMMdd");
 					Date bitTarih = PdksUtil.tariheGunEkleCikar(PdksUtil.tariheAyEkleCikar(basTarih, 1), -1);
-					if (yoneticisi.getIseGirisTarihi().getTime() <= bitTarih.getTime() && yoneticisi.getIstenAyrilisTarihi().getTime() >= basTarih.getTime())
-						yonetici = yoneticisi;
+					try {
+						if (yoneticisi.getIseGirisTarihi() != null && yoneticisi.getSskCikisTarihi() != null && yoneticisi.getIseGirisTarihi().getTime() <= bitTarih.getTime() && yoneticisi.getSskCikisTarihi().getTime() >= basTarih.getTime())
+							yonetici = yoneticisi;
+					} catch (Exception e) {
+						logger.equals(e);
+					}
+
 				}
 				value = (yonetici != null && yonetici.getId() != null) || pdksPersonel.isSanalPersonelMi();
 			}
@@ -1279,6 +1286,29 @@ public class AylikPuantaj implements Serializable, Cloneable {
 
 	public void setEksikCalismaSure(Double eksikCalismaSure) {
 		this.eksikCalismaSure = eksikCalismaSure;
+	}
+
+	/**
+	 * @return the eksikGunVar
+	 */
+	public boolean isEksikGunVar() {
+		return eksikGunVar;
+	}
+
+	/**
+	 * @param eksikGunVar
+	 *            the eksikGunVar to set
+	 */
+	public void setEksikGunVar(boolean eksikGunVar) {
+		this.eksikGunVar = eksikGunVar;
+	}
+
+	public User getLoginUser() {
+		return loginUser;
+	}
+
+	public void setLoginUser(User loginUser) {
+		this.loginUser = loginUser;
 	}
 
 }

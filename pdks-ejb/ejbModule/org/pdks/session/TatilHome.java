@@ -116,7 +116,7 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 
 	public void tatilEkle() {
 		Tatil tatil = new Tatil();
-		tatil.setArifeSonraVardiyaDenklestirmeVar(ortakIslemler.getParameterKey("arifeSonraVardiyaDenklestirmeVar").equals(""));
+		tatil.setArifeSonraVardiyaDenklestirmeVar(!ortakIslemler.getParameterKeyHasStringValue("arifeSonraVardiyaDenklestirmeVar"));
 		setInstance(tatil);
 		setBasGunList(new ArrayList<SelectItem>());
 		setBitisGunList(new ArrayList<SelectItem>());
@@ -130,12 +130,13 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 
 	public String tarihDegisti() {
 		Tatil pdksTatil = getInstance();
+		Calendar cal = Calendar.getInstance();
 		if (pdksTatil.getBitTarih() == null) {
 			if (pdksTatil.getBasTarih() != null)
-				pdksTatil.setBitTarih(PdksUtil.tariheGunEkleCikar(pdksTatil.getBasTarih(), pdksTatil.isYarimGunMu() ? 1 : 0));
+				pdksTatil.setBitTarih(ortakIslemler.tariheGunEkleCikar(cal, pdksTatil.getBasTarih(), pdksTatil.isYarimGunMu() ? 1 : 0));
 		} else if (pdksTatil.getBasTarih() == null) {
 			if (pdksTatil.getBitTarih() != null)
-				pdksTatil.setBasTarih(PdksUtil.tariheGunEkleCikar(pdksTatil.getBitTarih(), pdksTatil.isYarimGunMu() ? -1 : 0));
+				pdksTatil.setBasTarih(ortakIslemler.tariheGunEkleCikar(cal, pdksTatil.getBitTarih(), pdksTatil.isYarimGunMu() ? -1 : 0));
 
 		}
 
@@ -530,7 +531,7 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 		setInstance(pdksTatil);
 		yilSayisi = 1;
 		kopyala = Boolean.TRUE;
-		if (ortakIslemler.getParameterKey("cokluTatilKopyala").equals(""))
+		if (!ortakIslemler.getParameterKeyHasStringValue("cokluTatilKopyala"))
 			kayitKopyalaDevam();
 		return "";
 	}

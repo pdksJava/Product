@@ -9,9 +9,9 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
-import org.pdks.session.PdksUtil;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.pdks.session.PdksUtil;
 
 @Entity(name = IzinTipi.TABLE_NAME)
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = { IzinTipi.COLUMN_NAME_DEPARTMAN, IzinTipi.COLUMN_NAME_IZIN_TIPI }) })
@@ -28,6 +28,7 @@ public class IzinTipi extends BaseObject {
 	public static final String COLUMN_NAME_MAIL_GONDERIM_DURUMU = "MAIL_GONDERIM_DURUMU";
 	public static final String COLUMN_NAME_GIRIS_TIPI = "GIRIS_TIPI";
 	public static final String COLUMN_NAME_UCRETLI = "UCRETLI";
+	public static final String COLUMN_NAME_CUMA_CUMARTESI_TEK_IZIN_SAY = "CUMA_CUMARTESI_TEK_IZIN_SAY";
 
 	public static final int MAIL_GONDERIM_DURUMU_ONAYSIZ = 0;
 
@@ -110,7 +111,7 @@ public class IzinTipi extends BaseObject {
 	private String onaylayanTipi = ONAYLAYAN_TIPI_YONETICI2;
 	private String mesaj = "", kisaAciklama = "";
 	private IzinTipi bakiyeIzinTipi;
-	private Boolean denklestirmeDahil = Boolean.FALSE, offDahil = Boolean.FALSE, htDahil = Boolean.FALSE;
+	private Boolean denklestirmeDahil = Boolean.FALSE, offDahil = Boolean.FALSE, htDahil = Boolean.FALSE, cumaCumartesiTekIzinSay = Boolean.FALSE;
 	private Integer listeSira = 0, hesapTipi, durumCGS = CGS_DURUM_CIKAR, mailGonderimDurumu;
 	private IzinIstirahat izinIstirahat;
 
@@ -364,6 +365,15 @@ public class IzinTipi extends BaseObject {
 
 	public void setDenklestirmeDahil(Boolean denklestirmeDahil) {
 		this.denklestirmeDahil = denklestirmeDahil;
+	}
+
+	@Column(name = COLUMN_NAME_CUMA_CUMARTESI_TEK_IZIN_SAY)
+	public Boolean getCumaCumartesiTekIzinSay() {
+		return cumaCumartesiTekIzinSay;
+	}
+
+	public void setCumaCumartesiTekIzinSay(Boolean cumaCumartesiTekIzinSay) {
+		this.cumaCumartesiTekIzinSay = cumaCumartesiTekIzinSay;
 	}
 
 	@Column(name = "DOSYA_EKLE")
@@ -708,13 +718,18 @@ public class IzinTipi extends BaseObject {
 	}
 
 	@Transient
+	public boolean isCumaCumartesiTekIzinSaysin() {
+		return cumaCumartesiTekIzinSay != null && cumaCumartesiTekIzinSay;
+	}
+
+	@Transient
 	public Vardiya getIzinVardiya(char vardiyaTipi) {
 		Vardiya vardiya = new Vardiya();
 		vardiya.setId(-id);
 		vardiya.setKisaAdi(kisaAciklama);
 		vardiya.setVardiyaTipi(vardiyaTipi);
 		String str = izinTipiTanim.getAciklama();
-		vardiya.setAdi(str != null && str.trim().length() > 0 ? str : izinTipiTanim.getAciklamatr());
+		vardiya.setAdi(PdksUtil.hasStringValue(str) ? str : izinTipiTanim.getAciklamatr());
 		vardiya.setEkranSira(listeSira);
 		vardiya.setStyleClass(izinTipiTanim.getErpKodu());
 		return vardiya;

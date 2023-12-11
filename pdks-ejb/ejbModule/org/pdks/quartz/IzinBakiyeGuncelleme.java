@@ -1,5 +1,6 @@
 package org.pdks.quartz;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -42,11 +43,13 @@ import org.pdks.session.PdksUtil;
 @AutoCreate
 // @Synchronized(timeout=15000)
 @Scope(ScopeType.APPLICATION)
-public class IzinBakiyeGuncelleme {
+public class IzinBakiyeGuncelleme implements Serializable {
 
 	/**
 	 * 
 	 */
+	private static final long serialVersionUID = 7758680001001702451L;
+
 	static Logger logger = Logger.getLogger(IzinBakiyeGuncelleme.class);
 
 	@In(required = false, create = true)
@@ -113,7 +116,7 @@ public class IzinBakiyeGuncelleme {
 				Date time = zamanlayici.getDbTime(session);
 				hataGonder = Boolean.TRUE;
 				hataKonum = "Zaman kontrolu yapılıyor ";
-				boolean zamanDurum = manuel || (PdksUtil.zamanKontrol(PARAMETER_KEY, value, time) || ortakIslemler.getGuncellemeDurum(PersonelIzin.TABLE_NAME, session));
+				boolean zamanDurum = manuel || (PdksUtil.zamanKontrol(PARAMETER_KEY, value, time) && ortakIslemler.getGuncellemeDurum(PersonelIzin.TABLE_NAME, session));
 				if (zamanDurum)
 					izinBakiyeGuncellemeCalistir(session, true);
 
@@ -125,7 +128,7 @@ public class IzinBakiyeGuncelleme {
 			logger.error("PDKS hata out : " + e.getMessage());
 			if (hataGonder)
 				try {
-					zamanlayici.mailGonder(session, "İzin Bakiye Güncellemesi", "İzin bakiyeleri güncellenmemiştir." + e.getMessage() + " ( " + hataKonum + " )", null, Boolean.TRUE);
+					zamanlayici.mailGonder(session, null, "İzin Bakiye Güncellemesi", "İzin bakiyeleri güncellenmemiştir." + e.getMessage() + " ( " + hataKonum + " )", null, Boolean.TRUE);
 
 				} catch (Exception e2) {
 					logger.error("izinBakiyeGuncellemeTimer 2 : " + e2.getMessage());
@@ -152,7 +155,7 @@ public class IzinBakiyeGuncelleme {
 			sistemAdminUser.setLogin(Boolean.FALSE);
 		izinleriHesapla(sistemAdminUser, session);
 		if (mailGonder)
-			zamanlayici.mailGonder(session, "İzin Bakiye Güncellemesi", "İzin bakiyeleri güncellenmiştir.", null, Boolean.TRUE);
+			zamanlayici.mailGonder(session, null, "İzin Bakiye Güncellemesi", "İzin bakiyeleri güncellenmiştir.", null, Boolean.TRUE);
 		logger.info("izinleriHesapla bitti " + new Date());
 	}
 
@@ -169,7 +172,7 @@ public class IzinBakiyeGuncelleme {
 			sb.append(" AND I." + PersonelIzin.COLUMN_NAME_IZIN_DURUMU + " NOT IN (8,9) AND  I." + PersonelIzin.COLUMN_NAME_BITIS_ZAMANI + " >= P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI);
 			sb.append(" INNER JOIN " + IzinTipi.TABLE_NAME + "   T ON T." + IzinTipi.COLUMN_NAME_ID + "=I." + PersonelIzin.COLUMN_NAME_IZIN_TIPI + " AND T." + IzinTipi.COLUMN_NAME_BAKIYE_IZIN_TIPI + " IS NOT NULL");
 			sb.append(" LEFT JOIN " + PersonelIzinDetay.TABLE_NAME + "  D ON D." + PersonelIzinDetay.COLUMN_NAME_HAKEDIS_IZIN + "=I." + IzinTipi.COLUMN_NAME_ID);
-			sb.append(" WHERE P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + "=<CAST(GETDATE() AS date)  and D." + PersonelIzinDetay.COLUMN_NAME_ID + " IS NULL");
+			sb.append(" WHERE P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + "<=CAST(GETDATE() AS date)  and D." + PersonelIzinDetay.COLUMN_NAME_ID + " IS NULL");
 
 			if (session != null)
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -301,12 +304,12 @@ public class IzinBakiyeGuncelleme {
 			izinleriBakiyeleriniHesapla(null, null, null, user, Boolean.TRUE, Boolean.FALSE);
 			if (ozelKontrol) {
 				Parameter parameter = ortakIslemler.getParameter(session, "suaSenelikKullan");
-				boolean suaSenelikKullan = parameter == null || parameter.getValue() == null || !parameter.getValue().equals("1");
+				boolean suaSenelikKullanma = parameter == null || parameter.getValue() == null || !parameter.getValue().equals("1");
 				cal = Calendar.getInstance();
 				int haftaGun = cal.get(Calendar.DAY_OF_WEEK);
 				if (haftaGun == Calendar.SUNDAY)
 					ciftBakiyeIzinKontrol(session);
-				else if (suaSenelikKullan && haftaGun != Calendar.SATURDAY)
+				else if (suaSenelikKullanma == false && haftaGun != Calendar.SATURDAY)
 					senelikSuaIzinKontrol(session);
 			}
 
@@ -342,6 +345,8 @@ public class IzinBakiyeGuncelleme {
 		map.put("iseBaslamaTarihi<=", bugun);
 		map.put("dogumTarihi<>", null);
 		map.put("durum=", Boolean.TRUE);
+		map.put("sirket.fazlaMesai=", Boolean.TRUE);
+		map.put("sirket.departman.izinGirilebilir=", Boolean.TRUE);
 		if (siciller != null && !siciller.isEmpty())
 			map.put("pdksSicilNo", siciller);
 		else if (sirket != null)
@@ -349,7 +354,7 @@ public class IzinBakiyeGuncelleme {
 		else {
 			map.put("sirket.durum=", Boolean.TRUE);
 			if (!yeni && user != null && !user.isAdmin())
-				map.put("sirket.departman=", user.getDepartman());
+				map.put("sirket.departman.id=", user.getDepartman().getId());
 		}
 		List<Personel> list = pdksEntityController.getObjectByInnerObjectListInLogic(map, Personel.class);
 		String sicilNo = null;
@@ -366,7 +371,7 @@ public class IzinBakiyeGuncelleme {
 					continue;
 				}
 				try {
-					if (!(pdksPersonel.getSicilNo().trim().length() == 0 || pdksPersonel.getIzinHakEdisTarihi() == null || pdksPersonel.getDogumTarihi() == null)) {
+					if (!(PdksUtil.hasStringValue(pdksPersonel.getSicilNo()) == false || pdksPersonel.getIzinHakEdisTarihi() == null || pdksPersonel.getDogumTarihi() == null)) {
 						try {
 							sicilNo = String.valueOf(Long.parseLong(pdksPersonel.getSicilNo().trim()));
 						} catch (Exception e) {

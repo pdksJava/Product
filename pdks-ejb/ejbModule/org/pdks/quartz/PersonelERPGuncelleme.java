@@ -2,6 +2,7 @@ package org.pdks.quartz;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -45,11 +46,12 @@ import org.pdks.session.PdksUtil;
 @Name("personelERPGuncelleme")
 @AutoCreate
 @Scope(ScopeType.APPLICATION)
-public class PersonelERPGuncelleme {
+public class PersonelERPGuncelleme implements Serializable {
 
 	/**
 	 * 
 	 */
+	private static final long serialVersionUID = -421170994640099576L;
 
 	static Logger logger = Logger.getLogger(PersonelERPGuncelleme.class);
 
@@ -60,7 +62,7 @@ public class PersonelERPGuncelleme {
 	@In(required = false, create = true)
 	HashMap<String, String> parameterMap;
 	@In(required = false, create = true)
-	public Zamanlayici zamanlayici;
+	Zamanlayici zamanlayici;
 	@In(required = false, create = true)
 	EntityManager entityManager;
 	@In(required = false, create = true)
@@ -80,10 +82,10 @@ public class PersonelERPGuncelleme {
 
 	@Asynchronous
 	@SuppressWarnings("unchecked")
+	@Transactional
 	// @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
 	public QuartzTriggerHandle personelERPGuncellemeTimer(@Expiration Date when, @IntervalCron String interval) {
 		hataKonum = "personelERPGuncellemeTimer başladı ";
-
 		if (pdksEntityController != null && !isCalisiyor()) {
 			ozelKontrol = Boolean.FALSE;
 			setCalisiyor(Boolean.TRUE);
@@ -123,7 +125,7 @@ public class PersonelERPGuncelleme {
 				logger.error("personelERPGuncelle hata " + e.getMessage() + " " + new Date());
 				if (hataGonder)
 					try {
-						zamanlayici.mailGonder(session, "ERP personel bilgileri güncellemesi", "ERP personel bilgileri güncelleme tamamlanmadı." + e.getMessage() + " ( " + hataKonum + " )", null, Boolean.TRUE);
+						zamanlayici.mailGonder(session, null, "ERP personel bilgileri güncellemesi", "ERP personel bilgileri güncelleme tamamlanmadı." + e.getMessage() + " ( " + hataKonum + " )", null, Boolean.TRUE);
 
 					} catch (Exception e2) {
 						logger.error("personelERPGuncellemeTimer 2 : " + e2.getMessage());
@@ -204,9 +206,9 @@ public class PersonelERPGuncelleme {
 		}
 		if (mailGonder) {
 			if (dosya != null)
-				zamanlayici.mailGonderDosya(session, "SAP personel bilgileri güncellemesi", "SAP personel bilgileri güncelleme tamamlandı.", null, dosya, Boolean.TRUE);
+				zamanlayici.mailGonderDosya(session, null, "SAP personel bilgileri güncellemesi", "SAP personel bilgileri güncelleme tamamlandı.", null, dosya, Boolean.TRUE);
 			else
-				zamanlayici.mailGonder(session, "SAP personel bilgileri güncellemesi", "SAP personel bilgileri güncelleme tamamlandı.", null, Boolean.TRUE);
+				zamanlayici.mailGonder(session, null, "SAP personel bilgileri güncellemesi", "SAP personel bilgileri güncelleme tamamlandı.", null, Boolean.TRUE);
 		}
 		logger.info("personelERPGuncelle bitti " + new Date());
 	}
@@ -356,7 +358,7 @@ public class PersonelERPGuncelleme {
 				Personel pdksPersonel = (Personel) iterator.next();
 
 				try {
-					if (pdksPersonel.getSicilNo().trim().length() == 0) {
+					if (PdksUtil.hasStringValue(pdksPersonel.getSicilNo()) == false) {
 						iterator.remove();
 						continue;
 					}
@@ -513,7 +515,7 @@ public class PersonelERPGuncelleme {
 						if (user.getMailGrubuCC() != null) {
 							String mail = mailMap.get(user.getMailGrubuCC().getEmail());
 							if (!mail.equals(user.getMailGrubuCC().getEmail())) {
-								if (!mail.equals("")) {
+								if (PdksUtil.hasStringValue(mail)) {
 									user.setEmailCC(mail);
 									saveMailGrubuList.add(user.getMailGrubuCC());
 								} else if (user.getMailGrubuCC().getId() != null) {
@@ -527,7 +529,7 @@ public class PersonelERPGuncelleme {
 						if (user.getMailGrubuBCC() != null) {
 							String mail = mailMap.get(user.getMailGrubuBCC().getEmail());
 							if (!mail.equals(user.getMailGrubuBCC().getEmail())) {
-								if (!mail.equals("")) {
+								if (PdksUtil.hasStringValue(mail)) {
 									user.setEmailBCC(mail);
 									saveMailGrubuList.add(user.getMailGrubuBCC());
 								} else if (user.getMailGrubuBCC().getId() != null) {
@@ -540,7 +542,7 @@ public class PersonelERPGuncelleme {
 						if (user.getHareketMailGrubu() != null) {
 							String mail = mailMap.get(user.getHareketMailGrubu().getEmail());
 							if (!mail.equals(user.getHareketMailGrubu().getEmail())) {
-								if (!mail.equals("")) {
+								if (PdksUtil.hasStringValue(mail)) {
 									user.setEmailBCC(mail);
 									saveMailGrubuList.add(user.getHareketMailGrubu());
 								} else if (user.getHareketMailGrubu().getId() != null) {

@@ -131,7 +131,7 @@ if (typeof window.event == 'undefined'){
 						height="#{startupAction.projeHeaderImageHeight}" />
 
 				</ui:fragment></td>
-			<td style="font-weight: bold;  font-family: sans-serif; color: #{startupAction.projeHeaderColor};" height="83" align="center">&nbsp;#{ortakIslemler.getParameterKey('fromName')}
+			<td style="font-weight: bold; font-size: 22px; font-family: sans-serif; color: #{startupAction.projeHeaderColor};" height="83" align="center">&nbsp;#{ortakIslemler.getParameterKey('fromName')}
 			</td>
 			<td width="120" height="83">&nbsp;</td>
 		</tr>
@@ -146,11 +146,9 @@ if (typeof window.event == 'undefined'){
 				#{authenticatedUser.timeLongFormatla(authenticatedUser.menuItemTime.lastTime)}</SPAN>
 		</rich:toolTip>
 	</ui:fragment>
-	<ui:fragment rendered="#{ortakIslemler.getParameterKey('poweredBy')!=''}">
-		<div class="footer">
-			<a>Powered by #{ortakIslemler.getParameterKey('poweredBy')}</a>
-		</div>
-	</ui:fragment>
+	<div class="footer">
+		<a>Powered by HASAN SAYAR</a>
+	</div>
 	<a4j:status id="ajaxStatus" onstart="#{rich:component('wait')}.show()" onstop="#{rich:component('wait')}.hide()" />
 	<rich:modalPanel id="wait" style="background: #{startupAction.projeHeaderBackgroundColor};" autosized="true" width="200" height="160"
 		moveable="false" resizeable="false">

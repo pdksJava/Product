@@ -11,7 +11,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.StringTokenizer;
 
 import javax.faces.FacesException;
 import javax.persistence.EntityManager;
@@ -48,7 +47,7 @@ import org.pdks.entity.Parameter;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
 import org.pdks.entity.PersonelIzin;
-import org.pdks.entity.ServisData;
+import org.pdks.entity.ServiceData;
 import org.pdks.entity.Sirket;
 import org.pdks.entity.SkinBean;
 import org.pdks.entity.Tanim;
@@ -83,6 +82,8 @@ public class StartupAction implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = -6954515802074767473L;
+
+	private static final String HELP_DESK_STATUS = "helpDeskStatus";
 	static Logger logger = Logger.getLogger(StartupAction.class);
 
 	@In(required = false)
@@ -241,7 +242,7 @@ public class StartupAction implements Serializable {
 			// list.add(VardiyaIzin.class);
 			list.add(VardiyaYemekIzin.class);
 			list.add(YemekKartsiz.class);
-			list.add(ServisData.class);
+			list.add(ServiceData.class);
 			// pdksEntityController.savePrepareTableID(ServisData.class, entityManager, session);
 
 			for (Class class1 : list) {
@@ -332,7 +333,7 @@ public class StartupAction implements Serializable {
 			}
 			noticeList = null;
 			if (notice != null) {
-				if (notice.getValue() == null || notice.getValue().trim().length() == 0)
+				if (PdksUtil.hasStringValue(notice.getValue()) == false)
 					notice = null;
 			}
 
@@ -389,7 +390,7 @@ public class StartupAction implements Serializable {
 		List<Parameter> parameterList = null;
 		parameterMap.clear();
 		try {
-			fields.put("active", Boolean.TRUE);
+			// fields.put("active", Boolean.TRUE);
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			parameterList = (ArrayList<Parameter>) pdksEntityController.getObjectByInnerObjectList(fields, Parameter.class);
@@ -402,9 +403,12 @@ public class StartupAction implements Serializable {
 		for (Parameter parameter : parameterList) {
 			String key = parameter.getName().trim(), deger = parameter.getValue().trim();
 			pmMap.put(key, parameter);
-			parameterMap.put(key, deger);
-			if (parameter.isHelpDeskMi())
-				helpDeskList.add(key);
+			if (parameter != null && parameter.getActive()) {
+				parameterMap.put(key, deger);
+				if (parameter.isHelpDeskMi())
+					helpDeskList.add(key);
+			}
+
 		}
 		String dateFormat = null;
 		if (parameterMap.containsKey("dateFormat")) {
@@ -488,7 +492,7 @@ public class StartupAction implements Serializable {
 		String fontSize = "22px";
 		if (parameterMap.containsKey("projeHeaderRenk")) {
 			String deger = parameterMap.get("projeHeaderRenk");
-			LinkedHashMap<String, String> map = parametreAyikla(deger);
+			LinkedHashMap<String, String> map = PdksUtil.parametreAyikla(deger);
 			if (map.containsKey("background-color"))
 				projeHeaderBackgroundColor = map.get("background-color");
 			if (map.containsKey("color"))
@@ -537,7 +541,7 @@ public class StartupAction implements Serializable {
 		boolean menuKapali = false;
 		if (parameterMap.containsKey("menuKapali")) {
 			String menuKapaliStr = parameterMap.get("menuKapali");
-			menuKapali = !menuKapaliStr.equals("");
+			menuKapali = PdksUtil.hasStringValue(menuKapaliStr);
 
 		}
 		UserHome.setMenuKapali(menuKapali);
@@ -606,7 +610,7 @@ public class StartupAction implements Serializable {
 		Vardiya.setIntHaftaTatiliFazlaMesaiBasDakika(haftaTatiliFazlaMesaiBasDakika);
 		if (parameterMap.containsKey("projeHeaderSize")) {
 			String deger = parameterMap.get("projeHeaderSize");
-			LinkedHashMap<String, String> map = parametreAyikla(deger);
+			LinkedHashMap<String, String> map = PdksUtil.parametreAyikla(deger);
 			if (map.containsKey("width"))
 				projeHeaderImageWidth = map.get("width");
 			if (map.containsKey("height"))
@@ -677,6 +681,50 @@ public class StartupAction implements Serializable {
 				logger.error("PDKS hata out : " + e.getMessage());
 			}
 		fillSirketList(session);
+		setHelpDeskParametre(session, pmMap);
+		pmMap = null;
+	}
+
+	/**
+	 * @param session
+	 * @param pmMap
+	 */
+	private void setHelpDeskParametre(Session session, HashMap<String, Parameter> pmMap) {
+		OrtakIslemler ortakIslemler = new OrtakIslemler();
+		try {
+			Parameter helpDeskStatus = pmMap.containsKey(HELP_DESK_STATUS) ? pmMap.get(HELP_DESK_STATUS) : new Parameter();
+			Date bugun = new Date();
+			if (helpDeskStatus.getId() == null) {
+				Date changeDate = null;
+				try {
+					changeDate = PdksUtil.convertToJavaDate(PdksUtil.getSistemBaslangicYili() + "0101", "yyyyMMdd");
+				} catch (Exception e) {
+				}
+				helpDeskStatus.setChangeDate(changeDate != null ? changeDate : bugun);
+				helpDeskStatus.setChangeUser(ortakIslemler.getSistemAdminUserByParamMap(parameterMap, pdksEntityController, session));
+				helpDeskStatus.setVersion(0);
+				helpDeskStatus.setDescription("Sistem Desktek Durumu");
+				helpDeskStatus.setName(HELP_DESK_STATUS);
+				helpDeskStatus.setGuncelle(false);
+				helpDeskStatus.setHelpDesk(Boolean.TRUE);
+			}
+
+			Boolean durum = PdksUtil.isSistemDestekVar();
+			boolean degisti = helpDeskStatus.getId() == null || !helpDeskStatus.getActive().equals(durum);
+			helpDeskStatus.setActive(durum);
+			helpDeskStatus.setValue(durum ? "1" : "" + (helpDeskStatus.getId() != null ? -helpDeskStatus.getId() : 0));
+			if (degisti) {
+				if (helpDeskStatus.getId() != null)
+					helpDeskStatus.setChangeDate(bugun);
+				session.saveOrUpdate(helpDeskStatus);
+				session.flush();
+			}
+
+		} catch (Exception ex) {
+			logger.error(ex);
+			ex.printStackTrace();
+		}
+		ortakIslemler = null;
 	}
 
 	private void setExcelColor() {
@@ -819,7 +867,7 @@ public class StartupAction implements Serializable {
 								str += "&";
 						}
 						String json = islemler.getJSONData(path + "?" + str, "POST", null, null, false);
-						if (json != null && json.trim().length() > 0) {
+						if (PdksUtil.hasStringValue(json)) {
 							JSONParser jsonParser = new JSONParser();
 							JSONObject jsonObject = (JSONObject) jsonParser.parse(json);
 							if (jsonObject.containsKey("data")) {
@@ -887,23 +935,8 @@ public class StartupAction implements Serializable {
 	}
 
 	/**
-	 * @param deger
+	 * @param session
 	 */
-	private LinkedHashMap<String, String> parametreAyikla(String deger) {
-		LinkedHashMap<String, String> map = new LinkedHashMap<String, String>();
-		StringTokenizer st = new StringTokenizer(deger, ";");
-		while (st.hasMoreTokens()) {
-			String str = st.nextToken();
-			if (str.indexOf(":") > 0) {
-				String veri[] = str.split(":");
-				if (veri.length == 2)
-					map.put(PdksUtil.replaceAll(veri[0], " ", ""), PdksUtil.replaceAll(veri[1], " ", ""));
-
-			}
-		}
-		return map;
-	}
-
 	public void setLDAPUserList(Session session) {
 		List saveList = new ArrayList(), list = new ArrayList();
 		if (session == null)

@@ -35,6 +35,12 @@ public class Zamanlayici implements Serializable {
 	private static final long serialVersionUID = 7609983147081676186L;
 	static Logger logger = Logger.getLogger(Zamanlayici.class);
 
+	private List<User> adminList;
+
+	private String konu, aciklama;
+
+	private Dosya dosya;
+
 	@In(required = false, create = true)
 	UserHome userHome;
 	@In(required = false, create = true)
@@ -46,8 +52,6 @@ public class Zamanlayici implements Serializable {
 	@In
 	IzinBakiyeGuncelleme izinBakiyeGuncelleme;
 	@In
-	YemekMukkerrerBilgilendirme yemekMukkerrerBilgilendirme;
-	@In
 	SertifikaSSLKontrol sertifikaSSLKontrol;
 	@In(required = false, create = true)
 	OrtakIslemler ortakIslemler;
@@ -57,36 +61,27 @@ public class Zamanlayici implements Serializable {
 	Renderer renderer;
 	@In(required = false)
 	User authenticatedUser;
+	@In
+	FazlaMesaiGuncelleme fazlaMesaiGuncelleme;
 
-	private List<User> adminList;
+	public void scheduleFazlaMesaiGuncellemeTimer() {
+		logger.info("fazlaMesaiGuncellemeTimer start : " + new Date());
+		fazlaMesaiGuncelleme.fazlaMesaiGuncellemeTimer(new Date(), "0 0/5 3-21 ? * *");
+	}
 
-	private String konu, aciklama;
-
-	private Dosya dosya;
+	public void scheduleSertifikaSSLKontrolTimer() {
+		logger.info("scheduleSertifikaSSLKontrolTimer start : " + new Date());
+		sertifikaSSLKontrol.sertifikaSSLKontrolTimer(new Date(), "0 0/15 8-21 ? * *");
+	}
 
 	public void scheduleIseGelmemeUyariTimer() {
 		logger.info("scheduleIseGelmemeUyariTimer start : " + new Date());
 		iseGelmemeUyari.iseGelmeDurumuTimer(new Date(), "0 0/5 8-14 ? * *");
 	}
 
-	public void scheduleSertifikaSSLKontrolTimer() {
-		logger.info("scheduleSertifikaSSLKontrolTimer start : " + new Date());
-		sertifikaSSLKontrol.sertifikaSSLKontrolTimer(new Date(), "0 0/15 5-21 ? * *");
-
-	}
-
-	public void scheduleYemekMukkerrerBilgilendirmeTimer() {
-		logger.info("scheduleYemekMukkerrerBilgilendirmeTimer start : " + new Date());
-		yemekMukkerrerBilgilendirme.yemekMukkerrerBilgilendirmeTimer(new Date(), "0 0/5 5-21 ? * *");
-
-	}
-
 	public void schedulePersonelERPGuncellemeTimer() {
 		logger.info("schedulePersonelERPGuncellemeTimer start : " + new Date());
-
-		// sapPersonelGuncelleme.sapPersonelGuncellemeTimer(new Date(), "* 0/2 14 * * ?");
 		personelERPGuncelleme.personelERPGuncellemeTimer(new Date(), "0 0/5 3-21 ? * *");
-
 	}
 
 	public void izinBakiyeGuncellemeTimer() {
@@ -94,16 +89,44 @@ public class Zamanlayici implements Serializable {
 		izinBakiyeGuncelleme.izinBakiyeGuncellemeTimer(new Date(), "0 0/5 3-18 ? * *");
 	}
 
+	public boolean isPazar() {
+		boolean pazar = PdksUtil.getDateField(new Date(), Calendar.DAY_OF_WEEK) == Calendar.SUNDAY;
+		return pazar;
+	}
+
+	public boolean isCumartesi() {
+		boolean cumartesi = PdksUtil.getDateField(new Date(), Calendar.DAY_OF_WEEK) == Calendar.SATURDAY;
+		return cumartesi;
+	}
+
+	public boolean isHaftaSonu() {
+		Calendar cal = Calendar.getInstance();
+		int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+		boolean haftaSonu = dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY;
+		return haftaSonu;
+	}
+
+	public boolean isHaftaIci() {
+		Calendar cal = Calendar.getInstance();
+		int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+		boolean haftaIci = dayOfWeek != Calendar.SATURDAY && dayOfWeek != Calendar.SUNDAY;
+		return haftaIci;
+	}
+
 	/**
 	 * @param session
+	 * @param mail
 	 * @param xkonu
 	 * @param xaciklama
 	 * @param userList
 	 * @param xDosya
+	 * @param adresEkle
 	 * @throws Exception
 	 */
-	public void mailGonderDosya(Session session, String xkonu, String xaciklama, List<User> userList, Dosya xDosya, Boolean adresEkle) throws Exception {
+	public void mailGonderDosya(Session session, MailObject mail, String xkonu, String xaciklama, List<User> userList, Dosya xDosya, Boolean adresEkle) throws Exception {
 		setDosya(xDosya);
+		if (mail == null)
+			mail = new MailObject();
 		Boolean yeni = authenticatedUser == null;
 		InetAddress thisIp = adresEkle == null || adresEkle ? InetAddress.getLocalHost() : null;
 
@@ -125,8 +148,6 @@ public class Zamanlayici implements Serializable {
 			MailStatu mailSatu = null;
 			try {
 				// ortakIslemler.mailGonder(renderer, "/email/" + sayfaAdi);
-
-				MailObject mail = new MailObject();
 
 				mail.setSubject(xkonu);
 				mail.setBody(aciklama);
@@ -161,10 +182,11 @@ public class Zamanlayici implements Serializable {
 		String value = (parameterOzel != null) ? parameterOzel.getValue() : "";
 		boolean ozelKontrolDurum = value == null || !value.equals("0");
 		if (ozelKontrolDurum) {
-			Date tarih = PdksUtil.getDate(new Date());
+			Calendar cal = Calendar.getInstance();
+			Date tarih = PdksUtil.getDate(cal.getTime());
 			TreeMap<String, Tatil> resmiTatilMap = null;
 			try {
-				resmiTatilMap = ortakIslemler.getTatilGunleri(null, tarih, PdksUtil.tariheGunEkleCikar(tarih, 1), session);
+				resmiTatilMap = ortakIslemler.getTatilGunleri(null, tarih, ortakIslemler.tariheGunEkleCikar(cal, tarih, 1), session);
 			} catch (Exception e) {
 				resmiTatilMap = new TreeMap<String, Tatil>();
 			}
@@ -183,14 +205,16 @@ public class Zamanlayici implements Serializable {
 
 	/**
 	 * @param session
+	 * @param mailx
 	 * @param xkonu
 	 * @param xaciklama
 	 * @param userList
 	 * @param adresEkle
 	 * @throws Exception
 	 */
-	public void mailGonder(Session session, String xkonu, String xaciklama, List<User> userList, Boolean adresEkle) throws Exception {
-		mailGonderDosya(session, xkonu, xaciklama, userList, null, adresEkle);
+	public void mailGonder(Session session, MailObject mailx, String xkonu, String xaciklama, List<User> userList, Boolean adresEkle) throws Exception {
+		if (PdksUtil.isSistemDestekVar())
+			mailGonderDosya(session, mailx, xkonu, xaciklama, userList, null, adresEkle);
 
 	}
 

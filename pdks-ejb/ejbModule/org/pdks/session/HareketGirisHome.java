@@ -225,28 +225,35 @@ public class HareketGirisHome extends EntityHome<HareketKGS> implements Serializ
 			if (session != null)
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			TreeMap<String, Personel> personelMap = pdksEntityController.getObjectByInnerObjectMap(parametreMap, Personel.class, false);
-
-			dosyaTamam = true;
+			List<Personel> list = new ArrayList<Personel>();
 			for (String pdksSicilNo : veriMap.keySet()) {
 				Personel personel = personelMap.containsKey(pdksSicilNo) ? personelMap.get(pdksSicilNo) : new Personel();
 				if (personel.getId() == null) {
-					dosyaTamam = false;
 					personel.setAd(perMap.get(pdksSicilNo));
 					personel.setSoyad("");
 					personel.setPdksSicilNo(pdksSicilNo);
-				}
-				Date zaman = veriMap.get(pdksSicilNo), vardiyaDate = null;
-				if (zaman == null) {
-					vardiyaDate = zamanGuncelle();
+					list.add(personel);
 				} else {
-					vardiyaDate = PdksUtil.setTarih(tarih, Calendar.HOUR_OF_DAY, PdksUtil.getDateField(zaman, Calendar.HOUR_OF_DAY));
-					vardiyaDate = PdksUtil.setTarih(vardiyaDate, Calendar.MINUTE, PdksUtil.getDateField(zaman, Calendar.MINUTE));
-					vardiyaDate = PdksUtil.setTarih(vardiyaDate, Calendar.SECOND, 0);
-					vardiyaDate = PdksUtil.setTarih(vardiyaDate, Calendar.MILLISECOND, 0);
+					Date zaman = veriMap.get(pdksSicilNo), vardiyaDate = null;
+					if (zaman == null) {
+						vardiyaDate = zamanGuncelle();
+					} else {
+						vardiyaDate = PdksUtil.setTarih(tarih, Calendar.HOUR_OF_DAY, PdksUtil.getDateField(zaman, Calendar.HOUR_OF_DAY));
+						vardiyaDate = PdksUtil.setTarih(vardiyaDate, Calendar.MINUTE, PdksUtil.getDateField(zaman, Calendar.MINUTE));
+						vardiyaDate = PdksUtil.setTarih(vardiyaDate, Calendar.SECOND, 0);
+						vardiyaDate = PdksUtil.setTarih(vardiyaDate, Calendar.MILLISECOND, 0);
+					}
+					vardiyaGunleri.add(new VardiyaGun(personel, null, vardiyaDate));
 				}
-				vardiyaGunleri.add(new VardiyaGun(personel, null, vardiyaDate));
 			}
-
+			dosyaTamam = list.isEmpty();
+			if (dosyaTamam == false) {
+				PdksUtil.addMessageAvailableInfo("Aşağıdaki personel" + (list.size() > 1 ? "ler" : "") + "   bilgileri bulunamadı!");
+				for (Personel personel : list) {
+					PdksUtil.addMessageAvailableWarn(personel.getPdksSicilNo() + " " + personel.getAdSoyad());
+				}
+			}
+			list = null;
 		}
 
 		return "";
@@ -300,9 +307,10 @@ public class HareketGirisHome extends EntityHome<HareketKGS> implements Serializ
 		List<Long> kapiIdList = new ArrayList<Long>();
 		kapiIdList.add(kapiId);
 		List<Long> personelId = new ArrayList<Long>();
+		Calendar cal = Calendar.getInstance();
 		for (VardiyaGun vg : vardiyaGunleri)
 			personelId.add(vg.getPersonel().getPersonelKGS().getId());
-		kgsList = ortakIslemler.getHareketAktifBilgileri(kapiIdList, personelId, tarih, PdksUtil.tariheGunEkleCikar(tarih, 1), HareketKGS.class, session);
+		kgsList = ortakIslemler.getHareketAktifBilgileri(kapiIdList, personelId, tarih, ortakIslemler.tariheGunEkleCikar(cal, tarih, 1), HareketKGS.class, session);
 		TreeMap<Long, List<HareketKGS>> hMap = new TreeMap<Long, List<HareketKGS>>();
 		for (HareketKGS hareketKGS : kgsList) {
 			Long key = hareketKGS.getPersonelId();

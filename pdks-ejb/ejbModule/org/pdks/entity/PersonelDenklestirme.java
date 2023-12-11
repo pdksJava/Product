@@ -81,11 +81,16 @@ public class PersonelDenklestirme extends BaseObject {
 		this.setGuncellendi(null);
 	}
 
-	public PersonelDenklestirme(Personel pdksPersonel, DenklestirmeAy denklestirmeAy, CalismaModeliAy calismaModeliAy) {
+	public PersonelDenklestirme(Personel pdksPersonel, DenklestirmeAy denklestirmeAy, CalismaModeliAy cmAy) {
 		super();
 		this.setPersonel(pdksPersonel);
 		this.denklestirmeAy = denklestirmeAy;
-		this.calismaModeliAy = calismaModeliAy;
+		this.calismaModeliAy = cmAy;
+		if (cmAy != null) {
+			CalismaModeli cm = cmAy.getCalismaModeli();
+			this.onaylandi = cm.isIlkPlanOnaylidir() || cm.isFazlaMesaiVarMi() == false;
+		}
+
 		this.setGuncellendi(Boolean.FALSE);
 
 	}
@@ -564,6 +569,11 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	@Transient
+	public boolean isOtomatikFazlaCalismaOnaylansinmi() {
+		return calismaModeliAy != null && calismaModeliAy.isOtomatikFazlaCalismaOnaylansinmi();
+	}
+
+	@Transient
 	public PersonelDenklestirme getPersonelDenklestirmeDB() {
 		return personelDenklestirmeDB;
 	}
@@ -609,6 +619,16 @@ public class PersonelDenklestirme extends BaseObject {
 	public boolean isKapandi(User user) {
 		boolean kapandi = (erpAktarildi) || (denklestirmeAy == null || !denklestirmeAy.isDurum(user));
 		return kapandi;
+	}
+
+	@Transient
+	public boolean isDenklestirmeDurum() {
+		boolean denkDurum = denklestirme;
+		if (!denkDurum) {
+			CalismaModeli calismaModeli = getCalismaModeli();
+			denkDurum = calismaModeli != null && calismaModeli.isHareketKaydiVardiyaBulsunmu();
+		}
+		return denkDurum;
 	}
 
 	@Transient

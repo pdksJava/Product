@@ -8,10 +8,6 @@ import java.util.HashMap;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
-import org.pdks.security.action.StartupAction;
-import org.pdks.session.OrtakIslemler;
-import org.pdks.session.PdksUtil;
-import org.pdks.session.SSLImport;
 import org.hibernate.Session;
 import org.jboss.seam.ScopeType;
 import org.jboss.seam.annotations.AutoCreate;
@@ -23,6 +19,9 @@ import org.jboss.seam.annotations.async.Asynchronous;
 import org.jboss.seam.annotations.async.Expiration;
 import org.jboss.seam.annotations.async.IntervalCron;
 import org.jboss.seam.async.QuartzTriggerHandle;
+import org.pdks.security.action.StartupAction;
+import org.pdks.session.PdksUtil;
+import org.pdks.session.SSLImport;
 
 @Name("sertifikaSSLKontrol")
 @AutoCreate
@@ -32,14 +31,9 @@ public class SertifikaSSLKontrol implements Serializable {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 6017076879969504465L;
+	private static final long serialVersionUID = -5287144140086345430L;
 
-	/**
-	 * 
-	 */
 	static Logger logger = Logger.getLogger(SertifikaSSLKontrol.class);
-
-	OrtakIslemler ortakIslemler;
 
 	@In(required = false, create = true)
 	HashMap<String, String> parameterMap;
@@ -52,6 +46,9 @@ public class SertifikaSSLKontrol implements Serializable {
 
 	@In(required = false, create = true)
 	StartupAction startupAction;
+
+	// @In(required = false, create = true)
+	// FazlaMesaiGuncelleme fazlaMesaiGuncelleme;
 
 	private static boolean calisiyor = Boolean.FALSE;
 
@@ -70,11 +67,13 @@ public class SertifikaSSLKontrol implements Serializable {
 				SSLImport.addCertToKeyStore(null, null, true);
 				Date time = new Date();
 				int dakika = PdksUtil.getDateField(time, Calendar.MINUTE);
-				if (dakika % 30 == 0) {
+				if (zamanlayici.isPazar() == false) {
 					session = PdksUtil.getSession(entityManager, Boolean.TRUE);
-					startupAction.fillParameter(session);
-				}
-
+					if (dakika % 30 == 0) {
+						startupAction.fillParameter(session);
+						logger.debug("Parametreler güncellendi " + new Date());
+					}
+ 				}
 				logger.debug("Sertifika SSL Kontrol out " + new Date());
 			} catch (Exception e) {
 				logger.error("PDKS hata in : \n");

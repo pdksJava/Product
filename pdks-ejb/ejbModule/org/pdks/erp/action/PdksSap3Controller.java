@@ -1,4 +1,5 @@
 package org.pdks.erp.action;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -37,7 +38,6 @@ import com.sap.conn.jco.JCoTable;
 
 @Name("pdksSap3Controller")
 public class PdksSap3Controller implements ERPController, Serializable {
-
 
 	/**
 	 * 
@@ -175,7 +175,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 
 	public String setIzinRFC(PersonelIzin izin) throws Exception {
 		ConnectionMan sapRfcManager = new ConnectionMan();
-
+		Calendar cal = Calendar.getInstance();
 		String mesaj = "Hata Olabilir";
 		JCoDestination jcoClient = sapRfcManager.getJCoDestination();
 		if (jcoClient != null) {
@@ -203,7 +203,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 					impParametre.setValue("PRM", "2");
 				}
 				impParametre.setValue("BEGDA", izin.getBaslangicZamani());
-				impParametre.setValue("ENDDA", PdksUtil.tariheGunEkleCikar(izin.getBitisZamani(), -1));
+				impParametre.setValue("ENDDA", ortakIslemler.tariheGunEkleCikar(cal, izin.getBitisZamani(), -1));
 
 				PdksUtil.getXMLFunction3(jcoClient, function, new String[] { "MESTAB" });
 				StringBuilder sb = new StringBuilder();
@@ -241,8 +241,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 		return mesaj;
 	}
 
-	public LinkedHashMap<String, Personel> topluHaldePersonelBilgisiGetir(Session session, TreeMap bordroAltBirimiMap, TreeMap masrafYeriMap, LinkedHashMap<String, Personel> personelMap, Date baslangicZamani, Date bitisZamani, Object sapRfcManagerObject, Object jcoClientObject)
-			throws Exception {
+	public LinkedHashMap<String, Personel> topluHaldePersonelBilgisiGetir(Session session, TreeMap bordroAltBirimiMap, TreeMap masrafYeriMap, LinkedHashMap<String, Personel> personelMap, Date baslangicZamani, Date bitisZamani, Object sapRfcManagerObject, Object jcoClientObject) throws Exception {
 		ConnectionMan sapRfcManager = sapRfcManagerObject != null ? (ConnectionMan) sapRfcManagerObject : new ConnectionMan();
 		JCoDestination jcoClient = jcoClientObject != null ? (JCoDestination) jcoClientObject : null;
 		boolean kapat = jcoClient == null;
@@ -544,7 +543,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 				}
 				if (personellerMap.isEmpty()) {
 					for (String sicilNo : personelNo) {
-						personellerMap.put(sicilNo,  new Personel());
+						personellerMap.put(sicilNo, new Personel());
 
 					}
 					topluHaldePersonelBilgisiGetir(session, bordroAltBirimiMap, masrafYeriMap, personellerMap, baslangicZamani, bitisZamani, sapRfcManager, jcoClient);
@@ -561,7 +560,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 									Personel p = (Personel) pdksPersonel.clone();
 									while (p.getPdksYonetici() != null) {
 										String ysicil = p.getPdksYonetici().getSicilNo();
-										if (!ysicil.equals("")) {
+										if (PdksUtil.hasStringValue(ysicil)) {
 											personelNo.add(ysicil);
 											p = p.getPdksYonetici();
 											yoneticiMap.put(ysicil, p);
@@ -752,7 +751,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 						}
 						perMap.put(perNo, personel);
 
-					}  
+					}
 				} while (cikanTable.nextRow());
 
 				list.addAll(new ArrayList<Personel>(perMap.values()));
@@ -775,7 +774,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 	private Tanim getTanim(TreeMap<String, Tanim> map, String tipi, String kodu, String aciklama, Tanim parentTanim) {
 		Tanim tanim = null;
 		kodu = kodu.trim();
-		if (!kodu.equals("")) {
+		if (PdksUtil.hasStringValue(kodu)) {
 			aciklama = aciklama.trim();
 			if (map.containsKey(kodu)) {
 				tanim = map.get(kodu);
@@ -822,9 +821,8 @@ public class PdksSap3Controller implements ERPController, Serializable {
 
 	}
 
-	 
 	public List<Personel> pdksTanimsizPersonel(List<String> perNoList, String sapKodu) throws Exception {
-	 
+
 		return null;
 	}
 
@@ -840,6 +838,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 				JCoParameterList ipl = function.getTableParameterList();
 				JCoParameterList impParametre = function.getImportParameterList();
 				JCoTable cikanTable = ipl.getTable("MESTAB");
+				Calendar cal = Calendar.getInstance();
 				for (Iterator iterator = izinList.iterator(); iterator.hasNext();) {
 					PersonelIzin izin = (PersonelIzin) iterator.next();
 					String mesaj = null;
@@ -862,8 +861,8 @@ public class PdksSap3Controller implements ERPController, Serializable {
 							impParametre.setValue("PRM", "2");
 						}
 						impParametre.setValue("BEGDA", izin.getBaslangicZamani());
-						impParametre.setValue("ENDDA", PdksUtil.tariheGunEkleCikar(izin.getBitisZamani(), -1));
- 						PdksUtil.getXMLFunction3(jcoClient, function, new String[] { "MESTAB" });
+						impParametre.setValue("ENDDA", ortakIslemler.tariheGunEkleCikar(cal, izin.getBitisZamani(), -1));
+						PdksUtil.getXMLFunction3(jcoClient, function, new String[] { "MESTAB" });
 						StringBuilder sb = new StringBuilder();
 						if (cikanTable.getNumRows() > 0) {
 							mesaj = "";
@@ -883,7 +882,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 							mesaj = ex.getMessage();
 					}
 
-					if (mesaj != null && mesaj.equals(""))
+					if (!PdksUtil.hasStringValue(mesaj))
 						izin.setGuncellemeTarihi(new Date());
 					izin.setMesaj(mesaj);
 					map.put(izin.getId(), "");
@@ -900,7 +899,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 			}
 		}
 		return map;
-	
+
 	}
 
 }

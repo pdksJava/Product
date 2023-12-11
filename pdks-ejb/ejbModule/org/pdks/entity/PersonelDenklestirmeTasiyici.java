@@ -54,6 +54,7 @@ public class PersonelDenklestirmeTasiyici extends BaseObject {
 	private VardiyaGun sonVardiyaGun, oncekiVardiyaGun;
 	private CalismaModeli calismaModeli;
 	private DenklestirmeAy denklestirmeAy;
+	private CalismaModeliAy calismaModeliAy;
 	private Integer version = 0;
 
 	public PersonelDenklestirmeTasiyici() {
@@ -149,7 +150,7 @@ public class PersonelDenklestirmeTasiyici extends BaseObject {
 		else if (mesaiOdemeSekli.equals(MESAI_ODEME_SEKLI_PARA))
 			key = "puantaj.etiket.mesaiOdemeSekliPara";
 		String aciklama = "";
-		if (!key.equals(""))
+		if (PdksUtil.hasStringValue(key))
 			aciklama = PdksUtil.getMessageBundleMessage(key);
 		return aciklama;
 	}
@@ -354,7 +355,10 @@ public class PersonelDenklestirmeTasiyici extends BaseObject {
 	}
 
 	public String getAdSoyad() {
-		return personel != null ? personel.getAdSoyad() : "";
+		String key = personel != null ? personel.getAdSoyad() : "";
+		// CalismaModeli cm = calismaModeliAy != null ? calismaModeliAy.getCalismaModeli() : calismaModeli;
+		// key += (cm != null ? "_" + cm.getAciklama() : "");
+		return key;
 	}
 
 	public boolean isIptal(User user) {
@@ -417,5 +421,25 @@ public class PersonelDenklestirmeTasiyici extends BaseObject {
 
 	public Personel getPdksPersonel() {
 		return personel;
+	}
+
+	/**
+	 * @return the calismaModeliAy
+	 */
+	public CalismaModeliAy getCalismaModeliAy() {
+		return calismaModeliAy;
+	}
+
+	/**
+	 * @param calismaModeliAy
+	 *            the calismaModeliAy to set
+	 */
+	public void setCalismaModeliAy(CalismaModeliAy value) {
+		if (value != null) {
+			this.denklestirmeAy = value.getDenklestirmeAy();
+			this.calismaModeli = value.getCalismaModeli();
+		}
+
+		this.calismaModeliAy = value;
 	}
 }

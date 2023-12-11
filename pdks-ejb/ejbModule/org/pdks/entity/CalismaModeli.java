@@ -31,6 +31,7 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_GENEL_VARDIYA = "GENEL_VARDIYA";
 	public static final String COLUMN_NAME_HAFTA_TATIL_MESAI_ODE = "HAFTA_TATIL_MESAI_ODE";
 	public static final String COLUMN_NAME_GECE_HAFTA_TATIL_MESAI_PARCALA = "GECE_HAFTA_TATIL_MESAI_PARCALA";
+	public static final String COLUMN_NAME_OTOMATIK_FAZLA_CALISMA_ONAYLANSIN = "OTOMATIK_FAZLA_CALISMA_ONAYLANSIN";
 	public static final String COLUMN_NAME_GECE_CALISMA_ODEME_VAR = "GECE_CALISMA_ODEME_VAR";
 	public static final String COLUMN_NAME_OLUSTURAN = "OLUSTURANUSER_ID";
 	public static final String COLUMN_NAME_GUNCELLEYEN = "GUNCELLEYENUSER_ID";
@@ -42,14 +43,16 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_MAAS_ODEME_TIPI = "MAAS_ODEME_TIPI";
 	public static final String COLUMN_NAME_FAZLA_MESAI_VAR = "FAZLA_MESAI_VAR";
 	public static final String COLUMN_NAME_ORTAK_VARDIYA = "ORTAK_VARDIYA";
+	public static final String COLUMN_NAME_FAZLA_CALISMA_GORUNTULENSIN = "FAZLA_CALISMA_GORUNTULENSIN";
 	public static final String COLUMN_NAME_TOPLAM_GUN_GUNCELLE = "TOPLAM_GUN_GUNCELLE";
+	public static final String COLUMN_NAME_ILK_PLAN_ONAYLI = "ILK_PLAN_ONAYLI";
 
 	private String aciklama = "";
 	private double haftaIci = 0.0d, haftaSonu = 0.0d, arife = 0.0d, izin = 9.0d, izinhaftaSonu = 0.0d, negatifBakiyeDenkSaat = 0.0d;
 
 	private Boolean fazlaMesaiVar = Boolean.TRUE, toplamGunGuncelle = Boolean.FALSE, durum = Boolean.TRUE, genelVardiya = Boolean.TRUE, hareketKaydiVardiyaBul = Boolean.FALSE;
-	private Boolean haftaTatilMesaiOde = Boolean.FALSE, geceHaftaTatilMesaiParcala = Boolean.FALSE, geceCalismaOdemeVar = Boolean.FALSE;
-	private Boolean ortakVardiya = Boolean.FALSE;
+	private Boolean haftaTatilMesaiOde = Boolean.FALSE, geceHaftaTatilMesaiParcala = Boolean.FALSE, geceCalismaOdemeVar = Boolean.FALSE, otomatikFazlaCalismaOnaylansin = Boolean.FALSE;
+	private Boolean ortakVardiya = Boolean.FALSE, fazlaMesaiGoruntulensin = Boolean.TRUE, ilkPlanOnayliDurum = Boolean.FALSE;
 	private VardiyaSablonu bagliVardiyaSablonu;
 	private Departman departman;
 	private Boolean aylikMaas = Boolean.TRUE;
@@ -138,6 +141,15 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 		this.haftaTatilMesaiOde = haftaTatilMesaiOde;
 	}
 
+	@Column(name = COLUMN_NAME_OTOMATIK_FAZLA_CALISMA_ONAYLANSIN)
+	public Boolean getOtomatikFazlaCalismaOnaylansin() {
+		return otomatikFazlaCalismaOnaylansin;
+	}
+
+	public void setOtomatikFazlaCalismaOnaylansin(Boolean otomatikFazlaCalismaOnaylansin) {
+		this.otomatikFazlaCalismaOnaylansin = otomatikFazlaCalismaOnaylansin;
+	}
+
 	@Column(name = COLUMN_NAME_GECE_HAFTA_TATIL_MESAI_PARCALA)
 	public Boolean getGeceHaftaTatilMesaiParcala() {
 		return geceHaftaTatilMesaiParcala;
@@ -208,6 +220,24 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 
 	public void setOrtakVardiya(Boolean ortakVardiya) {
 		this.ortakVardiya = ortakVardiya;
+	}
+
+	@Column(name = COLUMN_NAME_FAZLA_CALISMA_GORUNTULENSIN)
+	public Boolean getFazlaMesaiGoruntulensin() {
+		return fazlaMesaiGoruntulensin;
+	}
+
+	public void setFazlaMesaiGoruntulensin(Boolean fazlaMesaiGoruntulensin) {
+		this.fazlaMesaiGoruntulensin = fazlaMesaiGoruntulensin;
+	}
+
+	@Column(name = COLUMN_NAME_ILK_PLAN_ONAYLI)
+	public Boolean getIlkPlanOnayliDurum() {
+		return ilkPlanOnayliDurum;
+	}
+
+	public void setIlkPlanOnayliDurum(Boolean ilkPlanOnayliDurum) {
+		this.ilkPlanOnayliDurum = ilkPlanOnayliDurum;
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
@@ -329,6 +359,11 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
+	public boolean isFazlaMesaiGoruntulensinMi() {
+		return fazlaMesaiGoruntulensin != null && fazlaMesaiGoruntulensin.booleanValue();
+	}
+
+	@Transient
 	public double getIzinSaat(VardiyaGun pdksVardiyaGun) {
 		double izinSure = this.getIzin();
 		if (izinhaftaSonu > 0.0d) {
@@ -351,6 +386,11 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
+	public boolean isOtomatikFazlaCalismaOnaylansinmi() {
+		return otomatikFazlaCalismaOnaylansin != null && otomatikFazlaCalismaOnaylansin.booleanValue();
+	}
+
+	@Transient
 	public boolean isUpdateCGS() {
 		boolean updateCGS = toplamGunGuncelle != null && toplamGunGuncelle;
 		return updateCGS;
@@ -360,4 +400,10 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	public boolean isOrtakVardiyadir() {
 		return ortakVardiya != null && ortakVardiya;
 	}
+
+	@Transient
+	public boolean isIlkPlanOnaylidir() {
+		return ilkPlanOnayliDurum != null && ilkPlanOnayliDurum;
+	}
+
 }

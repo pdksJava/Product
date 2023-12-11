@@ -37,6 +37,7 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -80,6 +81,7 @@ import org.pdks.entity.Dosya;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
 import org.pdks.entity.Tanim;
+import org.pdks.security.entity.DefaultPasswordGenerator;
 import org.pdks.security.entity.Role;
 import org.pdks.security.entity.User;
 import org.richfaces.model.UploadItem;
@@ -132,6 +134,55 @@ public class PdksUtil implements Serializable {
 	private static boolean sistemDestekVar = false, puantajSorguAltBolumGir = false;
 
 	/**
+	 * @param dosyaAdi
+	 * @param dosyaIcerik
+	 * @return
+	 */
+	public static byte[] getFileZip(String dosyaAdi, byte[] dosyaIcerik) {
+		byte[] bytesZip = null;
+		if (dosyaIcerik != null && PdksUtil.hasStringValue(dosyaAdi)) {
+			Dosya dosya = new Dosya();
+			dosya.setDosyaAdi(dosyaAdi);
+			dosya.setDosyaIcerik(dosyaIcerik);
+			List<Dosya> list = new ArrayList<Dosya>();
+			list.add(dosya);
+			OrtakIslemler ortakIslemler = new OrtakIslemler();
+			try {
+				String zipDosyaAdi = "tmp" + DefaultPasswordGenerator.generate(8) + ".zip";
+				File file = ortakIslemler.dosyaZipFileOlustur(zipDosyaAdi, list);
+				if (file != null && file.exists()) {
+					dosya = ortakIslemler.dosyaFileOlustur(zipDosyaAdi, file, Boolean.TRUE);
+					file.deleteOnExit();
+					bytesZip = dosya.getDosyaIcerik();
+				}
+
+			} catch (Exception e) {
+			}
+			dosya = null;
+			ortakIslemler = null;
+		}
+		return bytesZip;
+	}
+
+	/**
+	 * @param deger
+	 */
+	public static LinkedHashMap<String, String> parametreAyikla(String deger) {
+		LinkedHashMap<String, String> map = new LinkedHashMap<String, String>();
+		StringTokenizer st = new StringTokenizer(deger, ";");
+		while (st.hasMoreTokens()) {
+			String str = st.nextToken();
+			if (str.indexOf(":") > 0) {
+				String veri[] = str.split(":");
+				if (veri.length == 2)
+					map.put(replaceAll(veri[0], " ", ""), replaceAll(veri[1], " ", ""));
+
+			}
+		}
+		return map;
+	}
+
+	/**
 	 * @param ad
 	 * @param soyad
 	 * @return
@@ -155,7 +206,7 @@ public class PdksUtil implements Serializable {
 	public static String getJsonToXML(String jsonStr, String rootName, String arrayTag) {
 		String str = "";
 		try {
-			if (arrayTag != null && arrayTag.trim().length() > 0) {
+			if (hasStringValue(arrayTag)) {
 				if (jsonStr.startsWith("["))
 					jsonStr = "{\"" + arrayTag + "\":" + jsonStr + "}";
 				else if (jsonStr.startsWith("{"))
@@ -210,7 +261,7 @@ public class PdksUtil implements Serializable {
 			for (String pattern : map.keySet()) {
 				if (str.indexOf(pattern) >= 0) {
 					String replace = map.get(pattern);
-					str = PdksUtil.replaceAllManuel(str, pattern, replace);
+					str = replaceAllManuel(str, pattern, replace);
 				}
 			}
 			str = convertUTF8(str);
@@ -407,8 +458,8 @@ public class PdksUtil implements Serializable {
 		Date tarih = null;
 		if (date != null) {
 			String pattern = "yyyyMMddHHmm";
-			String dateStr = PdksUtil.convertToDateString(date, pattern);
-			tarih = PdksUtil.convertToJavaDate(dateStr, pattern);
+			String dateStr = convertToDateString(date, pattern);
+			tarih = convertToJavaDate(dateStr, pattern);
 		}
 		return tarih;
 	}
@@ -635,7 +686,7 @@ public class PdksUtil implements Serializable {
 	}
 
 	public static HashMap<String, String> getDecodeMapByBase64(String key) {
-		String planKey = PdksUtil.getDecodeStringByBase64(key);
+		String planKey = getDecodeStringByBase64(key);
 		StringTokenizer st = new StringTokenizer(planKey, "&");
 		HashMap<String, String> veriMap = new HashMap<String, String>();
 		while (st.hasMoreTokens()) {
@@ -904,12 +955,12 @@ public class PdksUtil implements Serializable {
 				Calendar cal = Calendar.getInstance();
 				int sayi = 0;
 				String pattern = "yyyyMMddHHmm";
-				long deger2 = Long.parseLong(PdksUtil.convertToDateString(tarih2, pattern));
-				long deger1 = Long.parseLong(PdksUtil.convertToDateString(tarih1, pattern));
+				long deger2 = Long.parseLong(convertToDateString(tarih2, pattern));
+				long deger1 = Long.parseLong(convertToDateString(tarih1, pattern));
 				while (deger2 > deger1) {
 					cal.setTime(tarih1);
 					cal.add(Calendar.DATE, sayi + 1);
-					deger1 = Long.parseLong(PdksUtil.convertToDateString(cal.getTime(), pattern));
+					deger1 = Long.parseLong(convertToDateString(cal.getTime(), pattern));
 					if (deger2 >= deger1)
 						sayi++;
 					// logger.info(deger1 + " " + deger2 + " " + sayi);
@@ -1120,8 +1171,8 @@ public class PdksUtil implements Serializable {
 				for (Iterator iterator = mailList.iterator(); iterator.hasNext();) {
 					String token = (String) iterator.next();
 					try {
-						String parca = PdksUtil.getInternetAdres(token.trim());
-						if (parca != null && !parca.trim().equals(""))
+						String parca = getInternetAdres(token.trim());
+						if (hasStringValue(parca))
 							list.add(parca);
 					} catch (Exception e) {
 						logger.error("PDKS hata in : \n");
@@ -1474,7 +1525,6 @@ public class PdksUtil implements Serializable {
 		RuleBasedCollator tr_Collator = (RuleBasedCollator) Collator.getInstance(Constants.TR_LOCALE);
 		try {
 			tr_Collator = new RuleBasedCollator("<a,A<b,B<c,C<ç,Ç<d,D<e,E<f,F<g,G<\u011f,\u011e<ğ,Ğ<h,H<ı=\u0131;I<i,\u0130=İ<j,J" + "<k,K<l,L<m,M<n,N<o,O<ö,Ö<p,P<q,Q<r,R<s,S<\u015f=ş;\u015e=Ş<t,T<u,U<ü,Ü<v,V<x,X<w,W<y,Y<z,Z<'-'<' '");
-
 		} catch (ParseException ex) {
 			ex.printStackTrace();
 		}
@@ -1497,7 +1547,6 @@ public class PdksUtil implements Serializable {
 					+ "< \u0444=?; \u0424=?" + "< \u0445=?; \u0425=?" + "< \u0446=?; \u0426=?" + "< \u0447=?; \u0427=?" + "< \u0448=?; \u0428=?" + "< \u0449=?; \u0429=?" + "< \u044A=?; \u042A=?" + "< \u044B=?; \u042B=?" + "< \u044C=?; \u042C=?" + "< \u044D=?; \u042D=?" + "< \u044E=?; \u042E=?"
 					+ "< \u044F=?; \u042F=?" + "<'-'<' '";
 			collator = new RuleBasedCollator(ruHarf);
-
 		} catch (ParseException ex) {
 			ex.printStackTrace();
 		}
@@ -1572,7 +1621,7 @@ public class PdksUtil implements Serializable {
 		ArrayList list = (ArrayList) veriList.clone();
 		veriList.clear();
 		int sayfaNo = 0;
-		if (request.getParameter("sayfaNo" + sonEk) != null && !request.getParameter("sayfaNo" + sonEk).trim().equals(""))
+		if (hasStringValue(request.getParameter("sayfaNo" + sonEk)))
 			sayfaNo = Integer.parseInt(request.getParameter("sayfaNo" + sonEk)) - 1;
 
 		request.setAttribute("sayfaNo" + sonEk, String.valueOf(sayfaNo + 1));
@@ -1613,7 +1662,9 @@ public class PdksUtil implements Serializable {
 	 * @return
 	 * @throws UnsupportedEncodingException
 	 */
-	public static String encoderURL(String fileName, String characterEncoding) throws UnsupportedEncodingException {
+	public static String encoderURL(String fileName, String characterEncoding) throws Exception {
+		if (characterEncoding == null)
+			characterEncoding = "UTF-8";
 		String url = URLEncoder.encode(fileName, characterEncoding);
 		if (url != null)
 			url = replaceAllManuel(url, "+", " ");
@@ -1972,10 +2023,14 @@ public class PdksUtil implements Serializable {
 	}
 
 	private static void addMessage(String message, Severity severity, Boolean yeni) {
-		FacesMessages facesMessages = (FacesMessages) Component.getInstance("facesMessages");
-		if (yeni)
-			facesMessages.clear();
-		facesMessages.add(severity, " " + message, "");
+		Object object = Component.getInstance("facesMessages");
+		if (object != null) {
+			FacesMessages facesMessages = (FacesMessages) object;
+			if (yeni)
+				facesMessages.clear();
+			facesMessages.add(severity, " " + message, "");
+		}
+
 	}
 
 	public static void addMessageError(String message) {
@@ -2449,7 +2504,8 @@ public class PdksUtil implements Serializable {
 					StringTokenizer st = new StringTokenizer(str, delim);
 					while (!zamaniGeldi && st.hasMoreTokens()) {
 						String zaman = st.nextToken();
-						zamaniGeldi = zamaniGeldimi(simdikiSaat, simdikiDakika, zaman);
+						if (!zamaniGeldi)
+							zamaniGeldi = zamaniGeldimi(simdikiSaat, simdikiDakika, zaman);
 					}
 					st = null;
 				} else
@@ -2690,9 +2746,9 @@ public class PdksUtil implements Serializable {
 		cal.set(cal.get(Calendar.YEAR), Calendar.JANUARY, 1);
 		for (int i = 0; i < 12; i++) {
 			if (sayisal)
-				list.add(new SelectItem(i + 1, PdksUtil.convertToDateString(cal.getTime(), "MMMMM")));
+				list.add(new SelectItem(i + 1, convertToDateString(cal.getTime(), "MMMMM")));
 			else
-				list.add(new SelectItem(String.valueOf(i), PdksUtil.convertToDateString(cal.getTime(), "MMMMM")));
+				list.add(new SelectItem(String.valueOf(i), convertToDateString(cal.getTime(), "MMMMM")));
 			cal.add(Calendar.MONTH, 1);
 		}
 		return list;
@@ -2808,7 +2864,7 @@ public class PdksUtil implements Serializable {
 			User kullaniciLDAP = null;
 			if (eMail.indexOf("@") > 0) {
 				eMail = getInternetAdres(eMail);
-				if (eMail != null && !eMail.equals("")) {
+				if (hasStringValue(eMail)) {
 					kullaniciLDAP = getLDAPKullanici(eMail, LDAPUserManager.USER_ATTRIBUTES_MAIL);
 					if (kullaniciLDAP == null)
 						kullaniciLDAP = getLDAPKullanici(eMail, LDAPUserManager.USER_ATTRIBUTES_PRINCIPAL_NAME);
@@ -2828,7 +2884,7 @@ public class PdksUtil implements Serializable {
 			Calendar cal = Calendar.getInstance();
 			cal.setTime(tarih);
 			cal.add(Calendar.DATE, 1);
-			cal.setTime(PdksUtil.getDate((Date) cal.getTime().clone()));
+			cal.setTime(getDate((Date) cal.getTime().clone()));
 			cal.set(Calendar.MILLISECOND, -2);
 			gunSonu = cal.getTime();
 		}
@@ -2875,7 +2931,7 @@ public class PdksUtil implements Serializable {
 	public static Date getBakiyeYil() {
 		Calendar date = Calendar.getInstance();
 		date.set(1900, 0, 1);
-		Date tarih = PdksUtil.getDate(date.getTime());
+		Date tarih = getDate(date.getTime());
 		return tarih;
 	}
 
@@ -2927,7 +2983,7 @@ public class PdksUtil implements Serializable {
 					if (run.getName().indexOf("get") < 0 || run.getName().equals("getClass"))
 						continue;
 					Object veri = run.invoke(at, parametre);
-					if (veri != null && !veri.toString().trim().equals("")) {
+					if (veri != null && hasStringValue(veri.toString())) {
 						String value = veri.toString();
 						String tagName = run.getName().substring(3).toUpperCase(Locale.ENGLISH);
 						veriMap.put(tagName, value);
@@ -2981,9 +3037,9 @@ public class PdksUtil implements Serializable {
 					}
 
 					xml = sb.toString() + "</" + name + ">";
-					if (!client.equals(""))
+					if (hasStringValue(client))
 						client = "_" + client;
-					if (!r3name.equals(""))
+					if (hasStringValue(r3name))
 						r3name = "_" + r3name;
 
 					fileWrite(xml, hata + name + client + r3name);
@@ -3085,7 +3141,7 @@ public class PdksUtil implements Serializable {
 						if (run.getName().indexOf("get") < 0 || run.getName().equals("getClass"))
 							continue;
 						Object veri = run.invoke(at, parametre);
-						if (veri != null && !veri.toString().trim().equals("")) {
+						if (veri != null && hasStringValue(veri.toString())) {
 							String value = veri.toString();
 							String tagName = run.getName().substring(3).toUpperCase(Locale.ENGLISH);
 							veriMap.put(tagName, value);
@@ -3094,7 +3150,7 @@ public class PdksUtil implements Serializable {
 					for (Iterator iterator = pr.keySet().iterator(); iterator.hasNext();) {
 						String key = (String) iterator.next();
 						String value = pr.getProperty(key).trim();
-						if (key.indexOf("passwd") >= 0 || value.equals(""))
+						if (key.indexOf("passwd") >= 0 || hasStringValue(value) == false)
 							continue;
 						String tagName = key.substring(key.lastIndexOf(".") + 1).toUpperCase(Locale.ENGLISH);
 						if (veriMap.containsKey(tagName))
@@ -3106,7 +3162,7 @@ public class PdksUtil implements Serializable {
 					for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
 						String key = (String) iterator.next();
 						String value = ((String) veriMap.get(key)).trim();
-						if (value.equals(""))
+						if (!hasStringValue(value))
 							continue;
 						if (tag != null) {
 							sb.append(tag);
@@ -3331,9 +3387,9 @@ public class PdksUtil implements Serializable {
 		if (value == null || value.trim().length() < 2) {
 			value = "dd/MM/yyyy";
 		}
-		PdksUtil.dateFormat = value;
-		PdksUtil.dateTimeFormat = value + " H:mm";
-		PdksUtil.dateTimeLongFormat = value + " H:mm:ss";
+		dateFormat = value;
+		dateTimeFormat = value + " H:mm";
+		dateTimeLongFormat = value + " H:mm:ss";
 	}
 
 	public static String getDateTimeFormat() {

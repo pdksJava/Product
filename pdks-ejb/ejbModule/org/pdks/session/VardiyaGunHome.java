@@ -651,7 +651,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				else if (object instanceof Date)
 					str = PdksUtil.convertToDateString((Date) object, PdksUtil.getDateFormat());
 
-				if (!str.equals(""))
+				if (PdksUtil.hasStringValue(str))
 					gunler.add(new SelectItem(str, str));
 			}
 			if (!idler.isEmpty()) {
@@ -811,7 +811,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		StringBuffer sb = new StringBuffer();
 		sb.append("<p>Sayın " + fmt.getGuncelleyenUser().getAdSoyad() + ",</p>");
 		sb.append("<p>" + ortakAciklama + " " + authenticatedUser.dateTimeFormatla(fmt.getBaslangicZamani()) + getTarihArasiBitisZamanString(fmt.getBaslangicZamani(), fmt.getBitisZamani()) + " arası " + authenticatedUser.sayiFormatliGoster(fmt.getMesaiSuresi()) + " saat ");
-		sb.append((fmt.getMesaiNeden() != null ? "<b>\"" + fmt.getMesaiNeden().getAciklama() + (fmt.getAciklama() != null && fmt.getAciklama().trim().length() > 0 ? " ( Açıklama : " + fmt.getAciklama().trim() + " ) " : "") + "\"</b> nedeniyle " : "") + " fazla mesai yapacaktır." + "</p>");
+		sb.append((fmt.getMesaiNeden() != null ? "<b>\"" + fmt.getMesaiNeden().getAciklama() + (PdksUtil.hasStringValue(fmt.getAciklama()) ? " ( Açıklama : " + fmt.getAciklama().trim() + " ) " : "") + "\"</b> nedeniyle " : "") + " fazla mesai yapacaktır." + "</p>");
 		mailIcerik = PdksUtil.replaceAll(sb.toString(), "  ", " ");
 		try {
 			MailStatu mailSatu = null;
@@ -852,7 +852,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		String aciklama = null;
 		if (tanim != null && tanim.getParentTanim() != null)
 			aciklama = tanim.getParentTanim().getAciklama();
-		if (ozelAciklama != null && (aciklama == null || aciklama.trim().length() == 0))
+		if (ozelAciklama != null && PdksUtil.hasStringValue(aciklama) == false)
 			aciklama = ozelAciklama;
 		if (aciklama != null)
 			aciklama = aciklama.trim().toLowerCase(PdksUtil.TR_LOCALE);
@@ -934,9 +934,9 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		StringBuffer sb = new StringBuffer();
 		sb.append("<p>Sayın " + fmt.getOlusturanUser().getAdSoyad() + ",</p>");
 		sb.append("<p>" + ortakAciklama + " " + fmt.getOlusturanUser().dateTimeFormatla(fmt.getBaslangicZamani()) + getTarihArasiBitisZamanString(fmt.getBaslangicZamani(), fmt.getBitisZamani()) + " arası " + fmt.getOlusturanUser().sayiFormatliGoster(fmt.getMesaiSuresi()) + " saat ");
-		sb.append((fmt.getMesaiNeden() != null ? "<b>\"" + fmt.getMesaiNeden().getAciklama() + (fmt.getAciklama() != null && fmt.getAciklama().trim().length() > 0 ? " ( Açıklama : " + fmt.getAciklama().trim() + " ) " : "") + "\"</b>" : " olması sebebiyle ") + " fazla mesai talebi "
+		sb.append((fmt.getMesaiNeden() != null ? "<b>\"" + fmt.getMesaiNeden().getAciklama() + (PdksUtil.hasStringValue(fmt.getAciklama()) ? " ( Açıklama : " + fmt.getAciklama().trim() + " ) " : "") + "\"</b>" : " olması sebebiyle ") + " fazla mesai talebi "
 				+ (onayDurum ? "onaylandı" : (fmt.getRedNedeni() != null ? "<b>\"" + fmt.getRedNedeni().getAciklama() + "\"</b> nedeniyle " : "") + (fmt.getDurum() ? " rededildi" : " iptal edildi")) + ".</p>");
-		if (fmt.getIptalAciklama() != null && fmt.getIptalAciklama().trim().length() > 0) {
+		if (PdksUtil.hasStringValue(fmt.getIptalAciklama())) {
 			sb.append("<p><b>İptal açıklama : " + "</b>" + fmt.getIptalAciklama().trim() + "</p>");
 		}
 		if (uyariNot != null)
@@ -1143,8 +1143,9 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 	 * @return
 	 */
 	public String bitTarihGuncelle(Date tarih) {
+		Calendar cal = Calendar.getInstance();
 		if (Calendar.MONDAY == PdksUtil.getDateField(tarih, Calendar.DAY_OF_WEEK))
-			setBitTarih(PdksUtil.tariheGunEkleCikar(tarih, 13));
+			setBitTarih(ortakIslemler.tariheGunEkleCikar(cal, tarih, 13));
 		else
 			setBitTarih(null);
 		return "";
@@ -1228,7 +1229,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 	public boolean veriGoster(String durum, List list) {
 		boolean goster = false;
 
-		if (durum != null && !durum.equals("")) {
+		if (PdksUtil.hasStringValue(durum)) {
 			for (Iterator iterator = list.iterator(); iterator.hasNext();) {
 				AylikPuantaj aylikPuantaj = (AylikPuantaj) iterator.next();
 				if (durum.equals("suaDurum")) {
@@ -1327,7 +1328,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 	 */
 	@Transactional
 	public String guncelle(VardiyaPlan plan) {
-		vardiyaGuncelle = ikRole || !ortakIslemler.getParameterKey("vardiyaGuncelle").equals("");
+		vardiyaGuncelle = ikRole || ortakIslemler.getParameterKeyHasStringValue("vardiyaGuncelle");
 		setVardiyaPlan(plan);
 		fillVardiyaSablonList(plan.getPersonel());
 		fillVardiyaList();
@@ -1446,8 +1447,9 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 	public boolean vardiyaPlanKontrol(PersonelDenklestirme personelDenklestirme, TreeMap<Long, Vardiya> vardiyaMap, VardiyaPlan plan, String mesaj, boolean excelAktar) {
 		boolean yaz = Boolean.TRUE;
 		boolean haftaTatil = Boolean.FALSE;
+		Calendar cal = Calendar.getInstance();
 		Date ilkGun = aylikPuantajDefault.getIlkGun(), iseBaslamaTarihi = null, istenAyrilmaTarihi = null;
-		Date sonGun = PdksUtil.tariheAyEkleCikar(ilkGun, 1);
+		Date sonGun = ortakIslemler.tariheAyEkleCikar(cal, ilkGun, 1);
 		boolean admin = ikRole;
 		StringBuffer sb = new StringBuffer();
 		if (vardiyaMap != null && vardiyaMap.isEmpty())
@@ -1524,7 +1526,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		} catch (Exception localException1) {
 		}
 		if (personel != null && haftaTatilCalismaGunAdetMaxSaat != null && calismaPlanDenetimTarih != null && calismaPlanDenetimTarih.before(ilkGun)) {
-			Date basTarih = PdksUtil.tariheGunEkleCikar(ilkGun, -7), bitTarih = PdksUtil.tariheGunEkleCikar(basGun, -1);
+			Date basTarih = ortakIslemler.tariheGunEkleCikar(cal, ilkGun, -7), bitTarih = ortakIslemler.tariheGunEkleCikar(cal, basGun, -1);
 			if (bitTarih.getTime() >= basTarih.getTime()) {
 				List<Long> personeller = new ArrayList<Long>();
 				personeller.add(personel.getId());
@@ -1702,7 +1704,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					Vardiya vardiya = (Vardiya) iterator.next();
 					Date vardiyaDate = vardiya.getVardiyaTarih();
 					if (vardiyaDate == null)
-						vardiyaDate = PdksUtil.tariheGunEkleCikar(vardiyaHafta.getBasTarih(), gunSayisi);
+						vardiyaDate = ortakIslemler.tariheGunEkleCikar(cal, vardiyaHafta.getBasTarih(), gunSayisi);
 					++gunSayisi;
 
 					if (vardiya.isCalisma() && vardiya.getGenel() && vardiyaMap != null && !vardiyaMap.containsKey(vardiya.getId())) {
@@ -1798,7 +1800,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				PdksUtil.addMessageAvailableWarn(mesaj + sb.toString());
 			if (sbCalismaModeliUyumsuz.length() > 0) {
 				String str = sbCalismaModeliUyumsuz.toString();
-				PdksUtil.addMessageAvailableWarn(mesaj + str + " " + (calismaModeli != null ? calismaModeli.getAciklama() + " vardiyalarına " : "çalışma modeline") + " uymayan hatalı " + (str.indexOf(",") < 0 ? "vardiyadır!" : "vardiyalardır"));
+				PdksUtil.addMessageAvailableWarn(mesaj + str + " " + (calismaModeli != null ? calismaModeli.getAciklama() + " Vardiyalarına " : ortakIslemler.calismaModeliAciklama()+"ne") + " uymayan hatalı " + (str.indexOf(",") < 0 ? "vardiyadır!" : "vardiyalardır"));
 			}
 			if (personelDenklestirme != null) {
 				if (ikMesaj)
@@ -1989,7 +1991,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				AylikPuantaj.baslikCell(factory, drawing, anchor, cell, ortakIslemler.devredenBakiyeKod(), "Bakiye: Çalışanın bu liste de dahil bugüne kadarki devreden eksi/fazla mesaisi");
 			}
 			if (modelGoster)
-				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Çalışma Modeli");
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.calismaModeliAciklama());
 			CellStyle headerIzinTipi = (XSSFCellStyle) header.clone();
 			ExcelUtil.setFillForegroundColor(headerIzinTipi, 255, 153, 204);
 
@@ -2084,7 +2086,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			AylikPuantaj aylikPuantaj = (AylikPuantaj) iter.next();
 
 			Personel personel = aylikPuantaj.getPdksPersonel();
-			if (!aylikPuantaj.isSecili() || personel == null || personel.getSicilNo() == null || personel.getSicilNo().trim().equals(""))
+			if (!aylikPuantaj.isSecili() || personel == null || PdksUtil.hasStringValue(personel.getSicilNo()) == false)
+
 				continue;
 			row++;
 			CalismaModeli calismaModeli = aylikPuantaj.getPersonelDenklestirmeAylik().getCalismaModeliAy() != null ? aylikPuantaj.getPersonelDenklestirmeAylik().getCalismaModeli() : null;
@@ -2622,11 +2625,12 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			}
 			vGun = pdksVardiyaGun;
 		}
+		Calendar cal = Calendar.getInstance();
 		if (vgIlkAy != null) {
 			HashMap fields = new HashMap();
 			fields.put("personel.id=", vGun.getPersonel().getId());
-			fields.put("vardiyaDate>=", PdksUtil.tariheGunEkleCikar(vgIlkAy.getVardiyaDate(), -7));
-			fields.put("vardiyaDate<=", PdksUtil.tariheGunEkleCikar(vgIlkAy.getVardiyaDate(), -1));
+			fields.put("vardiyaDate>=", ortakIslemler.tariheGunEkleCikar(cal, vgIlkAy.getVardiyaDate(), -7));
+			fields.put("vardiyaDate<=", ortakIslemler.tariheGunEkleCikar(cal, vgIlkAy.getVardiyaDate(), -1));
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<VardiyaGun> digerVardiyaGunList = pdksEntityController.getObjectByInnerObjectListInLogic(fields, VardiyaGun.class);
@@ -2637,8 +2641,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		if (vgAy != null && vGun.getId() != null && vGun.getId().equals(vgAy.getId())) {
 			HashMap fields = new HashMap();
 			fields.put("personel.id=", vGun.getPersonel().getId());
-			fields.put("vardiyaDate>=", PdksUtil.tariheGunEkleCikar(vgAy.getVardiyaDate(), 1));
-			fields.put("vardiyaDate<=", PdksUtil.tariheGunEkleCikar(vgAy.getVardiyaDate(), 7));
+			fields.put("vardiyaDate>=", ortakIslemler.tariheGunEkleCikar(cal, vgAy.getVardiyaDate(), 1));
+			fields.put("vardiyaDate<=", ortakIslemler.tariheGunEkleCikar(cal, vgAy.getVardiyaDate(), 7));
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<VardiyaGun> digerVardiyaGunList = pdksEntityController.getObjectByInnerObjectListInLogic(fields, VardiyaGun.class);
@@ -2650,7 +2654,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		sablonGuncelle = authenticatedUser == null && denklestirmeAyDurum && personelAylikPuantaj.isKaydet() && aylikPuantaj.isKaydet();
 		if (sablonGuncelle) {
 			String sablonGuncelleStr = ortakIslemler.getParameterKey("sablonGuncellemeyenDepartmanlar");
-			if (sablonGuncelleStr != null && sablonGuncelleStr.trim().length() > 0) {
+			if (PdksUtil.hasStringValue(sablonGuncelleStr)) {
 				List<String> depList = Arrays.asList(sablonGuncelleStr.split(","));
 				sablonGuncelle = !depList.contains(personel.getSirket().getDepartman().getId().toString());
 			}
@@ -2914,7 +2918,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			lastMap.put("altBolumId", "" + aramaSecenekleri.getEkSaha4Id());
 		if (aramaSecenekleri.getEkSaha3Id() != null)
 			lastMap.put("bolumId", "" + aramaSecenekleri.getEkSaha3Id());
-		if ((ikRole) && sicilNo != null && sicilNo.trim().length() > 0)
+		if ((ikRole) && PdksUtil.hasStringValue(sicilNo))
 			lastMap.put("sicilNo", sicilNo.trim());
 		try {
 			ortakIslemler.saveLastParameter(lastMap, session);
@@ -3022,6 +3026,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		} catch (Exception e) {
 			calismaModeli = aylikPuantaj.getCalismaModeli();
 		}
+		Calendar cal = Calendar.getInstance();
 		for (VardiyaGun pdksVardiyaGun : aylikPuantaj.getVardiyalar()) {
 			pdksVardiyaGun.setAyinGunu(pdksVardiyaGun.getVardiyaDateStr().startsWith(keyDonem));
 			if (pdksVardiyaGun != null)
@@ -3032,7 +3037,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			Vardiya vardiya = pdksVardiyaGun.getVardiya();
 			if (vardiya != null && vardiya.isAksamVardiyasi()) {
 				if (aksamVardiyaBitSaat != null && aksamVardiyaBitDakika != null) {
-					Calendar cal = Calendar.getInstance();
+
 					cal.setTime(pdksVardiyaGun.getVardiyaDate());
 					cal.set(Calendar.HOUR_OF_DAY, aksamVardiyaBitSaat);
 					cal.set(Calendar.MINUTE, aksamVardiyaBitDakika);
@@ -3041,7 +3046,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					aksamVardiyaBitisZamani = cal.getTime();
 				}
 				if (aksamVardiyaBasSaat != null && aksamVardiyaBasDakika != null) {
-					Calendar cal = Calendar.getInstance();
+
 					cal.setTime(pdksVardiyaGun.getVardiyaDate());
 					cal.set(Calendar.HOUR_OF_DAY, aksamVardiyaBasSaat);
 					cal.set(Calendar.MINUTE, aksamVardiyaBasDakika);
@@ -3074,7 +3079,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 									try {
 										if (haftaTatilDurum && pdksVardiyaGun.getSonrakiVardiya() != null && pdksVardiyaGun.getSonrakiVardiya().isHaftaTatil()) {
 											double calismaToplamSuresi = islemVardiya.getNetCalismaSuresi();
-											Date haftaTatil = PdksUtil.tariheGunEkleCikar(pdksVardiyaGun.getVardiyaDate(), 1);
+											Date haftaTatil = ortakIslemler.tariheGunEkleCikar(cal, pdksVardiyaGun.getVardiyaDate(), 1);
 											String haftaGunStr = PdksUtil.convertToDateString(haftaTatil, "yyyyMMdd").substring(6);
 											double aksamSure = ortakIslemler.getSaatSure(islemVardiya.getVardiyaBasZaman(), haftaTatil, yemekler, pdksVardiyaGun, session);
 											haftaSuresi = ortakIslemler.getSaatSure(haftaTatil, islemVardiya.getVardiyaBitZaman(), yemekler, pdksVardiyaGun, session);
@@ -4161,7 +4166,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			} else
 				mesaj = "Görev yeri değişecek gün seçiniz!";
 			map = null;
-			if (!mesaj.equals(""))
+			if (PdksUtil.hasStringValue(mesaj))
 				PdksUtil.addMessageWarn(mesaj);
 			if (aylikPuantaj != null)
 				aylikPuantaj.setGorevYeriSec(gorevYeriSec);
@@ -4198,7 +4203,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		boolean mesajYaz = true;
 		String genelMudurERPKoduStr = ortakIslemler.getParameterKey("genelMudurERPKodu");
 		boolean tumOnaylanPlanEkle = ortakIslemler.getParameterKey("tumOnaylanPlanEkle").equals("1");
-		List<String> genelMudurERPKodlari = genelMudurERPKoduStr.equals("") ? new ArrayList<String>() : PdksUtil.getListByString(genelMudurERPKoduStr, null);
+		boolean yoneticiTanimsiz = ortakIslemler.getParameterKey("yoneticiTanimsiz").equals("1");
+		List<String> genelMudurERPKodlari = !PdksUtil.hasStringValue(genelMudurERPKoduStr) ? new ArrayList<String>() : PdksUtil.getListByString(genelMudurERPKoduStr, null);
 		List<Long> eskiOnayList = new ArrayList<Long>();
 		TreeMap<Long, TreeMap<Long, Vardiya>> calismaModeliMap = getCalismaModeliMap(aylikPuantajList);
 		for (Iterator iter = aylikPuantajList.iterator(); iter.hasNext();) {
@@ -4213,7 +4219,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			}
 			Personel personel = aylikPuantaj.getPdksPersonel();
 			if (denklestirmeAy.isDurumu() && !(authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi())) {
-				if (personel.isSanalPersonelMi() == false && (aylikPuantaj.getYonetici() == null || aylikPuantaj.getYonetici().getId() == null)) {
+				if (personel.isSanalPersonelMi() == false && (yoneticiTanimsiz == false && (aylikPuantaj.getYonetici() == null || aylikPuantaj.getYonetici().getId() == null))) {
 					aylikPuantaj.setOnayDurum(false);
 				}
 			}
@@ -4357,14 +4363,14 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					mailData = baosDosya.toByteArray();
 
 					try {
-						if (!calismaPlanOnayMailAdres.equals("") && mailData != null) {
+						if (PdksUtil.hasStringValue(calismaPlanOnayMailAdres) && mailData != null) {
 							MailObject mail = new MailObject();
 							mail.setSubject(mailKonu);
 							mail.setBody(mailIcerik);
 							ortakIslemler.addMailPersonelUserList(toList, mail.getToList());
 							ortakIslemler.addMailPersonelUserList(ccList, mail.getCcList());
 							ortakIslemler.addMailPersonelUserList(bccList, mail.getBccList());
-							if (dosyaAdi == null || dosyaAdi.equals(""))
+							if (!PdksUtil.hasStringValue(dosyaAdi))
 								dosyaAdi = "AylıkÇalışmaPlanı_" + gorevYeriAciklama + PdksUtil.convertToDateString(aylikPuantajDefault.getIlkGun(), "yyyyMM") + ".xlsx";
 
 							MailFile mf = new MailFile();
@@ -4434,7 +4440,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				}
 			}
 			String servisMailAdresleri = ortakIslemler.getParameterKey("servisMailAdresleri");
-			if (servisMailAdresleri != null && servisMailAdresleri.trim().length() > 0) {
+			if (PdksUtil.hasStringValue(servisMailAdresleri)) {
 				List<String> mailList = PdksUtil.getListFromString(servisMailAdresleri, null);
 				for (String mail : mailList) {
 					User user = new User();
@@ -4471,7 +4477,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					}
 
 					mailData = null;
-					if (!calismaPlanOnayMailAdres.equals("")) {
+					if (PdksUtil.hasStringValue(calismaPlanOnayMailAdres)) {
 						String gorevYeriAciklama = getExcelAciklama();
 						baosDosya = aylikVardiyaExcelDevam(gorevYeriAciklama, puantajList, Boolean.FALSE);
 						mailData = baosDosya.toByteArray();
@@ -4582,7 +4588,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					}
 					if (manuelGiris.getId() != null && manuelGiris.getId() != null) {
 						Long personelKGSId = personelKGS.getId();
-
+						Calendar cal = Calendar.getInstance();
 						Long nedenId = islemFazlaMesaiTalep.getMesaiNeden() != null ? islemFazlaMesaiTalep.getMesaiNeden().getId() : null;
 						Tanim fazlaMesaiSistemOnayDurum = ortakIslemler.getOtomatikKapGirisiNeden(session);
 						if (fazlaMesaiSistemOnayDurum != null)
@@ -4592,8 +4598,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 						HashMap fields = new HashMap();
 						fields.put("islem.islemTipi<>", "D");
 						fields.put("personel.id=", personelKGSId);
-						fields.put("zaman>=", PdksUtil.tariheGunEkleCikar(tarih1, -1));
-						fields.put("zaman<=", PdksUtil.tariheGunEkleCikar(tarih2, 1));
+						fields.put("zaman>=", ortakIslemler.tariheGunEkleCikar(cal, tarih1, -1));
+						fields.put("zaman<=", ortakIslemler.tariheGunEkleCikar(cal, tarih2, 1));
 						fields.put("islem.aciklama like ", "%" + referans + "%");
 						if (session != null)
 							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -4759,7 +4765,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 											User sistemUser = ortakIslemler.getSistemAdminUser(session);
 											if (sistemUser == null)
 												sistemUser = authenticatedUser;
-											String aciklama = islemFazlaMesaiTalep.getAciklama() != null && islemFazlaMesaiTalep.getAciklama().trim().length() > 0 ? islemFazlaMesaiTalep.getAciklama().trim() : "";
+											String aciklama = PdksUtil.hasStringValue(islemFazlaMesaiTalep.getAciklama()) ? islemFazlaMesaiTalep.getAciklama().trim() : "";
 											pdksEntityController.hareketSil(kgsId, pdksId, sistemUser, nedenId, aciklama + (referans != null ? " " + referans.trim() : ""), hareketKGS3.getKgsSirketId(), session);
 											flush = true;
 										}
@@ -4768,7 +4774,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 								}
 							}
 
-							String aciklama = referans + " " + (islemFazlaMesaiTalep.getAciklama() != null && islemFazlaMesaiTalep.getAciklama().trim().length() > 0 ? islemFazlaMesaiTalep.getAciklama().trim() : "") + " hareket";
+							String aciklama = referans + " " + (PdksUtil.hasStringValue(islemFazlaMesaiTalep.getAciklama()) ? islemFazlaMesaiTalep.getAciklama().trim() : "") + " hareket";
 							User guncelleyen = ortakIslemler.getSistemAdminUser(session);
 							if (!authenticatedUser.isAdmin() && userHome.hasPermission("personelHareket", "view"))
 								guncelleyen = authenticatedUser;
@@ -5363,7 +5369,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 	@Transactional
 	private Boolean aylikPuantajOlusturuluyor() {
 		bordroPuantajEkranindaGoster = ortakIslemler.getParameterKey("bordroPuantajEkranindaGoster").equals("1");
-		yoneticiERP1Kontrol = ortakIslemler.getParameterKey("yoneticiERP1Kontrol").equals("");
+		yoneticiERP1Kontrol = !ortakIslemler.getParameterKeyHasStringValue("yoneticiERP1Kontrol");
 		bordroAlanKapat();
 		Boolean kontrolDurum = false;
 		String donem = String.valueOf(yil * 100 + ay);
@@ -5377,7 +5383,10 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		User user = ortakIslemler.getSistemAdminUser(session);
 		if (user == null)
 			user = authenticatedUser;
-
+		boolean testDurum = PdksUtil.getTestDurum() && PdksUtil.getCanliSunucuDurum() == false;
+		testDurum = false;
+		if (testDurum)
+			logger.info("aylikPuantajOlusturuluyor 0000 " + new Date());
 		manuelVardiyaIzinGir = ortakIslemler.isVardiyaIzinGir(session, authenticatedUser.getDepartman());
 		gorevYeriGirisDurum = ortakIslemler.getParameterKey("uygulamaTipi").equals("H") && ortakIslemler.getParameterKey("gorevYeriGiris").equals("1");
 		departmanBolumAyni = Boolean.FALSE;
@@ -5497,6 +5506,9 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		cal.set(Calendar.YEAR, yil);
 		boolean devam = true;
 		List<VardiyaHafta> vardiyaHaftaList = null;
+		if (testDurum)
+			logger.info("aylikPuantajOlusturuluyor 1000 " + new Date());
+
 		AylikPuantaj defaultAylikPuantajSablon = fazlaMesaiOrtakIslemler.getAylikPuantaj(ay, yil, denklestirmeDonemi, session);
 		tatilGunleriMap = null;
 		boolean veriGuncelle = false;
@@ -5575,9 +5587,11 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		perList = new ArrayList<String>();
 		List<Personel> donemPerList = fazlaMesaiOrtakIslemler.getFazlaMesaiPersonelList(aramaSecenekleri.getSirket(), aramaSecenekleri.getTesisId() != null ? String.valueOf(aramaSecenekleri.getTesisId()) : null, aramaSecenekleri.getEkSaha3Id(), aramaSecenekleri.getEkSaha4Id(),
 				denklestirmeAy != null ? new AylikPuantaj(denklestirmeAy) : null, getDenklestirmeDurum(), session);
+		if (testDurum)
+			logger.info("aylikPuantajOlusturuluyor 2000 " + new Date());
 		sicilNo = ortakIslemler.getSicilNo(sicilNo);
 		for (Personel personel : donemPerList) {
-			if (sicilNo.equals("") || sicilNo.trim().equals(personel.getPdksSicilNo().trim()))
+			if (PdksUtil.hasStringValue(sicilNo) == false || sicilNo.trim().equals(personel.getPdksSicilNo().trim()))
 				perList.add(personel.getPdksSicilNo());
 		}
 
@@ -5599,10 +5613,10 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					for (VardiyaGorev pdksVardiyaGorev : gorevliler) {
 						Personel personel = pdksVardiyaGorev.getVardiyaGun().getPersonel();
 						String perNo = personel.getPdksSicilNo();
-						if (perNo == null || perNo.trim().length() == 0)
+						if (PdksUtil.hasStringValue(perNo) == false)
 							continue;
 						perNo = perNo.trim();
-						if (!perList.contains(perNo) && (sicilNo.trim().length() == 0 || sicilNo.equals(perNo)))
+						if (!perList.contains(perNo) && (PdksUtil.hasStringValue(sicilNo) == false || sicilNo.equals(perNo)))
 							gorevliPersonelMap.put(personel.getPdksSicilNo().trim(), personel);
 					}
 
@@ -5614,7 +5628,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 
 		}
 		if (adminRole || islemYapan.getYetkiTumPersonelNoList().contains(sicilNo))
-			if (sicilNo.trim().length() > 0)
+			if (PdksUtil.hasStringValue(sicilNo))
 				perList.add(sicilNo);
 
 		ArrayList<Personel> personelList = null;
@@ -5639,7 +5653,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				superVisorList = new ArrayList<String>();
 				for (Personel personel : authenticatedUser.getTumPersoneller()) {
 					String sicil = personel.getSicilNo();
-					if (sicil == null || sicil.trim().equals(""))
+					if (!PdksUtil.hasStringValue(sicil))
 						continue;
 					superVisorList.add(sicil);
 				}
@@ -5647,7 +5661,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			}
 			for (Iterator iterator = perList.iterator(); iterator.hasNext();) {
 				String sicil = (String) iterator.next();
-				if (sicil == null || sicil.trim().equals(""))
+				if (!PdksUtil.hasStringValue(sicil))
 					iterator.remove();
 				else if (superVisorList != null && !superVisorList.contains(sicil))
 					iterator.remove();
@@ -5661,7 +5675,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					fields.put("tesis.id=", aramaSecenekleri.getTesisId());
 				if (aramaSecenekleri.getEkSaha3Id() != null)
 					fields.put("ekSaha3.id=", aramaSecenekleri.getEkSaha3Id());
-				if ((!sicilNo.equals("") || (donusAdres != null && donusAdres.trim().length() > 0)) && perList != null && !perList.isEmpty())
+				if ((PdksUtil.hasStringValue(sicilNo) || PdksUtil.hasStringValue(donusAdres)) && perList != null && !perList.isEmpty())
 					fields.put("pdksSicilNo", perList);
 				if (departmanBolumAyni == false && aramaSecenekleri.getSirketId() != null)
 					fields.put("sirket.id=", aramaSecenekleri.getSirketId());
@@ -5702,13 +5716,36 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					perKeyMap.put(personel.getId(), personel);
 				}
 				perIdler.addAll(new ArrayList<Long>(perKeyMap.keySet()));
-
+				if (testDurum)
+					logger.info("aylikPuantajOlusturuluyor 3000 " + new Date());
 				List<VardiyaGun> vardiyaGunList = null;
+				fields.clear();
+				fields.put("bitisZamani>=", ortakIslemler.tariheGunEkleCikar(cal, denklestirmeDonemiGecenAy.getBaslangicTarih(), -2));
+				fields.put("baslangicZamani<=", ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 1));
+				fields.put("izinSahibi.id", perIdler.clone());
+				fields.put("izinDurumu", ortakIslemler.getAktifIzinDurumList());
+				if (session != null)
+					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+				List<PersonelIzin> izinler = pdksEntityController.getObjectByInnerObjectListInLogic(fields, PersonelIzin.class);
+				HashMap<Long, List<PersonelIzin>> izinMap = new HashMap<Long, List<PersonelIzin>>();
+				for (Iterator iterator = izinler.iterator(); iterator.hasNext();) {
+					PersonelIzin personelIzin = (PersonelIzin) iterator.next();
+					IzinTipi izinTipi = personelIzin.getIzinTipi();
+					if (izinTipi.getBakiyeIzinTipi() != null)
+						iterator.remove();
+					else {
+						Long key = personelIzin.getIzinSahibi().getId();
+						List<PersonelIzin> list = izinMap.containsKey(key) ? izinMap.get(key) : new ArrayList<PersonelIzin>();
+						if (list.isEmpty())
+							izinMap.put(key, list);
+						list.add(personelIzin);
+					}
 
+				}
 				TreeMap<String, VardiyaGun> yeniVardiyaMap = null;
 				if (denklestirmeAyDurum) {
 					try {
-						vardiyaGunList = ortakIslemler.getAllPersonelIdVardiyalar(perIdler, PdksUtil.tariheGunEkleCikar(basTarih, -7), PdksUtil.tariheGunEkleCikar(bitTarih, 7), Boolean.FALSE, session);
+						vardiyaGunList = ortakIslemler.getAllPersonelIdVardiyalar(perIdler, ortakIslemler.tariheGunEkleCikar(cal, basTarih, -7), ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 7), Boolean.FALSE, session);
 						List<Long> olmayanPerList = new ArrayList<Long>(perIdler);
 						for (VardiyaGun vardiyaGun : vardiyaGunList) {
 							vardiyaGun.setAyinGunu(vardiyaGun.getVardiyaDateStr().startsWith(donem));
@@ -5722,20 +5759,23 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 							List<Personel> perYeniList = new ArrayList<Personel>();
 							for (Long key : olmayanPerList)
 								perYeniList.add(perKeyMap.get(key));
-							yeniVardiyaMap = ortakIslemler.getVardiyalar(perYeniList, PdksUtil.tariheGunEkleCikar(basTarih, -7), PdksUtil.tariheGunEkleCikar(bitTarih, 7), true, session, false);
+							yeniVardiyaMap = ortakIslemler.getVardiyalar(perYeniList, ortakIslemler.tariheGunEkleCikar(cal, basTarih, -7), ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 7), izinMap, true, session, false);
 							tekrarOku = true;
 							if (!yeniVardiyaMap.isEmpty())
-								vardiyaGunList = ortakIslemler.getAllPersonelIdVardiyalar(perIdler, PdksUtil.tariheGunEkleCikar(basTarih, -7), PdksUtil.tariheGunEkleCikar(bitTarih, 7), Boolean.FALSE, session);
+								vardiyaGunList = ortakIslemler.getAllPersonelIdVardiyalar(perIdler, ortakIslemler.tariheGunEkleCikar(cal, basTarih, -7), ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 7), Boolean.FALSE, session);
 							perYeniList = null;
 
 						}
 					} catch (Exception e) {
-						vardiyaGunList = ortakIslemler.getAllPersonelIdVardiyalar(perIdler, PdksUtil.tariheGunEkleCikar(basTarih, -7), PdksUtil.tariheGunEkleCikar(bitTarih, 7), Boolean.FALSE, session);
+						vardiyaGunList = ortakIslemler.getAllPersonelIdVardiyalar(perIdler, ortakIslemler.tariheGunEkleCikar(cal, basTarih, -7), ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 7), Boolean.FALSE, session);
 					}
 				} else
-					vardiyaGunList = ortakIslemler.getPersonelIdVardiyalar(perIdler, PdksUtil.tariheGunEkleCikar(basTarih, -7), PdksUtil.tariheGunEkleCikar(bitTarih, 7), null, session);
+					vardiyaGunList = ortakIslemler.getPersonelIdVardiyalar(perIdler, ortakIslemler.tariheGunEkleCikar(cal, basTarih, -7), ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 7), null, session);
 				if (yeniVardiyaMap == null)
 					yeniVardiyaMap = new TreeMap<String, VardiyaGun>();
+				if (testDurum)
+					logger.info("aylikPuantajOlusturuluyor 4000 " + new Date());
+
 				perKeyMap = null;
 				fields.clear();
 				fields.put(PdksEntityController.MAP_KEY_MAP, "getPersonelId");
@@ -5759,21 +5799,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				if (!flush)
 					flush = vardiyaHaftaMap.isEmpty();
 
-				fields.clear();
-				fields.put("bitisZamani>=", PdksUtil.tariheGunEkleCikar(denklestirmeDonemiGecenAy.getBaslangicTarih(), -2));
-				fields.put("baslangicZamani<=", PdksUtil.tariheGunEkleCikar(bitTarih, 1));
-				fields.put("izinSahibi.id", perIdler.clone());
-				fields.put("izinDurumu", ortakIslemler.getAktifIzinDurumList());
-				if (session != null)
-					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				List<PersonelIzin> izinler = pdksEntityController.getObjectByInnerObjectListInLogic(fields, PersonelIzin.class);
-				for (Iterator iterator = izinler.iterator(); iterator.hasNext();) {
-					PersonelIzin personelIzin = (PersonelIzin) iterator.next();
-					IzinTipi izinTipi = personelIzin.getIzinTipi();
-					if (izinTipi.getBakiyeIzinTipi() != null)
-						iterator.remove();
-
-				}
 				fields.clear();
 				fields.put(PdksEntityController.MAP_KEY_MAP, "getVardiyaGunId");
 				fields.put("vardiyaGun", vardiyaGunList);
@@ -5819,7 +5844,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				}
 				TreeMap<Long, List> bagliIdMap = new TreeMap<Long, List>();
 				if (!vardiyaGunList.isEmpty()) {
-					List<YemekIzin> yemekGenelList = ortakIslemler.getYemekList(session);
+					List<YemekIzin> yemekGenelList = ortakIslemler.getYemekList(basTarih, bitTarih, session);
 					ortakIslemler.setVardiyaYemekList(vardiyaGunList, yemekGenelList);
 					fazlaMesaiTalepVar = false;
 					List<Long> vardiyaIdList = new ArrayList<Long>();
@@ -5835,6 +5860,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 						}
 
 					}
+					if (testDurum)
+						logger.info("aylikPuantajOlusturuluyor 5000 " + new Date());
 					if (!vardiyaIdList.isEmpty()) {
 						List<FazlaMesaiTalep> fazlaMesaiList = getVardiyaTable(vardiyaIdList, FazlaMesaiTalep.TABLE_NAME, FazlaMesaiTalep.COLUMN_NAME_VARDIYA_GUN, FazlaMesaiTalep.class);
 						if (fazlaMesaiList != null && !fazlaMesaiList.isEmpty()) {
@@ -5861,7 +5888,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					vardiyaIdList = null;
 				}
 
-				ortakIslemler.fazlaMesaiSaatiAyarla(vardiyalarMap);
 				vardiyaGunList = null;
 				vardiyaGunGorevMap = null;
 				//
@@ -5913,12 +5939,16 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				}
 				kontratliPerIdList = null;
 				perMap = null;
+				if (testDurum)
+					logger.info("aylikPuantajOlusturuluyor 6000 " + new Date());
 				tatilGunleriMap = ortakIslemler.getTatilGunleri(personelList, denklestirmeDonemiGecenAy.getBaslangicTarih(), bitTarih, session);
 
 				fazlaMesaiOrtakIslemler.haftalikVardiyaOlustur(vardiyaHaftaList, gecenAylikPuantajSablon, denklestirmeDonemiGecenAy, tatilGunleriMap, null);
 
 				vardiyaHaftaList = new ArrayList<VardiyaHafta>();
 				VardiyaPlan pdksVardiyaPlanMaster = fazlaMesaiOrtakIslemler.haftalikVardiyaOlustur(vardiyaHaftaList, defaultAylikPuantajSablon, denklestirmeDonemi, tatilGunleriMap, aylikSablonVardiyalar);
+				if (testDurum)
+					logger.info("aylikPuantajOlusturuluyor 7000 " + new Date());
 
 				this.setVardiyaPlan(pdksVardiyaPlanMaster);
 				if (gorevliPersonelMap != null)
@@ -6430,6 +6460,8 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				}
 
 			}
+			if (testDurum)
+				logger.info("aylikPuantajOlusturuluyor 8000 " + new Date());
 
 			setTatilMap(tatilGunleriMap);
 			if (flush) {
@@ -6567,7 +6599,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			suaKontrol(aylikPuantajList);
 			list = null;
 		}
-		ortakIslemler.yoneticiPuantajKontrol(aylikPuantajList, Boolean.FALSE, session);
+		ortakIslemler.yoneticiPuantajKontrol(authenticatedUser, aylikPuantajList, Boolean.FALSE, session);
 		if (denklestirmeAyDurum && !aylikPuantajList.isEmpty()) {
 			try {
 				setDenklestirmeAlanlari(aylikPuantajList);
@@ -6580,7 +6612,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 		if (fazlaMesaiTalepVar && aylikPuantajList != null && !aylikPuantajList.isEmpty())
 			fazlaMesaiGunleriniBul(defaultAylikPuantajSablon.getIlkGun(), defaultAylikPuantajSablon.getSonGun(), aylikPuantajList);
 		vardiyaFazlaMesaiTalepGoster = planGirisi && !vardiyaFazlaMesaiMap.isEmpty() && (authenticatedUser.isAdmin() || PdksUtil.isSistemDestekVar());
-		TreeMap<String, Object> ozetMap = fazlaMesaiOrtakIslemler.getIzinOzetMap(null, aylikPuantajList, false);
+		TreeMap<String, Object> ozetMap = fazlaMesaiOrtakIslemler.getIzinOzetMap(authenticatedUser, null, aylikPuantajList, false);
 		izinTipiVardiyaList = ozetMap.containsKey("izinTipiVardiyaList") ? (List<Vardiya>) ozetMap.get("izinTipiVardiyaList") : new ArrayList<Vardiya>();
 		izinTipiPersonelVardiyaMap = ozetMap.containsKey("izinTipiPersonelVardiyaMap") ? (TreeMap<String, TreeMap<String, List<VardiyaGun>>>) ozetMap.get("izinTipiPersonelVardiyaMap") : new TreeMap<String, TreeMap<String, List<VardiyaGun>>>();
 		if (izinTipiVardiyaList != null && !izinTipiVardiyaList.isEmpty()) {
@@ -6648,8 +6680,12 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			if (sirket != null)
 				bordroVeriOlusturBasla(sirket, aylikPuantajList);
 		}
-		if (!aylikPuantajList.isEmpty())
+		if (!aylikPuantajList.isEmpty()) {
+			ortakIslemler.sortAylikPuantajList(aylikPuantajList, true);
+
 			modelGoster = ortakIslemler.getModelGoster(denklestirmeAy, session);
+		}
+
 		return kontrolDurum;
 	}
 
@@ -6658,7 +6694,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 	 * @param puantajList
 	 */
 	private void bordroVeriOlusturBasla(Sirket sirket, List<AylikPuantaj> puantajList) {
-		if (sirket != null && !ortakIslemler.getParameterKey("bordroVeriOlustur").equals("")) {
+		if (sirket != null && ortakIslemler.getParameterKeyHasStringValue("bordroVeriOlustur")) {
 			try {
 				String str = ortakIslemler.getParameterKey("bordroVeriOlustur");
 				int donem = yil * 100 + ay;
@@ -6958,7 +6994,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 	 * @return
 	 */
 	public String fillPersonelSicilAylikPlanRaporList() {
-		if (sicilNo.trim().equals(""))
+		if (!PdksUtil.hasStringValue(sicilNo))
 			aylikPuantajList.clear();
 		else {
 			sicilNo = ortakIslemler.getSicilNo(sicilNo);
@@ -8056,7 +8092,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				lastMap.put("tesisId", "" + tesisId);
 			if (seciliEkSaha3Id != null)
 				lastMap.put("bolumId", "" + seciliEkSaha3Id);
-			if (sicilNo != null && sicilNo.trim().length() > 0)
+			if (PdksUtil.hasStringValue(sicilNo))
 				lastMap.put("sicilNo", sicilNo.trim());
 		}
 
@@ -8094,7 +8130,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					session);
 			List<String> perList = new ArrayList<String>();
 			for (Personel personel : personelList) {
-				if (sicilNo.equals("") || sicilNo.equals(personel.getPdksSicilNo()))
+				if (PdksUtil.hasStringValue(sicilNo) == false || sicilNo.equals(personel.getPdksSicilNo()))
 					perList.add(personel.getPdksSicilNo());
 
 			}
@@ -8507,7 +8543,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					ExcelUtil.getCell(sheet, row, col++, cellStyleDateTime).setCellValue(ft.getBitisZamani());
 					Double sure = ft.getMesaiSuresi();
 					ExcelUtil.getCell(sheet, row, col++, PdksUtil.isDoubleValueNotLong(sure) ? cellTutar : cellNumber).setCellValue(sure);
-					String neden = ft.getMesaiNeden().getAciklama() + (ft.getAciklama() != null && ft.getAciklama().trim().length() > 0 ? "\nAçıklama : " + ft.getAciklama().trim() : "");
+					String neden = ft.getMesaiNeden().getAciklama() + (PdksUtil.hasStringValue(ft.getAciklama()) ? "\nAçıklama : " + ft.getAciklama().trim() : "");
 					ExcelUtil.getCell(sheet, row, col++, style).setCellValue(ft.getOnayDurumAciklama());
 					ExcelUtil.getCell(sheet, row, col++, style).setCellValue(ft.getOlusturanUser().getAdSoyad());
 					ExcelUtil.getCell(sheet, row, col++, cellStyleDateTime).setCellValue(ft.getOlusturmaTarihi());
@@ -8630,7 +8666,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 	public void bolumDoldur() throws Exception {
 		stajerSirket = Boolean.FALSE;
 		aramaSecenekleri.setGorevYeriList(null);
-		if (donusAdres == null || donusAdres.equals("")) {
+		if (!PdksUtil.hasStringValue(donusAdres)) {
 			listeleriTemizle();
 		}
 		Sirket sirket = null;
@@ -9131,9 +9167,10 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 			DepartmanDenklestirmeDonemi denklestirmeDonemi = (DepartmanDenklestirmeDonemi) getDenklestirmeDonemi().clone();
 			denklestirmeDonemi.setDenklestirmeAy(denklestirmeAy);
 			denklestirmeDonemi.setDenklestirmeAyDurum(denklestirmeAyDurum);
+			Calendar cal = Calendar.getInstance();
 			for (int i = 0; i < 3; i++) {
 				if (denklestirmeDonemi.getBaslangicTarih() != null && PdksUtil.tarihKarsilastirNumeric(denklestirmeDonemi.getBitisTarih(), denklestirmeDonemi.getBaslangicTarih()) == 1) {
-					tatilGunleriMap = ortakIslemler.getTatilGunleri(new ArrayList<Personel>(), PdksUtil.tariheGunEkleCikar(denklestirmeDonemi.getBaslangicTarih(), -1), PdksUtil.tariheGunEkleCikar(denklestirmeDonemi.getBitisTarih(), 1), session);
+					tatilGunleriMap = ortakIslemler.getTatilGunleri(new ArrayList<Personel>(), ortakIslemler.tariheGunEkleCikar(cal, denklestirmeDonemi.getBaslangicTarih(), -1), ortakIslemler.tariheGunEkleCikar(cal, denklestirmeDonemi.getBitisTarih(), 1), session);
 					List<PersonelDenklestirmeTasiyici> personelDenklestirmeList = ortakIslemler.personelDenklestir(denklestirmeDonemi, tatilGunleriMap, "id", new ArrayList<Long>(hashMap.keySet()), Boolean.FALSE, Boolean.TRUE, Boolean.FALSE, session);
 					for (PersonelDenklestirmeTasiyici personelDenklestirme : personelDenklestirmeList) {
 						if (hashMap.containsKey(personelDenklestirme.getPersonel().getId())) {
@@ -9152,9 +9189,9 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 						}
 					}
 				}
-				Date tarih = PdksUtil.tariheGunEkleCikar(denklestirmeDonemi.getBitisTarih(), 7);
+				Date tarih = ortakIslemler.tariheGunEkleCikar(cal, denklestirmeDonemi.getBitisTarih(), 7);
 				denklestirmeDonemi.setBitisTarih(tarih);
-				denklestirmeDonemi.setBaslangicTarih(PdksUtil.tariheGunEkleCikar(tarih, -6));
+				denklestirmeDonemi.setBaslangicTarih(ortakIslemler.tariheGunEkleCikar(cal, tarih, -6));
 
 			}
 
@@ -9234,8 +9271,9 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 	 */
 	@Transactional
 	public String vardiyaPlanDosyaYaz() throws Exception {
+		Calendar cal = Calendar.getInstance();
 		boolean islemYapildi = Boolean.FALSE;
-		Date sonGun = PdksUtil.tariheAyEkleCikar(aylikPuantajDefault.getIlkGun(), 1);
+		Date sonGun = ortakIslemler.tariheAyEkleCikar(cal, aylikPuantajDefault.getIlkGun(), 1);
 		List<VardiyaGun> vardiyaGunleri = new ArrayList<VardiyaGun>();
 
 		List<String> perNoList = new ArrayList<String>();
@@ -9475,7 +9513,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 				String sicilNoUzunlukStr = ortakIslemler.getParameterKey("sicilNoUzunluk");
 				int maxTextLength = 0;
 				try {
-					if (!sicilNoUzunlukStr.equals(""))
+					if (PdksUtil.hasStringValue(sicilNoUzunlukStr))
 						maxTextLength = Integer.parseInt(sicilNoUzunlukStr);
 				} catch (Exception e) {
 					maxTextLength = 0;
@@ -9511,11 +9549,11 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 					for (int row = baslangic + 1; row <= sheet.getLastRowNum(); row++) {
 						try {
 							perSicilNo = ExcelUtil.getSheetStringValue(sheet, row, COL_SICIL_NO);
-							if (perSicilNo == null || perSicilNo.trim().equals(""))
+							if (!PdksUtil.hasStringValue(perSicilNo))
 								break;
 
 							adiSoyadi = ExcelUtil.getSheetStringValue(sheet, row, COL_ADI_SOYADI);
-							if (adiSoyadi == null || adiSoyadi.trim().equals(""))
+							if (!PdksUtil.hasStringValue(adiSoyadi))
 								break;
 							if (maxTextLength > 0 && perSicilNo != null && perSicilNo.trim().length() < maxTextLength)
 								perSicilNo = PdksUtil.textBaslangicinaKarakterEkle(perSicilNo, '0', maxTextLength);
@@ -9524,7 +9562,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 							for (int i = 0; i < maxGun; i++) {
 								vardiyaAdi = ExcelUtil.getSheetStringValueTry(sheet, row, COL_ADI_SOYADI + i + 2);
 								String key = null;
-								if (vardiyaAdi != null && !vardiyaAdi.equals("")) {
+								if (PdksUtil.hasStringValue(vardiyaAdi)) {
 									key = PdksUtil.setTurkishStr(vardiyaAdi).toLowerCase(Locale.ENGLISH);
 									if (!vardiyaMap.containsKey(key))
 										key = vardiyaAdi;
@@ -9611,7 +9649,6 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 								logger.error(ev);
 								ev.printStackTrace();
 							}
-							// ortakIslemler.fazlaMesaiSaatiAyarla(vardiyalarMap);
 							Date sonGunVardiya = (Date) sonGun.clone();
 							for (String key : vardiyalarMap.keySet()) {
 								VardiyaGun pdksVardiyaGun = vardiyalarMap.get(key);
@@ -9704,7 +9741,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 											if (PdksUtil.setTurkishStr(vardiyaKey).equalsIgnoreCase("ISTIFA"))
 												vardiyaKey = "";
 
-											if (!vardiyaKey.equals("")) {
+											if (PdksUtil.hasStringValue(vardiyaKey)) {
 												if (izinler != null && !izinler.isEmpty()) {
 													vardiyaList.add(pdksVardiyaGun);
 													setIzin(personel.getId(), izinler, vardiyaList);

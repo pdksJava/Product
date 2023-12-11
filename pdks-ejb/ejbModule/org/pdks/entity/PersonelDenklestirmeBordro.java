@@ -181,13 +181,15 @@ public class PersonelDenklestirmeBordro extends BasePDKSObject implements Serial
 
 	@Transient
 	public Double getBordroToplamGunAdet() {
-		double toplamGun = 0;
+		double toplamGun = 0, ucretliIzinTutar = getUcretliIzin();
 		if (normalGunAdet != null)
 			toplamGun += normalGunAdet.doubleValue();
 		if (haftaTatilAdet != null)
 			toplamGun += haftaTatilAdet.doubleValue();
 		if (resmiTatilAdet != null)
 			toplamGun += resmiTatilAdet.doubleValue();
+		if (ucretliIzinTutar != 0.0d)
+			toplamGun += ucretliIzinTutar;
 		return toplamGun;
 	}
 
@@ -229,6 +231,13 @@ public class PersonelDenklestirmeBordro extends BasePDKSObject implements Serial
 	@Transient
 	public Integer getRaporluIzin() {
 		PersonelDenklestirmeBordroDetay detay = getBordroDetay(BordroDetayTipi.RAPORLU_IZIN);
+		Integer value = detay != null ? detay.getMiktar().intValue() : 0;
+		return value;
+	}
+
+	@Transient
+	public Integer getYillikIzin() {
+		PersonelDenklestirmeBordroDetay detay = getBordroDetay(BordroDetayTipi.YILLIK_IZIN);
 		Integer value = detay != null ? detay.getMiktar().intValue() : 0;
 		return value;
 	}
