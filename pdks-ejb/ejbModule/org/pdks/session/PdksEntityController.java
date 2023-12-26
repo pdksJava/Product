@@ -33,6 +33,8 @@ import org.pdks.entity.PersonelKGS;
 import org.pdks.entity.PersonelView;
 import org.pdks.security.entity.User;
 
+import com.google.gson.Gson;
+
 @Startup(depends = { "entityManager" })
 @Scope(ScopeType.APPLICATION)
 @Name("pdksEntityController")
@@ -631,14 +633,16 @@ public class PdksEntityController implements Serializable {
 	 * @throws Exception
 	 */
 	public List execSPList(LinkedHashMap<String, Object> veriMap, StringBuffer sp, Class class1) throws Exception {
-		SQLQuery query = prepareProcedure(veriMap, sp);
-		if (class1 != null)
-			query.addEntity(class1);
 		List sonucList = null;
 		try {
+			SQLQuery query = prepareProcedure(veriMap, sp);
+			if (class1 != null)
+				query.addEntity(class1);
 			sonucList = query.list();
 		} catch (Exception e) {
-			logger.error(sp.toString() + "\n" + e);
+			Gson gson = new Gson();
+			logger.error(sp.toString() + (veriMap != null && !veriMap.isEmpty() ? "\n" + gson.toJson(veriMap) : "") + "\n" + e);
+			gson = null;
 			throw new Exception(e);
 		}
 
@@ -651,12 +655,14 @@ public class PdksEntityController implements Serializable {
 	 * @param sp
 	 */
 	public int execSP(LinkedHashMap<String, Object> veriMap, StringBuffer sp) throws Exception {
-		SQLQuery query = prepareProcedure(veriMap, sp);
 		Integer sonuc = null;
 		try {
+			SQLQuery query = prepareProcedure(veriMap, sp);
 			sonuc = query.executeUpdate();
 		} catch (Exception e) {
-			logger.error(sp.toString() + "\n" + e);
+			Gson gson = new Gson();
+			logger.error(sp.toString() + (veriMap != null && !veriMap.isEmpty() ? "\n" + gson.toJson(veriMap) : "") + "\n" + e);
+			gson = null;
 		}
 
 		return sonuc;
