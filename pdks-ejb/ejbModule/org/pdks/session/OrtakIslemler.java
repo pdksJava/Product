@@ -16525,9 +16525,11 @@ public class OrtakIslemler implements Serializable {
 							// Arife günü hareketleri güncelleniyor
 							if (vardiyaGun.getTatil().isYarimGunMu() && bayramEkleDurum) {
 								if (vardiyaGun.getIslemVardiya().getVardiyaBasZaman().getTime() < vardiyaGun.getTatil().getBasTarih().getTime()) {
-									HareketKGS ilkGiris = (HareketKGS) vardiyaGun.getGirisHareketleri().get(0).clone();
-									HareketKGS sonCikis = (HareketKGS) vardiyaGun.getCikisHareketleri().get(vardiyaGun.getCikisHareketleri().size() - 1).clone();
-									if (vardiyaGun.getIslemVardiya().getVardiyaBitZaman().getTime() > sonCikis.getZaman().getTime()) {
+									HareketKGS ilkGiris = (HareketKGS) vardiyaGun.getGirisHareketleri().get(0).clone(), sonCikis = null;
+									List<HareketKGS> cikisHareketleri = vardiyaGun.getCikisHareketleri();
+									if (cikisHareketleri != null && !cikisHareketleri.isEmpty())
+										sonCikis = (HareketKGS) cikisHareketleri.get(cikisHareketleri.size() - 1).clone();
+									if (sonCikis != null && vardiyaGun.getIslemVardiya().getVardiyaBitZaman().getTime() > sonCikis.getZaman().getTime()) {
 										Calendar cal = Calendar.getInstance();
 										cal.setTime((Date) sonCikis.getZaman().clone());
 										cal.add(Calendar.MINUTE, vardiyaGun.getVardiya().getCikisGecikmeToleransDakika());
