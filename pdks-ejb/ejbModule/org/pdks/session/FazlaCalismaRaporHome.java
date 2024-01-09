@@ -784,16 +784,36 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 					String formatStr = "yyyy-MM-dd HH:mm:ss";
 					String basTarihStr = basTarih != null ? PdksUtil.convertToDateString(basTarih, formatStr) : null;
 					String bitTarihStr = bitTarih != null ? PdksUtil.convertToDateString(bitTarih, formatStr) : null;
-					StringBuffer sb = new StringBuffer("SP_GET_EKSIK_CALISAN_VARDIYALAR");
+					List<Long> idList = new ArrayList<Long>();
+					if (vardiyaGunPerList == null)
+						vardiyaGunPerList = new ArrayList<VardiyaGun>();
+					else
+						vardiyaGunPerList.clear();
 					LinkedHashMap<String, Object> fields = new LinkedHashMap<String, Object>();
-					fields.put("saat", saat);
-					fields.put("personel", ortakIslemler.getListIdStr(personelIdler));
-					fields.put("basTarih", basTarihStr);
-					fields.put("bitTarih", bitTarihStr);
-					fields.put("df", null);
-					if (session != null)
-						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-					vardiyaGunPerList = pdksEntityController.execSPList(fields, sb, VardiyaGun.class);
+					StringBuffer sb = new StringBuffer("SP_GET_EKSIK_CALISAN_VARDIYALAR");
+					while (!personelIdler.isEmpty()) {
+						HashMap map = new HashMap();
+						for (Iterator iterator = personelIdler.iterator(); iterator.hasNext();) {
+							Long long1 = (Long) iterator.next();
+							idList.add(long1);
+							iterator.remove();
+							if (idList.size() + map.size() >= 1800)
+								break;
+						}
+						fields.clear();
+						fields.put("saat", saat);
+						fields.put("personel", ortakIslemler.getListIdStr(idList));
+						fields.put("basTarih", basTarihStr);
+						fields.put("bitTarih", bitTarihStr);
+						fields.put("df", null);
+						if (session != null)
+							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+						List<VardiyaGun> vPerList = pdksEntityController.execSPList(fields, sb, VardiyaGun.class);
+						if (!vPerList.isEmpty())
+							vardiyaGunPerList.addAll(vPerList);
+						vPerList = null;
+						idList.clear();
+					}
 					if (!vardiyaGunPerList.isEmpty()) {
 						TreeMap<Long, Personel> perMap = new TreeMap<Long, Personel>();
 						for (VardiyaGun vg : vardiyaGunPerList) {
