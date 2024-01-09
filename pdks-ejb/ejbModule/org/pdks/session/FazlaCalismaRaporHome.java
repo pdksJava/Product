@@ -781,39 +781,19 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 					List<Long> personelIdler = new ArrayList<Long>();
 					for (Personel personel : personelList)
 						personelIdler.add(personel.getId());
-					StringBuffer sb = new StringBuffer();
-					HashMap fields = new HashMap();
-					sb.append("WITH VERI_ASIL AS ( ");
-					sb.append(" SELECT  V.VARDIYA_GUN_ID,V." + VardiyaSaat.COLUMN_NAME_NORMAL_SURE + ",V." + VardiyaGun.COLUMN_NAME_PERSONEL + ", ");
-					sb.append(" V." + VardiyaSaat.COLUMN_NAME_CALISMA_SURESI + "- COALESCE(F." + PersonelFazlaMesai.COLUMN_NAME_FAZLA_MESAI_SAATI + ",0) " + VardiyaSaat.COLUMN_NAME_CALISMA_SURESI + " FROM VARDIYA_GUN_SAAT_VIEW V WITH(nolock) ");
-					sb.append(" LEFT JOIN " + PersonelFazlaMesai.TABLE_NAME + " F ON F." + PersonelFazlaMesai.COLUMN_NAME_VARDIYA_GUN + "=V.VARDIYA_GUN_ID");
-					sb.append("  AND F." + PersonelFazlaMesai.COLUMN_NAME_DURUM + "=1 AND F.ONAY_DURUM=1");
-					sb.append(" WHERE  V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + ">=:t1 AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + "<=:t2 ");
-					sb.append(" AND  V." + VardiyaGun.COLUMN_NAME_PERSONEL + " :p AND V." + VardiyaGun.COLUMN_NAME_DURUM + "=1 AND V.NORMAL_SURE>0 )");
-					sb.append(" ,VERI AS ( ");
-					sb.append(" SELECT * FROM VERI_ASIL G");
-					sb.append(" WHERE G." + VardiyaSaat.COLUMN_NAME_NORMAL_SURE + "> G."+ VardiyaSaat.COLUMN_NAME_CALISMA_SURESI +" AND " + VardiyaSaat.COLUMN_NAME_CALISMA_SURESI +">0");
-					sb.append(") ");
-					sb.append(" ,SINIR_GECENLER AS ( ");
-					sb.append(" SELECT * FROM VERI ");
-					sb.append(" WHERE  " + VardiyaSaat.COLUMN_NAME_NORMAL_SURE + " - " + VardiyaSaat.COLUMN_NAME_CALISMA_SURESI + ">=:s");
-					sb.append(") ");
-					sb.append(" ,CIFT_VERI AS ( ");
-					sb.append(" SELECT " + VardiyaGun.COLUMN_NAME_PERSONEL + ",COUNT(*) AS ADET FROM SINIR_GECENLER ");
-					sb.append(" GROUP BY  " + VardiyaGun.COLUMN_NAME_PERSONEL);
-					sb.append(" HAVING COUNT(*)>1  ");
-					sb.append(") ");
-					sb.append(" SELECT DISTINCT V.* FROM VERI G");
-					sb.append(" INNER JOIN " + VardiyaGun.TABLE_NAME + " V ON V." + VardiyaGun.COLUMN_NAME_ID + "=G.VARDIYA_GUN_ID");
-					sb.append(" INNER JOIN CIFT_VERI C ON C." + VardiyaGun.COLUMN_NAME_PERSONEL + "=G." + VardiyaGun.COLUMN_NAME_PERSONEL );
-//					sb.append(" WHERE  C.ADET IS NULL ");
-					fields.put("s", saat);
-					fields.put("t1", basTarih);
-					fields.put("t2", bitTarih);
-					fields.put("p", personelIdler);
+					String formatStr = "yyyy-MM-dd HH:mm:ss";
+					String basTarihStr = basTarih != null ? PdksUtil.convertToDateString(basTarih, formatStr) : null;
+					String bitTarihStr = bitTarih != null ? PdksUtil.convertToDateString(bitTarih, formatStr) : null;
+					StringBuffer sb = new StringBuffer("SP_GET_EKSIK_CALISAN_VARDIYALAR");
+					LinkedHashMap<String, Object> fields = new LinkedHashMap<String, Object>();
+					fields.put("saat", saat);
+					fields.put("personel", ortakIslemler.getListIdStr(personelIdler));
+					fields.put("basTarih", basTarihStr);
+					fields.put("bitTarih", bitTarihStr);
+					fields.put("df", null);
 					if (session != null)
 						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-					vardiyaGunPerList = pdksEntityController.getObjectBySQLList(sb, fields, VardiyaGun.class);
+					vardiyaGunPerList = pdksEntityController.execSPList(fields, sb, VardiyaGun.class);
 					if (!vardiyaGunPerList.isEmpty()) {
 						TreeMap<Long, Personel> perMap = new TreeMap<Long, Personel>();
 						for (VardiyaGun vg : vardiyaGunPerList) {
