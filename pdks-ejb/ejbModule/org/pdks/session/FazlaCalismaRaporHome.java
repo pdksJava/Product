@@ -212,6 +212,9 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 
 		if (ortakIslemler.getParameterKeyHasStringValue(("maxGunCalismaSaat")))
 			raporList.add(new SelectItem("maxGunCalismaSaat", "Günlük Çalışmayı Aşanlar"));
+		if (authenticatedUser.isAdmin() || ortakIslemler.getParameterKeyHasStringValue(("minGunCalismaSaat")))
+			raporList.add(new SelectItem("minGunCalismaSaat", "Günlük Eksik Çalışanlar"));
+
 		raporList.add(new SelectItem("maxHaftaTatilCalismaGun", "Hafta Tatil Çalışanlar"));
 		if (ortakIslemler.getParameterKeyHasStringValue(("maxHaftaCalismaSaat")))
 			raporList.add(new SelectItem("maxHaftaCalismaSaat", "Haftalık Çalışmayı Aşanlar"));
@@ -745,25 +748,83 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				}
 			}
 			ekSaha4Tanim = null;
-			if ((!personelList.isEmpty()) && (raporSecim.equals("maxGeceCalismaSaat"))) {
-				List<Long> personelIdler = new ArrayList<Long>();
-				for (Personel personel : personelList)
-					personelIdler.add(personel.getId());
-				StringBuffer sb = new StringBuffer();
-				HashMap fields = new HashMap();
-				sb.append("SELECT  DISTINCT P.* FROM " + VardiyaGun.TABLE_NAME + " G WITH(nolock) ");
-				sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + "=G." + VardiyaGun.COLUMN_NAME_PERSONEL);
-				sb.append("  AND G.VARDIYA_TARIHI>=P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + "   AND G.VARDIYA_TARIHI<=P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI);
-				sb.append(" INNER JOIN " + Vardiya.TABLE_NAME + " V ON V." + Vardiya.COLUMN_NAME_ID + "=G." + VardiyaGun.COLUMN_NAME_VARDIYA + " AND V.AKSAM_VARDIYA=1");
-				sb.append(" INNER JOIN " + VardiyaSaat.TABLE_NAME + " S ON S." + VardiyaSaat.COLUMN_NAME_ID + "=G." + VardiyaGun.COLUMN_NAME_VARDIYA_SAAT + " AND S.CALISMA_SURESI>0");
-				sb.append(" WHERE  G." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + ">=:t1 AND G." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + "<=:t2 ");
-				sb.append(" AND  G." + VardiyaGun.COLUMN_NAME_PERSONEL + " :p AND G." + VardiyaGun.COLUMN_NAME_DURUM + "=1 ");
-				fields.put("t1", basTarih);
-				fields.put("t2", bitTarih);
-				fields.put("p", personelIdler);
-				if (session != null)
-					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				personelList = pdksEntityController.getObjectBySQLList(sb, fields, Personel.class);
+			if (!personelList.isEmpty()) {
+				if (raporSecim.equals("maxGeceCalismaSaat")) {
+					List<Long> personelIdler = new ArrayList<Long>();
+					for (Personel personel : personelList)
+						personelIdler.add(personel.getId());
+					StringBuffer sb = new StringBuffer();
+					HashMap fields = new HashMap();
+					sb.append("SELECT  DISTINCT P.* FROM " + VardiyaGun.TABLE_NAME + " G WITH(nolock) ");
+					sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + "=G." + VardiyaGun.COLUMN_NAME_PERSONEL);
+					sb.append("  AND G.VARDIYA_TARIHI>=P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + "   AND G.VARDIYA_TARIHI<=P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI);
+					sb.append(" INNER JOIN " + Vardiya.TABLE_NAME + " V ON V." + Vardiya.COLUMN_NAME_ID + "=G." + VardiyaGun.COLUMN_NAME_VARDIYA + " AND V.AKSAM_VARDIYA=1");
+					sb.append(" INNER JOIN " + VardiyaSaat.TABLE_NAME + " S ON S." + VardiyaSaat.COLUMN_NAME_ID + "=G." + VardiyaGun.COLUMN_NAME_VARDIYA_SAAT + " AND S.CALISMA_SURESI>0");
+					sb.append(" WHERE  G." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + ">=:t1 AND G." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + "<=:t2 ");
+					sb.append(" AND  G." + VardiyaGun.COLUMN_NAME_PERSONEL + " :p AND G." + VardiyaGun.COLUMN_NAME_DURUM + "=1 ");
+					fields.put("t1", basTarih);
+					fields.put("t2", bitTarih);
+					fields.put("p", personelIdler);
+					if (session != null)
+						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+					personelList = pdksEntityController.getObjectBySQLList(sb, fields, Personel.class);
+				} else if (raporSecim.equals("minGunCalismaSaat")) {
+					Double saat = null;
+					try {
+						if (ortakIslemler.getParameterKeyHasStringValue("minGunCalismaSaat"))
+							saat = Double.parseDouble(ortakIslemler.getParameterKey("minGunCalismaSaat"));
+					} catch (Exception e) {
+						// TODO: handle exception
+					}
+					if (saat == null || saat.doubleValue() < 0.0d)
+						saat = 0.5d;
+					List<Long> personelIdler = new ArrayList<Long>();
+					for (Personel personel : personelList)
+						personelIdler.add(personel.getId());
+					StringBuffer sb = new StringBuffer();
+					HashMap fields = new HashMap();
+					sb.append("WITH VERI_ASIL AS ( ");
+					sb.append(" SELECT  V.VARDIYA_GUN_ID,V." + VardiyaSaat.COLUMN_NAME_NORMAL_SURE + ",V." + VardiyaGun.COLUMN_NAME_PERSONEL + ", ");
+					sb.append(" V." + VardiyaSaat.COLUMN_NAME_CALISMA_SURESI + "- COALESCE(F." + PersonelFazlaMesai.COLUMN_NAME_FAZLA_MESAI_SAATI + ",0) " + VardiyaSaat.COLUMN_NAME_CALISMA_SURESI + " FROM VARDIYA_GUN_SAAT_VIEW V WITH(nolock) ");
+					sb.append(" LEFT JOIN " + PersonelFazlaMesai.TABLE_NAME + " F ON F." + PersonelFazlaMesai.COLUMN_NAME_VARDIYA_GUN + "=V.VARDIYA_GUN_ID");
+					sb.append("  AND F." + PersonelFazlaMesai.COLUMN_NAME_DURUM + "=1 AND F.ONAY_DURUM=1");
+					sb.append(" WHERE  V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + ">=:t1 AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + "<=:t2 ");
+					sb.append(" AND  V." + VardiyaGun.COLUMN_NAME_PERSONEL + " :p AND V." + VardiyaGun.COLUMN_NAME_DURUM + "=1 AND V.NORMAL_SURE>0 )");
+					sb.append(" ,VERI AS ( ");
+					sb.append(" SELECT * FROM VERI_ASIL G");
+					sb.append(" WHERE G." + VardiyaSaat.COLUMN_NAME_NORMAL_SURE + "> G."+ VardiyaSaat.COLUMN_NAME_CALISMA_SURESI +" AND " + VardiyaSaat.COLUMN_NAME_CALISMA_SURESI +">0");
+					sb.append(") ");
+					sb.append(" ,SINIR_GECENLER AS ( ");
+					sb.append(" SELECT * FROM VERI ");
+					sb.append(" WHERE  " + VardiyaSaat.COLUMN_NAME_NORMAL_SURE + " - " + VardiyaSaat.COLUMN_NAME_CALISMA_SURESI + ">=:s");
+					sb.append(") ");
+					sb.append(" ,CIFT_VERI AS ( ");
+					sb.append(" SELECT " + VardiyaGun.COLUMN_NAME_PERSONEL + ",COUNT(*) AS ADET FROM SINIR_GECENLER ");
+					sb.append(" GROUP BY  " + VardiyaGun.COLUMN_NAME_PERSONEL);
+					sb.append(" HAVING COUNT(*)>1  ");
+					sb.append(") ");
+					sb.append(" SELECT DISTINCT V.* FROM VERI G");
+					sb.append(" INNER JOIN " + VardiyaGun.TABLE_NAME + " V ON V." + VardiyaGun.COLUMN_NAME_ID + "=G.VARDIYA_GUN_ID");
+					sb.append(" INNER JOIN CIFT_VERI C ON C." + VardiyaGun.COLUMN_NAME_PERSONEL + "=G." + VardiyaGun.COLUMN_NAME_PERSONEL );
+//					sb.append(" WHERE  C.ADET IS NULL ");
+					fields.put("s", saat);
+					fields.put("t1", basTarih);
+					fields.put("t2", bitTarih);
+					fields.put("p", personelIdler);
+					if (session != null)
+						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+					vardiyaGunPerList = pdksEntityController.getObjectBySQLList(sb, fields, VardiyaGun.class);
+					if (!vardiyaGunPerList.isEmpty()) {
+						TreeMap<Long, Personel> perMap = new TreeMap<Long, Personel>();
+						for (VardiyaGun vg : vardiyaGunPerList) {
+							perMap.put(vg.getPdksPersonel().getId(), vg.getPdksPersonel());
+						}
+						personelList = new ArrayList<Personel>(perMap.values());
+						perMap = null;
+					} else
+						personelList.clear();
+
+				}
 			}
 			List<Long> personelIdler = new ArrayList<Long>();
 			if (!personelList.isEmpty()) {
@@ -786,7 +847,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				if (!ekSaha4Var) {
 					ekSaha4Tanim = null;
 				}
-				if (raporSecim.equals("maxGunCalismaSaat") || raporSecim.equals("maxGeceCalismaSaat") || raporSecim.equals("maxHaftaCalismaSaat") || raporSecim.equals("maxHaftaTatilCalismaGun"))
+				if (raporSecim.equals("minGunCalismaSaat") || raporSecim.equals("maxGunCalismaSaat") || raporSecim.equals("maxGeceCalismaSaat") || raporSecim.equals("maxHaftaCalismaSaat") || raporSecim.equals("maxHaftaTatilCalismaGun"))
 					fazlaCalismaHazirla(personelIdler);
 				else if (raporSecim.equals("maxToplamMesai"))
 					maxToplamMesaiHazirla(personelIdler, puantajMap);
@@ -796,7 +857,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 					maxGunCalismaSaatKontrol();
 				else if (raporSecim.equals("maxHaftaCalismaSaat"))
 					maxHaftaCalismaSaatKontrol();
-				else if (!raporSecim.equals("maxToplamMesai"))
+				else if (!raporSecim.equals("maxToplamMesai") && !raporSecim.equals("minGunCalismaSaat"))
 					aylikPuantajList.clear();
 				for (SelectItem st : raporList) {
 					if (st.getValue().equals(raporSecim))
@@ -895,10 +956,39 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 	 */
 	private void fazlaCalismaHazirla(List<Long> personelIdler) throws Exception {
 		Double calSure = 0.0d;
+		List<Long> ekCalismaList = new ArrayList<Long>();
+		TreeMap<Long, ArrayList<PersonelFazlaMesai>> fmMap = new TreeMap<Long, ArrayList<PersonelFazlaMesai>>();
 		if (raporSecim.equals("maxGunCalismaSaat"))
 			calSure = getMaxGunCalismaSaat();
 		else if (raporSecim.equals("maxHaftaTatilCalismaGun"))
 			calSure = -1.0d;
+		else if (raporSecim.equals("minGunCalismaSaat")) {
+			for (VardiyaGun vg : vardiyaGunPerList) {
+				ekCalismaList.add(vg.getId());
+			}
+			HashMap parametreMap = new HashMap();
+			StringBuffer sb = new StringBuffer();
+			sb.append("SELECT I.* FROM " + PersonelFazlaMesai.TABLE_NAME + " I  WITH(nolock) ");
+			sb.append(" WHERE I." + PersonelFazlaMesai.COLUMN_NAME_VARDIYA_GUN + " :v");
+			sb.append(" AND I." + PersonelFazlaMesai.COLUMN_NAME_DURUM + "=1");
+			parametreMap.put("v", ekCalismaList);
+			if (session != null)
+				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+			List<PersonelFazlaMesai> list = pdksEntityController.getObjectBySQLList(sb, parametreMap, PersonelFazlaMesai.class);
+			for (PersonelFazlaMesai personelFazlaMesai : list) {
+				if (personelFazlaMesai.isOnaylandi()) {
+					Long key = personelFazlaMesai.getVardiyaGun().getId();
+					ArrayList<PersonelFazlaMesai> fazlaMesaiList = fmMap.containsKey(key) ? fmMap.get(key) : new ArrayList<PersonelFazlaMesai>();
+					if (fazlaMesaiList.isEmpty())
+						fmMap.put(key, fazlaMesaiList);
+					fazlaMesaiList.add(personelFazlaMesai);
+				}
+
+			}
+
+			list = null;
+		}
+
 		List<VardiyaGun> list = getVardiyaList(personelIdler, calSure);
 		if (!list.isEmpty()) {
 			TreeMap<String, VardiyaGun> varMap = new TreeMap<String, VardiyaGun>();
@@ -907,7 +997,6 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			}
 			if (!varMap.isEmpty()) {
 				Calendar cal = Calendar.getInstance();
-
 				boolean maxHaftaCalismaSaatDurum = raporSecim.equals("maxHaftaCalismaSaat");
 				cal.setTime(basTarih);
 				VardiyaHafta vardiyaHafta = null;
@@ -937,9 +1026,10 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 							gun2.setVardiyaSaat(null);
 						aylikPuantaj.getVgMap().put(key, gun2);
 						gun2.setTdClass("");
+						gun2.setFazlaMesailer(null);
 						if (personel.getIseBaslamaTarihi().after(tarih) || personel.getSskCikisTarihi().before(tarih))
 							continue;
-						if (gun2.getId() != null) {
+						if (gun2.getId() != null && ekCalismaList.isEmpty()) {
 							aylikPuantaj.getVardiyalar().add(gun2);
 							if (vardiyaHafta != null && gun2.getDurum() && gun2.getVardiyaSaat() != null) {
 								String str = vardiyaHafta.getHafta() + "_" + personel.getId();
@@ -947,8 +1037,18 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 								sure += gun2.getVardiyaSaat().getCalismaSuresi();
 								haftaCalismaMap.put(str, sure);
 							}
-						} else
+						} else {
+							if (gun2.getId() != null) {
+								if (ekCalismaList.contains(gun2.getId()))
+									gun2.setTdClass("font-weight: bold; color: red;");
+								if (fmMap.containsKey(gun2.getId())) {
+									gun2.setFazlaMesailer(fmMap.get(gun2.getId()));
+								}
+
+							}
+
 							aylikPuantaj.getVardiyalar().add(gun2);
+						}
 
 					}
 					if ((maxHaftaCalismaSaatDurum) && (vardiyaHafta.getVardiyaGunler().size() == 7))
@@ -958,7 +1058,9 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				varMap = null;
 			}
 		}
+		fmMap = null;
 		list = null;
+		ekCalismaList = null;
 	}
 
 	/**
