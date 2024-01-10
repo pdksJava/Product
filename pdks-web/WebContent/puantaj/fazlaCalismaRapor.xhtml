@@ -176,7 +176,15 @@
 												<h:outputText value="#{da.aciklama}" />
 											</f:facet>
 											<ui:fragment rendered="#{fazlaMesai.getPersonelDinamikAlan(da.id)!=null}">
-											#{authenticatedUser.getYesNo(fazlaMesai.personelDinamikAlan.durumSecim)}
+												<ui:fragment rendered="#{fazlaMesai.personelDinamikAlan.checkBox}">
+													<h:outputText value="#{authenticatedUser.getYesNo(fazlaMesai.personelDinamikAlan.durumSecim)}" />
+												</ui:fragment>
+												<ui:fragment rendered="#{fazlaMesai.personelDinamikAlan.sayisal}">
+													<h:outputText value="#{authenticatedUser.sayiFormatliGoster(fazlaMesai.personelDinamikAlan.sayisalDeger)}" />
+												</ui:fragment>
+												<ui:fragment rendered="#{fazlaMesai.personelDinamikAlan.tanim}">
+													<h:outputText value="#{fazlaMesai.personelDinamikAlan.tanimDeger.aciklama}" />
+												</ui:fragment>
 											</ui:fragment>
 
 										</rich:column>
