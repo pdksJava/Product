@@ -758,6 +758,8 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 		veriMap.remove(BaseDAOHibernate.MAP_KEY_SELECT);
 		String queryStr = "exec " + qname;
 		Session session = getHibernateCurrentSession();
+		if (veriMap.containsKey(MAP_KEY_SESSION))
+			veriMap.remove(MAP_KEY_SESSION);
 		for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
 			String string = (String) iterator.next();
 			if (string != null) {
