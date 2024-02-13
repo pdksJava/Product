@@ -84,6 +84,8 @@ public class Tanim extends BasePDKSObject implements Serializable, Cloneable {
 	public static final String TIPI_GOREV_DEPARTMAN = "GOREV_DEPARTMAN";
 	public static final String TIPI_ERP_FAZLA_MESAI = "ERP_FAZLA_MESAI";
 	public static final String TIPI_ERP_PERSONEL_DB = "ERP_PERSONEL_DB";
+	public static final String TIPI_ERP_IZIN_DB = "ERP_IZIN_DB";
+	public static final String TIPI_PERSONEL_TIPI = "PERSONEL_TIPI";
 	public static final String TIPI_SKIN = "SKIN";
 
 	public static final String TIPI_SAP_MASRAF_YERI = "SAP_MASRAF_YERI";
@@ -100,6 +102,9 @@ public class Tanim extends BasePDKSObject implements Serializable, Cloneable {
 
 	public static final String DEFAULT_DOVIZ_KODU = "TL";
 	public static final String IKINCI_YONETICI_ONAYLAMAZ = "ikinciYoneticiOlmaz";
+	 
+	
+	
 
 	private String tipi;
 	private Tanim parentTanim;

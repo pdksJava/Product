@@ -53,6 +53,7 @@ import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
 import org.pdks.entity.PersonelDenklestirmeBordro;
 import org.pdks.entity.PersonelDenklestirmeBordroDetay;
+import org.pdks.entity.PersonelDenklestirmeDinamikAlan;
 import org.pdks.entity.PersonelIzin;
 import org.pdks.entity.PersonelKGS;
 import org.pdks.entity.Sirket;
@@ -136,7 +137,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 			List<Long> perList = new ArrayList<Long>();
 
 			for (Personel personel : donemPerList) {
-				if (sicilDolu && !personel.getPdksSicilNo().trim().equals(sicilNo.trim()))
+				if (sicilDolu && !ortakIslemler.isStringEqual(sicilNo, personel.getPdksSicilNo()))
 					continue;
 				perList.add(personel.getId());
 			}
@@ -148,6 +149,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 			boolean hataliDurum = false;
 			TreeMap<Long, AylikPuantaj> aylikPuantajMap = new TreeMap<Long, AylikPuantaj>();
 			TreeMap<Long, PersonelDenklestirmeBordro> idMap = new TreeMap<Long, PersonelDenklestirmeBordro>();
+			TreeMap<Long, AylikPuantaj> hataliMap = new TreeMap<Long, AylikPuantaj>();
 			if (!perList.isEmpty()) {
 				fields.clear();
 				sb = new StringBuffer();
@@ -163,6 +165,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 				perList.clear();
 				for (PersonelDenklestirme pd : pdlist) {
 					boolean ekle = true;
+
 					if (hataliDurum) {
 						ekle = false;
 						if (pd.getDurum() && pd.isOnaylandi()) {
@@ -173,7 +176,11 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 					if (ekle) {
 						perList.add(pd.getId());
 						pdMap.put(pd.getId(), pd);
+
 						AylikPuantaj aylikPuantaj = new AylikPuantaj();
+						if (hataliVeriGetir != null && hataliVeriGetir && pd.getDurum().equals(Boolean.FALSE) && pd.isOnaylandi())
+							hataliMap.put(pd.getPdksPersonel().getId(), aylikPuantaj);
+
 						aylikPuantaj.setPersonelDenklestirmeAylik(pd);
 						aylikPuantaj.setPdksPersonel(pd.getPdksPersonel());
 						aylikPuantaj.setEksikCalismaSure(null);
@@ -223,11 +230,14 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 			}
 			perList = null;
 			if (!idMap.isEmpty()) {
+				String fieldName = "personelDenklestirmeBordro.id";
+				List idList = new ArrayList(idMap.keySet());
 				fields.clear();
-				fields.put("personelDenklestirmeBordro.id", new ArrayList(idMap.keySet()));
+				fields.put(fieldName, idList);
 				if (session != null)
 					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				List<PersonelDenklestirmeBordroDetay> list = pdksEntityController.getObjectByInnerObjectList(fields, PersonelDenklestirmeBordroDetay.class);
+				// List<PersonelDenklestirmeBordroDetay> list = pdksEntityController.getObjectByInnerObjectList(fields, PersonelDenklestirmeBordroDetay.class);
+				List<PersonelDenklestirmeBordroDetay> list = ortakIslemler.getParamList(false, idList, fieldName, fields, PersonelDenklestirmeBordroDetay.class, session);
 				for (PersonelDenklestirmeBordroDetay detay : list) {
 					Long key = detay.getPersonelDenklestirmeBordro().getId();
 					BordroDetayTipi bordroDetayTipi = BordroDetayTipi.fromValue(detay.getTipi());
@@ -235,7 +245,39 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 				}
 				idMap = null;
 			}
-
+			String donem = String.valueOf(dm.getYil() * 100 + dm.getAy());
+			if (!hataliMap.isEmpty()) {
+				List<Long> perIdList = new ArrayList<Long>(hataliMap.keySet());
+				HashMap map = new HashMap();
+				sb = new StringBuffer();
+				sb.append("SELECT DISTINCT V.* FROM " + VardiyaGun.TABLE_NAME + " V WITH(nolock) ");
+				sb.append(" INNER JOIN  " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + "=V." + VardiyaGun.COLUMN_NAME_PERSONEL);
+				sb.append(" AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + ">=P." + Personel.getIseGirisTarihiColumn());
+				sb.append(" AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + "<=P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI);
+				sb.append(" WHERE V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + ">= :basTarih AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + "< :bitTarih  ");
+				sb.append("  AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " <CONVERT(DATE, GETDATE() ) AND  V." + VardiyaGun.COLUMN_NAME_DURUM + " = 0 ");
+				sb.append(" AND V." + VardiyaGun.COLUMN_NAME_PERSONEL + " :p");
+				sb.append(" ORDER BY V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI);
+				Date basTarih = PdksUtil.getDateFromString((yil * 100 + ay) + "01");
+				Date bitTarih = ortakIslemler.tariheAyEkleCikar(cal, basTarih, 1);
+				map.put("p", perIdList);
+				map.put("basTarih", basTarih);
+				map.put("bitTarih", bitTarih);
+				if (session != null)
+					map.put(PdksEntityController.MAP_KEY_SESSION, session);
+				List<VardiyaGun> vardiyaGunList = pdksEntityController.getObjectBySQLList(sb, map, VardiyaGun.class);
+				for (VardiyaGun vardiyaGun : vardiyaGunList) {
+					String vardiyaDateStr = vardiyaGun.getVardiyaDateStr();
+					if (vardiyaDateStr.startsWith(donem)) {
+						Personel personel = vardiyaGun.getPdksPersonel();
+						Long id = personel.getId();
+						AylikPuantaj aylikPuantaj = hataliMap.get(id);
+						if (aylikPuantaj.getVardiyalar() == null)
+							aylikPuantaj.setVardiyalar(new ArrayList<VardiyaGun>());
+						aylikPuantaj.getVardiyalar().add(vardiyaGun);
+					}
+				}
+			}
 			if (!eksikCalismaMap.isEmpty()) {
 				TreeMap<Long, AylikPuantaj> perDMap = new TreeMap<Long, AylikPuantaj>();
 				for (Long key : eksikCalismaMap.keySet()) {
@@ -266,7 +308,6 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 					List<VardiyaGun> vardiyaGunList = pdksEntityController.getObjectBySQLList(sb, map, VardiyaGun.class);
 					if (vardiyaGunList.size() > 1)
 						vardiyaGunList = PdksUtil.sortListByAlanAdi(vardiyaGunList, "vardiyaDate", false);
-					String donem = String.valueOf(dm.getYil() * 100 + dm.getAy());
 					TreeMap<String, Tatil> tatilGunleriMap = ortakIslemler.getTatilGunleri(null, ortakIslemler.tariheGunEkleCikar(cal, basTarih, -1), ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 1), session);
 					TreeMap<Long, Personel> perMap = new TreeMap<Long, Personel>();
 					for (VardiyaGun vardiyaGun : vardiyaGunList) {
@@ -538,22 +579,35 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 				for (AylikPuantaj ap : list) {
 					Personel personel = ap.getPdksPersonel();
 					PersonelDenklestirmeBordro denklestirmeBordro = ap.getDenklestirmeBordro();
+					PersonelDenklestirme pd = ap.getPersonelDenklestirmeAylik();
+					if (pd == null && denklestirmeBordro != null)
+						pd = denklestirmeBordro.getPersonelDenklestirme();
 					if (denklestirmeBordro == null)
 						denklestirmeBordro = denklestirmeBordroBos;
 					row++;
 					col = 0;
 					PersonelKGS personelKGS = personel.getPersonelKGS();
 					StringBuffer sb = null;
-					if (ap.getVardiyalar() != null && !ap.getVardiyalar().isEmpty()) {
-						sb = new StringBuffer();
-						String pattern = PdksUtil.getDateFormat();
-						for (VardiyaGun vg : ap.getVardiyalar()) {
-							if (sb.length() > 0)
-								sb.append("\n");
-							Vardiya vardiya = vg.getVardiya();
-							sb.append(PdksUtil.convertToDateString(vg.getVardiyaDate(), pattern) + " " + vardiya.getKisaAdi() + " [ " + vg.getVardiyaAdi() + " ] ");
+					try {
+						if (ap.getVardiyalar() != null && !ap.getVardiyalar().isEmpty()) {
+							sb = new StringBuffer();
+							if (pd.getDurum())
+								sb.append("Kapı Giriş Hatalı veya Fazla Çalışması Onay Bekleyen Günler");
+							else
+								sb.append("Kapı Giriş Kayıtı ve İzin Girilmeyen Günler");
+							String pattern = PdksUtil.getDateFormat();
+							for (VardiyaGun vg : ap.getVardiyalar()) {
+								Vardiya vardiya = vg.getVardiya();
+								if (vardiya == null)
+									continue;
+
+								sb.append("\n" + PdksUtil.convertToDateString(vg.getVardiyaDate(), pattern) + " " + vardiya.getKisaAdi() + " [ " + vg.getVardiyaAdi() + " ] ");
+							}
 						}
+					} catch (Exception e) {
+						logger.equals(e);
 					}
+
 					for (String kodu : baslikMap.keySet()) {
 						if (kodu.startsWith(home.COL_CALISMA_MODELI)) {
 							ExcelUtil.getCell(sheet, row, col++, style).setCellValue(ap.getCalismaModeli().getAciklama());
@@ -571,8 +625,13 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 							ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(ay);
 						else if (kodu.equals(home.COL_AY_ADI))
 							ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(ayAdi);
-
-						else if (kodu.equals(home.COL_PERSONEL_NO)) {
+						else if (kodu.equals(home.COL_DEVAMLILIK_PRIMI)) {
+							String dp = "";
+							Boolean dpDurum = denklestirmeBordro.getDevamlilikPrimi();
+							if (dpDurum != null)
+								dp = dpDurum ? "+" : "-";
+							ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(dp);
+						} else if (kodu.equals(home.COL_PERSONEL_NO)) {
 							Cell perNoCell = ExcelUtil.getCell(sheet, row, col++, styleCenter);
 							perNoCell.setCellValue(personel.getPdksSicilNo());
 							if (sb != null) {
@@ -700,7 +759,6 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 	 */
 	public int aylariDoldur(int donemYil, int donemAy, List<SelectItem> aylar, Session session) {
 		Calendar cal = Calendar.getInstance();
-		cal.add(Calendar.MONTH, 1);
 		int maxYil = cal.get(Calendar.YEAR);
 		int sonDonem = (maxYil * 100) + cal.get(Calendar.MONTH) + 1;
 		HashMap fields = new HashMap();
@@ -708,7 +766,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 		sb.append("SELECT DISTINCT D.* from " + DenklestirmeAy.TABLE_NAME + " D WITH(nolock) ");
 		sb.append(" INNER  JOIN " + PersonelDenklestirme.TABLE_NAME + " PD ON PD." + PersonelDenklestirme.COLUMN_NAME_DONEM + "=D." + DenklestirmeAy.COLUMN_NAME_ID);
 		sb.append("    AND  PD." + PersonelDenklestirme.COLUMN_NAME_DENKLESTIRME_DURUM + "=1");
-		sb.append(" WHERE D." + DenklestirmeAy.COLUMN_NAME_YIL + "=:y");
+		sb.append(" WHERE D." + DenklestirmeAy.COLUMN_NAME_YIL + "=:y  AND D." + DenklestirmeAy.COLUMN_NAME_AY + ">0 ");
 		if (donemYil == maxYil) {
 			sb.append(" AND ((D." + DenklestirmeAy.COLUMN_NAME_YIL + "*100)+" + DenklestirmeAy.COLUMN_NAME_AY + ")<=:s");
 			fields.put("s", sonDonem);
@@ -805,12 +863,15 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 				puantajMap.put(personelDenklestirme.getId(), ap);
 		}
 		if (!puantajMap.isEmpty()) {
+			List dataIdList = new ArrayList(puantajMap.keySet());
+			String fieldName = "personelDenklestirme.id";
 			fields.clear();
-			fields.put("personelDenklestirme.id", new ArrayList(puantajMap.keySet()));
-			fields.put(PdksEntityController.MAP_KEY_MAP, "getPersonelDenklestirmeId");
+			fields.put(fieldName, dataIdList);
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-			TreeMap<Long, PersonelDenklestirmeBordro> bordroMap = pdksEntityController.getObjectByInnerObjectMap(fields, PersonelDenklestirmeBordro.class, false);
+			// fields.put(PdksEntityController.MAP_KEY_MAP, "getPersonelDenklestirmeId");
+			// TreeMap<Long, PersonelDenklestirmeBordro> bordroMap = pdksEntityController.getObjectByInnerObjectMap(fields, PersonelDenklestirmeBordro.class, false);
+			TreeMap<Long, PersonelDenklestirmeBordro> bordroMap = ortakIslemler.getParamTreeMap(Boolean.FALSE, "getPersonelDenklestirmeId", false, dataIdList, fieldName, fields, PersonelDenklestirmeBordro.class, session);
 			TreeMap<String, PersonelDenklestirmeBordroDetay> bordroDetayMap = null;
 			List<Long> idList = new ArrayList<Long>();
 			if (!bordroMap.isEmpty()) {
@@ -831,6 +892,17 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 				if (!(personelDenklestirme.getDurum() || fazlaMesaiHesapla == false))
 					continue;
 				boolean flush = false;
+				PersonelDenklestirmeDinamikAlan devamPrim = null;
+				if (ap.getDinamikAlanMap() != null) {
+					for (Object key : ap.getDinamikAlanMap().keySet()) {
+						PersonelDenklestirmeDinamikAlan personelDenklestirmeDinamikAlan = ap.getDinamikAlanMap().get(key);
+						if (personelDenklestirmeDinamikAlan.getDurum() && personelDenklestirmeDinamikAlan.getAlan().getKodu().equals(PersonelDenklestirmeDinamikAlan.TIPI_DEVAMLILIK_PRIMI)) {
+							devamPrim = personelDenklestirmeDinamikAlan;
+						}
+
+					}
+
+				}
 				CalismaModeli calismaModeli = personelDenklestirme.getCalismaModeli();
 				try {
 					for (VardiyaHafta vardiyaHafta : ap.getVardiyaHaftaList()) {
@@ -889,7 +961,9 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 							IzinTipi izinTipi = null;
 							if (vardiyaGun.getIzin() != null) {
 								PersonelIzin personelIzin = vardiyaGun.getIzin();
-								if (vardiyaGun.getVardiyaDateStr().equals("20240106"))
+								if (personelIzin.getOrjIzin() != null)
+									personelIzin = personelIzin.getOrjIzin();
+								if (vardiyaGun.getVardiyaDateStr().equals("20240121"))
 									logger.debug("x");
 								izinTipi = personelIzin.getIzinTipi();
 								if (izinTipi != null) {
@@ -932,7 +1006,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 										}
 									}
 									if (izinTipi.getUcretli() && resmiTatil == false)
-										izinGunAdet += 1;
+										izinGunAdet += artiGun;
 
 								}
 
@@ -977,15 +1051,13 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 									resmiTatilAdet += calismaGun;
 								}
 							}
-							if (!haftaTatil)
+							if (!haftaTatil) {
 								normalGunAdet += calismaGun;
-							else {
-
+								// logger.info(vardiyaGun.getVardiyaDateStr() + " " + normalGunAdet);
+							} else {
 								haftaTatilAdet += calismaGun;
 							}
-							// logger.info(vardiyaGun.getVardiyaDateStr() + " " + (normalGunAdet + haftaTatilAdet + resmiTatilAdet));
 						}
-
 						if (vardiyaGun.isIzinli() == false) {
 							if (resmiTatil) {
 								if (!tatil.isYarimGunMu())
@@ -1006,7 +1078,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 
 				}
 
-				double toplamAdet = normalGunAdet + haftaTatilAdet + resmiTatilAdet;
+				double toplamAdet = normalGunAdet + haftaTatilAdet + resmiTatilAdet + izinGunAdet;
 				double toplamSaatAdet = saatlikCalisma ? normalSaat + haftaTatilSaat + resmiTatilSaat + izinGunSaat : 0;
 				double normalCalisma = ap.getSaatToplami() > ap.getPlanlananSure() ? ap.getPlanlananSure() : ap.getSaatToplami();
 				if (!detayMap.isEmpty() || (saatlikCalisma == false && toplamAdet > 0) || (saatlikCalisma && toplamSaatAdet > 0)) {
@@ -1041,8 +1113,8 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 					}
 					if (izinGunAdet > 0) {
 						detayMap.put(BordroDetayTipi.IZIN_GUN, izinGunAdet);
-						if (calismaModeli.isSaatlikOdeme() == false)
-							normalGunAdet -= izinGunAdet;
+						// if (calismaModeli.isSaatlikOdeme() == false)
+						// normalGunAdet -= izinGunAdet;
 					}
 
 					if (normalCalisma != 0)
@@ -1071,6 +1143,9 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 					HashMap<BordroDetayTipi, PersonelDenklestirmeBordroDetay> detayMap1 = new HashMap<BordroDetayTipi, PersonelDenklestirmeBordroDetay>();
 					denklestirmeBordro.setDetayMap(detayMap1);
 					if (kaydet || fazlaMesaiHesapla) {
+						if (devamPrim != null) {
+							detayMap.put(BordroDetayTipi.DEVAMSIZLIK_PRIMI, devamPrim.getIslemDurum() != null && devamPrim.getIslemDurum() ? 1.0d : 0.0d);
+						}
 						if (!detayMap.isEmpty()) {
 							for (BordroDetayTipi bordroDetayTipi : detayMap.keySet()) {
 								PersonelDenklestirmeBordroDetay bordroDetay = null;

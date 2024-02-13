@@ -283,7 +283,12 @@
 								</f:facet>
 								<h:outputText value="#{personelView.pdksPersonel.gorevTipi.aciklama}" />
 							</rich:column>
-
+							<rich:column rendered="#{pdksPersonelHome.personelTipiGoster and (authenticatedUser.admin or authenticatedUser.IKAdmin)}">
+								<f:facet name="header">
+									<h:outputText value="#{ortakIslemler.personelTipiAciklama()}" />
+								</f:facet>
+								<h:outputText value="#{personelView.pdksPersonel.personelTipi.aciklama}" />
+							</rich:column>
 							<rich:column rendered="#{pdksPersonelHome.partTimeDurum}">
 								<f:facet name="header">
 									Part Time
@@ -582,13 +587,19 @@
 										</f:facet>
 										<h:outputText value="#{personelERP.cinsiyeti}" title="Cinsiyet Kodu : #{personelERP.cinsiyetKodu}" />
 									</rich:column>
+									
 									<rich:column rendered="#{ortakIslemler.tesisDurumu and pdksPersonelHome.COL_TESIS_ADI>=0}">
 										<f:facet name="header">
 											<h:outputText value="#{ortakIslemler.tesisAciklama()} Adı" />
 										</f:facet>
 										<h:outputText value="#{personelERP.tesisAdi}" title="#{ortakIslemler.tesisAciklama()} Kodu : #{personelERP.tesisKodu}" />
 									</rich:column>
-
+<rich:column rendered="#{pdksPersonelHome.COL_PERSONEL_TIPI_ADI>=0}">
+										<f:facet name="header">
+											<h:outputText value="#{ortakIslemler.personelTipiAciklama()}" />
+										</f:facet>
+										<h:outputText value="#{personelERP.personelTipi}" title="#{ortakIslemler.personelTipiAciklama()} Kodu : #{personelERP.personelTipiKodu}" />
+									</rich:column>
 									<rich:column rendered="#{pdksPersonelHome.COL_DEPARTMAN_ADI>=0}">
 										<f:facet name="header">
 											<h:outputText value="#{pdksPersonelHome.departmanAciklama}" />
@@ -814,6 +825,16 @@
 												<s:convertEntity />
 											</h:selectOneMenu>
 										</s:decorate>
+										<s:decorate template="/layout/edit.xhtml" id="tipler" rendered="#{not empty pdksPersonelHome.personelTipleri}">
+											<ui:define name="label">#{ortakIslemler.personelTipiAciklama()}</ui:define>
+											<h:selectOneMenu value="#{pdksPersonelHome.instance.personelTipi}" required="#{pdksPersonelHome.instance.pdks}"
+												disabled="#{pdksPersonelHome.personelTipleri.size()==1 and pdksPersonelHome.instance.personelTipi!=null}">
+												<s:selectItems var="comp" value="#{pdksPersonelHome.personelTipleri}" label="#{comp.aciklama}" noSelectionLabel="Lütfen seçiniz" />
+												<a4j:support event="onchange" action="#{pdksPersonelHome.personelTipiDegisti()}" reRender="sirketDegisti" status="ajaxStatus"
+													ajaxSingle="true" />
+												<s:convertEntity />
+											</h:selectOneMenu>
+										</s:decorate>
 										<s:decorate template="/layout/edit.xhtml" id="modeller">
 											<ui:define name="label">#{ortakIslemler.calismaModeliAciklama()}</ui:define>
 											<h:selectOneMenu value="#{pdksPersonelHome.instance.calismaModeli}" required="#{pdksPersonelHome.instance.pdks}"
@@ -864,14 +885,14 @@
 
 											</h:selectOneMenu>
 										</s:decorate>
-										<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.instance.cinsiyetBayan}">
+										<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.instance.gebelikSutIzinVar}">
 											<ui:define name="label">Süt İzni</ui:define>
 											<h:selectBooleanCheckbox value="#{pdksPersonelHome.instance.sutIzni}">
 												<a4j:support event="onclick" action="#{pdksPersonelHome.durumGebeSutIzni('S')}" reRender="sirketDegisti" status="ajaxStatus"
 													ajaxSingle="true" />
 											</h:selectBooleanCheckbox>
 										</s:decorate>
-										<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.instance.cinsiyetBayan and pdksPersonelHome.gebeSecim}">
+										<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.instance.gebelikSutIzinVar and pdksPersonelHome.gebeSecim}">
 											<ui:define name="label">GebeMi</ui:define>
 											<h:selectBooleanCheckbox value="#{pdksPersonelHome.instance.gebeMi}">
 												<a4j:support event="onclick" action="#{pdksPersonelHome.durumGebeSutIzni('G')}" reRender="sirketDegisti" status="ajaxStatus"

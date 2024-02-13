@@ -18,40 +18,40 @@ import org.apache.log4j.Logger;
 
 import com.google.gson.Gson;
 import com.google.gson.internal.LinkedTreeMap;
-import com.pdks.dao.PdksDAO;
-import com.pdks.dao.impl.BaseDAOHibernate;
-import com.pdks.entity.BordroIzinGrubu;
-import com.pdks.entity.CalismaModeli;
-import com.pdks.entity.DenklestirmeAy;
-import com.pdks.entity.Departman;
-import com.pdks.entity.ERPPersonel;
-import com.pdks.entity.IzinReferansERP;
-import com.pdks.entity.IzinTipi;
-import com.pdks.entity.KapiSirket;
-import com.pdks.entity.Parameter;
-import com.pdks.entity.Personel;
-import com.pdks.entity.PersonelDenklestirme;
-import com.pdks.entity.PersonelDinamikAlan;
-import com.pdks.entity.PersonelIzin;
-import com.pdks.entity.PersonelIzinDetay;
-import com.pdks.entity.PersonelKGS;
-import com.pdks.entity.PersonelMesai;
-import com.pdks.entity.Role;
-import com.pdks.entity.ServiceData;
-import com.pdks.entity.Sirket;
-import com.pdks.entity.Tanim;
-import com.pdks.entity.User;
-import com.pdks.entity.UserRoles;
-import com.pdks.entity.Vardiya;
-import com.pdks.entity.VardiyaGun;
-import com.pdks.entity.VardiyaSablonu;
-import com.pdks.genel.model.Constants;
-import com.pdks.genel.model.MailManager;
-import com.pdks.genel.model.PdksUtil;
-import com.pdks.mail.model.MailFile;
-import com.pdks.mail.model.MailObject;
-import com.pdks.mail.model.MailPersonel;
-import com.pdks.mail.model.MailStatu;
+import org.pdks.dao.PdksDAO;
+import org.pdks.dao.impl.BaseDAOHibernate;
+import org.pdks.entity.BordroIzinGrubu;
+import org.pdks.entity.CalismaModeli;
+import org.pdks.entity.DenklestirmeAy;
+import org.pdks.entity.Departman;
+import org.pdks.entity.ERPPersonel;
+import org.pdks.entity.IzinReferansERP;
+import org.pdks.entity.IzinTipi;
+import org.pdks.entity.KapiSirket;
+import org.pdks.entity.Parameter;
+import org.pdks.entity.Personel;
+import org.pdks.entity.PersonelDenklestirme;
+import org.pdks.entity.PersonelDinamikAlan;
+import org.pdks.entity.PersonelIzin;
+import org.pdks.entity.PersonelIzinDetay;
+import org.pdks.entity.PersonelKGS;
+import org.pdks.entity.PersonelMesai;
+import org.pdks.entity.Role;
+import org.pdks.entity.ServiceData;
+import org.pdks.entity.Sirket;
+import org.pdks.entity.Tanim;
+import org.pdks.entity.User;
+import org.pdks.entity.UserRoles;
+import org.pdks.entity.Vardiya;
+import org.pdks.entity.VardiyaGun;
+import org.pdks.entity.VardiyaSablonu;
+import org.pdks.genel.model.Constants;
+import org.pdks.genel.model.MailManager;
+import org.pdks.genel.model.PdksUtil;
+import org.pdks.mail.model.MailFile;
+import org.pdks.mail.model.MailObject;
+import org.pdks.mail.model.MailPersonel;
+import org.pdks.mail.model.MailStatu;
 
 public class PdksVeriOrtakAktar implements Serializable {
 
@@ -95,13 +95,16 @@ public class PdksVeriOrtakAktar implements Serializable {
 
 	private ServiceData serviceData = null;
 
-	private boolean sistemDestekVar = false, izinGirisiVar = false, departmanYoneticiRolVar = false, yoneticiRolVarmi = false, updateYonetici2, altBolumDurum = false;
+	private boolean sistemDestekVar = false, izinGirisiVar = false, personelCalismaModeliVar = false, sablonCalismaModeliVar = false, departmanYoneticiRolVar = false, yoneticiRolVarmi = false, updateYonetici2, altBolumDurum = false;
 
 	private Tanim bosDepartman, ikinciYoneticiOlmaz;
 
 	private TreeMap<String, Tanim> genelTanimMap;
 
 	private List<Long> yoneticiIdList = null;
+
+	private List<CalismaModeli> modeller;
+	private List<VardiyaSablonu> sablonlar;
 
 	public PdksVeriOrtakAktar() {
 		super();
@@ -183,6 +186,27 @@ public class PdksVeriOrtakAktar implements Serializable {
 	}
 
 	/**
+	 * @param adi
+	 * @return
+	 */
+	public String getParametreDeger(String adi) {
+		PdksDAO pdksDAO = Constants.pdksDAO;
+		String deger = null;
+		HashMap fields = new HashMap();
+		fields.put("name", adi);
+		StringBuffer sb = new StringBuffer();
+		sb.append("select dbo.FN_GET_PARAMETRE_DEGER(:name) ");
+		List<Object> veriList = pdksDAO.getNativeSQLList(fields, sb, null);
+		if (veriList != null && !veriList.isEmpty()) {
+			Object object = veriList.get(0);
+			if (object != null && object instanceof String)
+				deger = (String) object;
+
+		}
+		return deger;
+	}
+
+	/**
 	 * @param dao
 	 */
 	private void personelKontrolVerileriAyarla(PdksDAO dao) {
@@ -200,7 +224,7 @@ public class PdksVeriOrtakAktar implements Serializable {
 		sb.append("	IZIN_DURUM AS (");
 		sb.append("		SELECT COUNT(I.ID) AS IZIN_TIPI_ADET FROM " + IzinTipi.TABLE_NAME + " I WITH(nolock)");
 		sb.append("			INNER JOIN " + Departman.TABLE_NAME + " D ON D." + Departman.COLUMN_NAME_ID + "=I." + IzinTipi.COLUMN_NAME_DEPARTMAN + " AND D." + Departman.COLUMN_NAME_ADMIN_DURUM + "=1 AND D." + Departman.COLUMN_NAME_DURUM + "=1");
-		sb.append("		WHERE I." + IzinTipi.COLUMN_NAME_DURUM + "=1  AND I." + IzinTipi.COLUMN_NAME_BAKIYE_IZIN_TIPI + " IS NULL AND I." + IzinTipi.COLUMN_NAME_GIRIS_TIPI + "<>'" + IzinTipi.GIRIS_TIPI_YOK + "'");
+		sb.append("		WHERE I." + IzinTipi.COLUMN_NAME_DEPARTMAN + "=1 AND I." + IzinTipi.COLUMN_NAME_DURUM + "=1  AND I." + IzinTipi.COLUMN_NAME_BAKIYE_IZIN_TIPI + " IS NULL AND I." + IzinTipi.COLUMN_NAME_GIRIS_TIPI + "<>'" + IzinTipi.GIRIS_TIPI_YOK + "'");
 		sb.append("	)");
 		sb.append("	SELECT COALESCE(DY.DEP_YONETICI_ROL_ADI,'') DEP_YONETICI_ROL_ADI,");
 		sb.append("		COALESCE(ID.IZIN_TIPI_ADET,0) IZIN_TIPI_ADET, GETDATE() AS TARIH FROM BUGUN B ");
@@ -333,26 +357,34 @@ public class PdksVeriOrtakAktar implements Serializable {
 	public void sistemVerileriniYukle(PdksDAO dao) {
 		if (dao != null) {
 			mesaj = null;
-			fields.clear();
-			// fields.put("active", Boolean.TRUE);
-			List<Parameter> list = dao.getObjectByInnerObjectList(fields, Parameter.class);
+			List<String> helpDeskList = new ArrayList<String>();
 			if (mailMap == null)
 				mailMap = new HashMap<String, Object>();
 			else
 				mailMap.clear();
-			sistemDestekVar = false;
 			HashMap<String, Parameter> pmMap = new HashMap<String, Parameter>();
-			List<String> helpDeskList = new ArrayList<String>();
-			for (Parameter parameter : list) {
-				String key = parameter.getName().trim(), deger = parameter.getValue().trim();
-				pmMap.put(key, parameter);
-				if (parameter.getActive() != null && parameter.getActive()) {
-					mailMap.put(key, deger);
-					if (parameter.isHelpDeskMi())
-						helpDeskList.add(key);
-				}
+			islemYapan = getSistemAdminUser(dao);
 
+			try {
+				fields.clear();
+				List<Parameter> list = dao.getObjectByInnerObjectList(fields, Parameter.class);
+				for (Parameter parameter : list) {
+					String key = parameter.getName().trim(), deger = parameter.getValue().trim();
+					pmMap.put(key, parameter);
+					if (parameter.getActive() != null && parameter.getActive()) {
+						mailMap.put(key, deger);
+						if (parameter.isHelpDeskMi())
+							helpDeskList.add(key);
+					}
+
+				}
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
 			}
+
+			sistemDestekVar = false;
+
 			String testSunucu = "srvglftest";
 			if (mailMap.containsKey("testSunucu"))
 				testSunucu = (String) mailMap.get("testSunucu");
@@ -410,8 +442,6 @@ public class PdksVeriOrtakAktar implements Serializable {
 			PdksUtil.setSistemBaslangicYili(mailMap.containsKey("sistemBaslangicYili") ? Integer.parseInt((String) mailMap.get("sistemBaslangicYili")) : 2010);
 			PdksUtil.setSistemDestekVar(sistemDestekVar);
 
-			islemYapan = getSistemAdminUser(dao);
-
 			setHelpDeskParametre(pmMap, dao);
 			pmMap = null;
 
@@ -426,6 +456,18 @@ public class PdksVeriOrtakAktar implements Serializable {
 	public static User getSistemAdminUser(PdksDAO dao) {
 		if (dao == null)
 			dao = Constants.pdksDAO;
+		// try {
+		// Departman departman = (Departman) dao.getObjectByInnerObject("id", 1L, Departman.class);
+		// if (departman != null) {
+		// Sirket sirket = (Sirket) dao.getObjectByInnerObject("id", 2L, Sirket.class);
+		// if (sirket != null)
+		// System.out.println(sirket.getAd());
+		// }
+		//
+		// } catch (Exception e) {
+		// System.err.println(e);
+		// e.printStackTrace();
+		// }
 		User user = null;
 		try {
 			LinkedHashMap<String, Object> fields = new LinkedHashMap<String, Object>();
@@ -1578,7 +1620,8 @@ public class PdksVeriOrtakAktar implements Serializable {
 			veriIsle("izinTipi", izinERP.getIzinTipi(), veriSorguMap);
 			veriIsle("personelIzin", izinERP.getReferansNoERP(), veriSorguMap);
 		}
-		List<Personel> personelList = pdksDAO.getObjectByInnerObjectList("pdksSicilNo", veriSorguMap.get("personel"), Personel.class);
+
+		List<Personel> personelList = getObjectListFromDataList("pdksSicilNo", veriSorguMap.get("personel"), Personel.class);
 		if (personelList.size() > 1)
 			personelList = PdksUtil.sortListByAlanAdi(personelList, "iseBaslamaTarihi", Boolean.FALSE);
 		TreeMap<String, Personel> personelMap = new TreeMap<String, Personel>();
@@ -1589,8 +1632,8 @@ public class PdksVeriOrtakAktar implements Serializable {
 		}
 		personelList = null;
 		// TreeMap<String, Personel> personelMap = veriSorguMap.containsKey("personel") ? pdksDAO.getObjectByInnerObjectMap("getPdksSicilNo", "pdksSicilNo", veriSorguMap.get("personel"), Personel.class, false) : new TreeMap<String, Personel>();
-		TreeMap<String, ERPPersonel> personelERPHataliMap = veriSorguMap.containsKey("personel") ? pdksDAO.getObjectByInnerObjectMap("getSicilNo", "sicilNo", veriSorguMap.get("personel"), ERPPersonel.class, false) : new TreeMap<String, ERPPersonel>();
-		TreeMap<String, IzinReferansERP> izinERPMap = veriSorguMap.containsKey("personelIzin") ? pdksDAO.getObjectByInnerObjectMap("getId", "id", veriSorguMap.get("personelIzin"), IzinReferansERP.class, false) : new TreeMap<String, IzinReferansERP>();
+		TreeMap<String, ERPPersonel> personelERPHataliMap = veriSorguMap.containsKey("personel") ? getParamListMap("getSicilNo", "sicilNo", veriSorguMap.get("personel"), ERPPersonel.class, false) : new TreeMap<String, ERPPersonel>();
+		TreeMap<String, IzinReferansERP> izinERPMap = veriSorguMap.containsKey("personelIzin") ? getParamListMap("getId", "id", veriSorguMap.get("personelIzin"), IzinReferansERP.class, false) : new TreeMap<String, IzinReferansERP>();
 		TreeMap<String, IzinTipi> izinTipiMap = null;
 		String erpIzinTipiOlusturStr = sistemDestekVar && mailMap.containsKey("erpIzinTipiOlustur") ? (String) mailMap.get("erpIzinTipiOlustur") : "";
 		boolean erpIzinTipiOlustur = erpIzinTipiOlusturStr.equals("1");
@@ -2762,7 +2805,8 @@ public class PdksVeriOrtakAktar implements Serializable {
 		Personel personelTest = new Personel();
 		String personelERPGuncelleme = mailMap.containsKey("personelERPOku") ? (String) mailMap.get("personelERPOku") : "";
 		boolean personelERPGuncellemeDurum = personelERPGuncelleme != null && personelERPGuncelleme.equalsIgnoreCase("M");
-
+		List<CalismaModeli> modelList = new ArrayList<CalismaModeli>();
+		List<VardiyaSablonu> sablonList = new ArrayList<VardiyaSablonu>();
 		for (String personelNo : personelList) {
 			kidemHataList.clear();
 			boolean calisiyor = false;
@@ -2773,6 +2817,7 @@ public class PdksVeriOrtakAktar implements Serializable {
 				boolean yoneticiPersonel = yoneticiBul || yoneticiNo.equals(personelNo);
 
 				Tanim cinsiyet = getTanim(null, Tanim.TIPI_CINSIYET, personelERP.getCinsiyetKodu(), personelERP.getCinsiyeti(), dataMap, saveList);
+				Tanim personelTipi = getTanim(null, Tanim.TIPI_PERSONEL_TIPI, personelERP.getPersonelTipiKodu(), personelERP.getPersonelTipi(), dataMap, saveList);
 				String soyadi = personelERP.getSoyadi() != null ? new String(personelERP.getSoyadi()) : null;
 				personelTest.setCinsiyet(bayanSoyadKontrol ? cinsiyet : null);
 				boolean bayanSoyad = false;
@@ -2990,6 +3035,32 @@ public class PdksVeriOrtakAktar implements Serializable {
 					Personel personel = personelPDKSMap.containsKey(personelNo) ? personelPDKSMap.get(personelNo) : null;
 					if (personel != null) {
 						personel.setCinsiyet(cinsiyet);
+						personel.setPersonelTipi(personelTipi);
+						sablonList.addAll(sablonlar);
+						modelList.addAll(modeller);
+						if (personelTipi != null && personelCalismaModeliVar) {
+							long id = personelTipi.getId().longValue();
+							for (Iterator iterator = modelList.iterator(); iterator.hasNext();) {
+								CalismaModeli calismaModeli = (CalismaModeli) iterator.next();
+								if (calismaModeli.getPersonelTipi() != null && calismaModeli.getPersonelTipi().getId().longValue() != id)
+									iterator.remove();
+							}
+							if (modelList.size() == 1)
+								personel.setCalismaModeli(modelList.get(0));
+						}
+						CalismaModeli cm = personel.getCalismaModeli();
+						if (cm != null && sablonCalismaModeliVar) {
+							long id = cm.getId().longValue();
+							for (Iterator iterator = sablonList.iterator(); iterator.hasNext();) {
+								VardiyaSablonu vardiyaSablonu = (VardiyaSablonu) iterator.next();
+								if (vardiyaSablonu.getCalismaModeli() != null && vardiyaSablonu.getCalismaModeli().getId().longValue() != id)
+									iterator.remove();
+							}
+						}
+						if (sablonList.size() == 1)
+							personel.setSablon(sablonList.get(0));
+						sablonList.clear();
+						modelList.clear();
 						PersonelKGS personelKGS2 = personel.getPersonelKGS();
 						personel.setDegisti(personel.getId() == null);
 						if (kapiSirket != null && personelKGS2.getKapiSirket() != null && !personelKGS2.getId().equals(personelKGS.getId()) && !personelKGS2.getKapiSirket().getId().equals(kapiSirket.getId())) {
@@ -3145,6 +3216,7 @@ public class PdksVeriOrtakAktar implements Serializable {
 								str = "Doğum tarihi boş olamaz!";
 							else if (sistemDestekVar == false || personelERP.getDogumTarihi().length() > 5)
 								str = "Doğum tarihi hatalıdır! (" + personelERP.getDogumTarihi() + " --> format : " + FORMAT_DATE + " )";
+
 							if (str != null) {
 								if (!izinERPUpdate)
 									addHatalist(personelERP.getHataList(), str);
@@ -3166,6 +3238,20 @@ public class PdksVeriOrtakAktar implements Serializable {
 								kidemHataList.add(str);
 							}
 
+						}
+
+					}
+					if (dogumTarihi != null) {
+						String str = null;
+						if (iseBaslamaTarihi != null && iseBaslamaTarihi.before(dogumTarihi))
+							str = "İşe giriş tarihi doğum tarihinden önce olamaz!";
+						else if (grubaGirisTarihi != null && grubaGirisTarihi.before(dogumTarihi))
+							str = "Gruba giriş tarihi doğum tarihinden önce olamaz!";
+						if (str != null) {
+							if (izinGirisiVar == false)
+								kidemHataList.add(str);
+							else
+								addHatalist(personelERP.getHataList(), str);
 						}
 
 					}
@@ -3227,8 +3313,6 @@ public class PdksVeriOrtakAktar implements Serializable {
 							personel.setGrubaGirisTarihi(grubaGirisTarihi);
 
 					} else {
-						if (dogumTarihi != null && grubaGirisTarihi.before(dogumTarihi))
-							addHatalist(personelERP.getHataList(), "Grubu giriş tarihi doğum tarihinden önce olamaz!");
 						if (iseBaslamaTarihi != null && iseBaslamaTarihi.before(grubaGirisTarihi))
 							addHatalist(personelERP.getHataList(), "İşe giriş tarihi grubu giriş tarihinden önce olamaz!");
 						if (izinHakEdisTarihi != null && izinHakEdisTarihi.before(grubaGirisTarihi))
@@ -3388,6 +3472,8 @@ public class PdksVeriOrtakAktar implements Serializable {
 			}
 
 		}
+		sablonList = null;
+		modelList = null;
 		personelTest = null;
 		if (yoneticiBul || kendiYonetici) {
 			for (String personelNo : personelList) {
@@ -3509,6 +3595,64 @@ public class PdksVeriOrtakAktar implements Serializable {
 			}
 		}
 
+	}
+
+	/**
+	 * @param method
+	 * @param fieldName
+	 * @param dataIdList
+	 * @param class1
+	 * @param yaz
+	 * @return
+	 */
+	public TreeMap getParamListMap(String method, String fieldName, List dataIdList, Class class1, boolean yaz) {
+		TreeMap map = new TreeMap();
+		if (dataIdList != null) {
+			List veriList = getObjectListFromDataList(fieldName, dataIdList, class1);
+			if (!veriList.isEmpty())
+				map = pdksDAO.getTreeMapByList(veriList, method, yaz);
+		}
+		return map;
+	}
+
+	/**
+	 * @param fieldName
+	 * @param dataIdList
+	 * @param class1
+	 * @return
+	 */
+	public List getObjectListFromDataList(String fieldName, List dataIdList, Class class1) {
+		List idList = new ArrayList();
+		List veriList = new ArrayList();
+		if (pdksDAO == null)
+			pdksDAO = Constants.pdksDAO;
+		int size = 1800;
+		List idInputList = new ArrayList(dataIdList);
+		while (!idInputList.isEmpty()) {
+			for (Iterator iterator = idInputList.iterator(); iterator.hasNext();) {
+				Object long1 = (Object) iterator.next();
+				idList.add(long1);
+				iterator.remove();
+				if (idList.size() >= size)
+					break;
+			}
+			HashMap fields = new HashMap();
+			fields.put(fieldName, idList);
+			try {
+				List list = pdksDAO.getObjectByInnerObjectList(fields, class1);
+				if (!list.isEmpty())
+					veriList.addAll(list);
+				list = null;
+			} catch (Exception e) {
+				logger.error(e);
+				idInputList.clear();
+			}
+
+			fields = null;
+			idList.clear();
+
+		}
+		return veriList;
 	}
 
 	/**
@@ -3700,8 +3844,28 @@ public class PdksVeriOrtakAktar implements Serializable {
 		fields.put("beyazYakaDefault", Boolean.TRUE);
 		fields.put("isKur", Boolean.TRUE);
 		isKurVardiyaSablonu = (VardiyaSablonu) pdksDAO.getObjectByInnerObject(fields, VardiyaSablonu.class);
+		sablonCalismaModeliVar = false;
+		personelCalismaModeliVar = false;
+		fields.clear();
+		fields.put("durum", Boolean.TRUE);
+		fields.put("isKur", Boolean.FALSE);
+		sablonlar = pdksDAO.getObjectByInnerObjectList(fields, VardiyaSablonu.class);
+		for (Iterator iterator = sablonlar.iterator(); iterator.hasNext();) {
+			VardiyaSablonu sablon = (VardiyaSablonu) iterator.next();
+			if (sablon.getDepartman() != null && sablon.getDepartman().isAdminMi() == false)
+				iterator.remove();
+			else if (!sablonCalismaModeliVar)
+				sablonCalismaModeliVar = sablon.getCalismaModeli() != null;
 
-		List<CalismaModeli> modeller = pdksDAO.getObjectByInnerObjectList("durum", Boolean.TRUE, CalismaModeli.class);
+		}
+		modeller = pdksDAO.getObjectByInnerObjectList("durum", Boolean.TRUE, CalismaModeli.class);
+		for (Iterator iterator = modeller.iterator(); iterator.hasNext();) {
+			CalismaModeli calismaModeli = (CalismaModeli) iterator.next();
+			if (calismaModeli.getDepartman() != null && calismaModeli.getDepartman().isAdminMi() == false)
+				iterator.remove();
+			else if (!personelCalismaModeliVar)
+				personelCalismaModeliVar = calismaModeli.getPersonelTipi() != null;
+		}
 		if (!modeller.isEmpty()) {
 			if (modeller.size() == 1)
 				calismaModeli = modeller.get(0);
@@ -3761,9 +3925,10 @@ public class PdksVeriOrtakAktar implements Serializable {
 			personelDigerMap.put(personelKGS.getSicilNo(), personel);
 		}
 		personelDigerList = null;
-		TreeMap<String, ERPPersonel> personelERPHataliMap = !fields.isEmpty() ? pdksDAO.getObjectByInnerObjectMap(fields, ERPPersonel.class, true) : new TreeMap<String, ERPPersonel>();
-		TreeMap<String, Sirket> sirketMap = veriSorguMap.containsKey("sirket") ? pdksDAO.getObjectByInnerObjectMap("getErpKodu", "erpKodu", veriSorguMap.get("sirket"), Sirket.class, false) : new TreeMap<String, Sirket>();
-		TreeMap<String, Personel> personelPDKSMap = veriSorguMap.containsKey("personel") ? pdksDAO.getObjectByInnerObjectMap("getPdksSicilNo", "pdksSicilNo", veriSorguMap.get("personel"), Personel.class, false) : new TreeMap<String, Personel>();
+
+		TreeMap<String, ERPPersonel> personelERPHataliMap = !personelNoList.isEmpty() ? getParamListMap("getSicilNo", "sicilNo", personelNoList, ERPPersonel.class, true) : new TreeMap<String, ERPPersonel>();
+		TreeMap<String, Sirket> sirketMap = veriSorguMap.containsKey("sirket") ? getParamListMap("getErpKodu", "erpKodu", veriSorguMap.get("sirket"), Sirket.class, false) : new TreeMap<String, Sirket>();
+		TreeMap<String, Personel> personelPDKSMap = veriSorguMap.containsKey("personel") ? getParamListMap("getPdksSicilNo", "pdksSicilNo", veriSorguMap.get("personel"), Personel.class, false) : new TreeMap<String, Personel>();
 		fields.clear();
 		fields.put("Map", "getKodu");
 		fields.put("tipi", Tanim.TIPI_PERSONEL_EK_SAHA);
@@ -3787,6 +3952,7 @@ public class PdksVeriOrtakAktar implements Serializable {
 		tanimGetir(personelEKSahaVeriMap, Tanim.TIPI_BORDRO_ALT_BIRIMI);
 		tanimGetir(personelEKSahaVeriMap, Tanim.TIPI_ERP_MASRAF_YERI);
 		tanimGetir(personelEKSahaVeriMap, Tanim.TIPI_TESIS);
+		tanimGetir(personelEKSahaVeriMap, Tanim.TIPI_PERSONEL_TIPI);
 		dataMap.put("personelEKSahaVeriMap", personelEKSahaVeriMap);
 		dataMap.put("personelEKSahaMap", personelEKSahaMap);
 		dataMap.put("personelPDKSMap", personelPDKSMap);

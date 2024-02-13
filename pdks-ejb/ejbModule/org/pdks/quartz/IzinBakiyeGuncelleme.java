@@ -27,6 +27,7 @@ import org.jboss.seam.annotations.async.Expiration;
 import org.jboss.seam.annotations.async.IntervalCron;
 import org.jboss.seam.async.QuartzTriggerHandle;
 import org.jboss.seam.faces.Renderer;
+import org.pdks.entity.Departman;
 import org.pdks.entity.IzinHakedisHakki;
 import org.pdks.entity.IzinTipi;
 import org.pdks.entity.Parameter;
@@ -75,6 +76,7 @@ public class IzinBakiyeGuncelleme implements Serializable {
 	private List<PersonelIzin> izinList;
 	private static final String PARAMETER_KEY = "izinBakiyeGuncelleme";
 	private static boolean ozelKontrol = Boolean.FALSE;
+	private boolean guncellemeDBDurum = Boolean.FALSE, zamanDurum = false;
 
 	@Asynchronous
 	@SuppressWarnings("unchecked")
@@ -84,7 +86,10 @@ public class IzinBakiyeGuncelleme implements Serializable {
 		hataKonum = "izinBakiyeGuncellemeTimer başladı ";
 		if (pdksEntityController != null && !isCalisiyor()) {
 			Session session = null;
-			if (PdksUtil.getCanliSunucuDurum() || PdksUtil.getTestSunucuDurum())
+			boolean sunucuDurum = PdksUtil.getCanliSunucuDurum() || PdksUtil.getTestSunucuDurum();
+			zamanDurum = false;
+			// sunucuDurum = true;
+			if (sunucuDurum)
 				izinGuncelemeCalistir(false, session);
 		}
 		return null;
@@ -94,10 +99,12 @@ public class IzinBakiyeGuncelleme implements Serializable {
 	 * @param manuel
 	 * @param session
 	 */
-	public void izinGuncelemeCalistir(boolean manuel, Session session) {
+	public boolean izinGuncelemeCalistir(boolean manuel, Session session) {
 		setCalisiyor(Boolean.TRUE);
 		ozelKontrol = Boolean.FALSE;
 		boolean hataGonder = Boolean.FALSE;
+		guncellemeDBDurum = false;
+		StringBuffer sb = new StringBuffer();
 		try {
 			if (session == null)
 				session = PdksUtil.getSession(entityManager, Boolean.TRUE);
@@ -106,27 +113,47 @@ public class IzinBakiyeGuncelleme implements Serializable {
 			hataKonum = "Paramatre okunuyor ";
 			Parameter parameter = ortakIslemler.getParameter(session, PARAMETER_KEY);
 			String value = (parameter != null) ? parameter.getValue() : null;
-			boolean zamanDurum = manuel || (PdksUtil.zamanKontrol(PARAMETER_KEY, value, time) && ortakIslemler.getGuncellemeDurum(PersonelIzin.TABLE_NAME, session));
+			String izinERPTableViewAdi = ortakIslemler.getParameterKey(ortakIslemler.getParametreIzinERPTableView());
+			zamanDurum = manuel || PdksUtil.zamanKontrol(PARAMETER_KEY, value, time);
+			boolean tableERPOku = PdksUtil.hasStringValue(izinERPTableViewAdi);
+			if (!zamanDurum && tableERPOku) {
+				String parameterUpdateKey = PARAMETER_KEY + "Update";
+				value = ortakIslemler.getParameterKey(PARAMETER_KEY + "Update");
+				guncellemeDBDurum = PdksUtil.zamanKontrol(parameterUpdateKey, value, time);
+			}
 			hataKonum = "Paramatre okundu ";
-			if (zamanDurum) {
-				hataKonum = "İzin durum kontrolu yapılıyor ";
-				HashMap fields = new HashMap();
-				fields.put("durum=", Boolean.TRUE);
-				fields.put("departman.izinGirilebilir=", Boolean.TRUE);
-				fields.put("personelGirisTipi<>", IzinTipi.GIRIS_TIPI_YOK);
-				if (session != null)
-					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				List<IzinTipi> list = pdksEntityController.getObjectByInnerObjectListInLogic(fields, IzinTipi.class);
-				if (!list.isEmpty())
-					izinBakiyeGuncellemeCalistir(session, true);
-
+			if (zamanDurum || guncellemeDBDurum) {
+				if (ortakIslemler.getGuncellemeDurum(PersonelIzin.TABLE_NAME, session)) {
+					hataKonum = "İzin durum kontrolu yapılıyor ";
+					if (tableERPOku) {
+						String uygulamaBordro = ortakIslemler.getParameterKey("uygulamaBordro");
+						logger.info(uygulamaBordro + " izin bilgileri güncelleniyor in " + PdksUtil.getCurrentTimeStampStr());
+						ortakIslemler.izinERPDBGuncelle(guncellemeDBDurum, session);
+						logger.info(uygulamaBordro + " izin bilgileri güncelleniyor out " + PdksUtil.getCurrentTimeStampStr());
+					}
+					if (zamanDurum) {
+						HashMap fields = new HashMap();
+						sb.append(" SELECT DISTINCT  IT." + IzinTipi.COLUMN_NAME_ID + " FROM " + IzinTipi.TABLE_NAME + " IT  WITH(nolock) ");
+						sb.append(" INNER JOIN " + Departman.TABLE_NAME + "  D ON D." + Departman.COLUMN_NAME_ID + "=IT." + IzinTipi.COLUMN_NAME_DEPARTMAN);
+						sb.append(" AND D." + Departman.COLUMN_NAME_IZIN_GIRILEBILIR + " = 1 ");
+						sb.append(" WHERE IT." + IzinTipi.COLUMN_NAME_DURUM + "=1 AND IT." + IzinTipi.COLUMN_NAME_GIRIS_TIPI + "<>:t");
+						fields.put("t", IzinTipi.GIRIS_TIPI_YOK);
+						if (session != null)
+							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+						List list = pdksEntityController.getObjectBySQLList(sb, fields, null);
+						if (!list.isEmpty())
+							izinBakiyeGuncellemeCalistir(session, true);
+						else
+							zamanDurum = false;
+						list = null;
+					}
+				}
 			}
 
 		} catch (Exception e) {
-			logger.error("PDKS hata in : \n");
+			logger.error(sb.toString() + " " + e);
 			e.printStackTrace();
-			logger.error("PDKS hata out : " + e.getMessage());
-			if (hataGonder)
+			if (hataGonder && zamanDurum)
 				try {
 					zamanlayici.mailGonder(session, null, "İzin Bakiye Güncellemesi", "İzin bakiyeleri güncellenmemiştir." + e.getMessage() + " ( " + hataKonum + " )", null, Boolean.TRUE);
 
@@ -139,6 +166,7 @@ public class IzinBakiyeGuncelleme implements Serializable {
 			setCalisiyor(Boolean.FALSE);
 
 		}
+		return zamanDurum;
 	}
 
 	/**
@@ -149,12 +177,13 @@ public class IzinBakiyeGuncelleme implements Serializable {
 	public void izinBakiyeGuncellemeCalistir(Session session, Boolean mailGonder) throws Exception {
 		logger.info("izinleriHesapla basladi " + PdksUtil.getCurrentTimeStampStr());
 		ozelKontrol = zamanlayici.getOzelKontrol(session);
+
 		User sistemAdminUser = ortakIslemler.getSistemAdminUser(session);
 		hataKonum = "izinleriHesapla başladı ";
 		if (sistemAdminUser != null)
 			sistemAdminUser.setLogin(Boolean.FALSE);
 		izinleriHesapla(sistemAdminUser, session);
-		if (mailGonder)
+		if (mailGonder && zamanDurum)
 			zamanlayici.mailGonder(session, null, "İzin Bakiye Güncellemesi", "İzin bakiyeleri güncellenmiştir.", null, Boolean.TRUE);
 		logger.info("izinleriHesapla bitti " + PdksUtil.getCurrentTimeStampStr());
 	}

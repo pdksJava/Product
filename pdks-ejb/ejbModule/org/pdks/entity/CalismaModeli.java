@@ -22,10 +22,11 @@ import org.pdks.session.PdksUtil;
 @Entity(name = CalismaModeli.TABLE_NAME)
 public class CalismaModeli extends BasePDKSObject implements Serializable {
 
+	 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 4015750209129001721L;
+	private static final long serialVersionUID = -445686730459083532L;
 	public static final String TABLE_NAME = "CALISMA_MODELI";
 	public static final String COLUMN_NAME_DURUM = "DURUM";
 	public static final String COLUMN_NAME_GENEL_VARDIYA = "GENEL_VARDIYA";
@@ -46,15 +47,18 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_FAZLA_CALISMA_GORUNTULENSIN = "FAZLA_CALISMA_GORUNTULENSIN";
 	public static final String COLUMN_NAME_TOPLAM_GUN_GUNCELLE = "TOPLAM_GUN_GUNCELLE";
 	public static final String COLUMN_NAME_ILK_PLAN_ONAYLI = "ILK_PLAN_ONAYLI";
+	public static final String COLUMN_NAME_GUN_MAX_CALISMA_SURESI_ODENIR = "GUN_MAX_CALISMA_SURESI_ODENIR";
+	public static final String COLUMN_NAME_PERSONEL_TIPI = "PERSONEL_TIPI_ID";
 
 	private String aciklama = "";
 	private double haftaIci = 0.0d, haftaSonu = 0.0d, arife = 0.0d, izin = 9.0d, izinhaftaSonu = 0.0d, negatifBakiyeDenkSaat = 0.0d;
 
 	private Boolean fazlaMesaiVar = Boolean.TRUE, toplamGunGuncelle = Boolean.FALSE, durum = Boolean.TRUE, genelVardiya = Boolean.TRUE, hareketKaydiVardiyaBul = Boolean.FALSE;
 	private Boolean haftaTatilMesaiOde = Boolean.FALSE, geceHaftaTatilMesaiParcala = Boolean.FALSE, geceCalismaOdemeVar = Boolean.FALSE, otomatikFazlaCalismaOnaylansin = Boolean.FALSE;
-	private Boolean ortakVardiya = Boolean.FALSE, fazlaMesaiGoruntulensin = Boolean.TRUE, ilkPlanOnayliDurum = Boolean.FALSE;
+	private Boolean ortakVardiya = Boolean.FALSE, fazlaMesaiGoruntulensin = Boolean.TRUE, ilkPlanOnayliDurum = Boolean.FALSE, gunMaxCalismaOdemeDurum = Boolean.TRUE;
 	private VardiyaSablonu bagliVardiyaSablonu;
 	private Departman departman;
+	private Tanim personelTipi;
 	private Boolean aylikMaas = Boolean.TRUE;
 
 	private User guncelleyenUser, olusturanUser;
@@ -240,6 +244,15 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 		this.ilkPlanOnayliDurum = ilkPlanOnayliDurum;
 	}
 
+	@Column(name = COLUMN_NAME_GUN_MAX_CALISMA_SURESI_ODENIR)
+	public Boolean getGunMaxCalismaOdemeDurum() {
+		return gunMaxCalismaOdemeDurum;
+	}
+
+	public void setGunMaxCalismaOdemeDurum(Boolean gunMaxCalismaOdemeDurum) {
+		this.gunMaxCalismaOdemeDurum = gunMaxCalismaOdemeDurum;
+	}
+
 	@ManyToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
 	@JoinColumn(name = COLUMN_NAME_BAGLI_VARDIYA_SABLON)
 	@Fetch(FetchMode.JOIN)
@@ -256,6 +269,17 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	@Fetch(FetchMode.JOIN)
 	public Departman getDepartman() {
 		return departman;
+	}
+
+	@ManyToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
+	@JoinColumn(name = COLUMN_NAME_PERSONEL_TIPI)
+	@Fetch(FetchMode.JOIN)
+	public Tanim getPersonelTipi() {
+		return personelTipi;
+	}
+
+	public void setPersonelTipi(Tanim personelTipi) {
+		this.personelTipi = personelTipi;
 	}
 
 	public void setDepartman(Departman departman) {
@@ -404,6 +428,11 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	@Transient
 	public boolean isIlkPlanOnaylidir() {
 		return ilkPlanOnayliDurum != null && ilkPlanOnayliDurum;
+	}
+
+	@Transient
+	public boolean isGunMaxCalismaOdenir() {
+		return gunMaxCalismaOdemeDurum != null && gunMaxCalismaOdemeDurum;
 	}
 
 }

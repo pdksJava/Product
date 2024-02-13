@@ -129,9 +129,42 @@ public class PdksUtil implements Serializable {
 
 	private static double odenenFazlaMesaiSaati = 30d;
 
-	private static Integer yarimYuvarlaLast = 1;
+	private static Integer yarimYuvarlaLast = 1, sicilNoUzunluk = null;
 
 	private static boolean sistemDestekVar = false, puantajSorguAltBolumGir = false;
+
+	/**
+	 * @param prefix
+	 * @param sicilNo
+	 * @return
+	 */
+	public static boolean isStringEqual(String prefix, String sicilNo) {
+		boolean sonuc = false;
+		if (PdksUtil.hasStringValue(prefix) && PdksUtil.hasStringValue(sicilNo)) {
+			sicilNo = sicilNo.trim();
+			prefix = prefix.trim();
+			if (!prefix.equals(sicilNo)) {
+				boolean sayisal = false;
+				Long sayi = null;
+				try {
+					sayi = Long.parseLong(prefix);
+				} catch (Exception e) {
+					sayi = null;
+				}
+				sayisal = sayi != null && sayi.longValue() > 0L;
+				if (sayisal) {
+					sonuc = sicilNo.endsWith(prefix);
+				} else {
+					String str1 = sicilNo.toLowerCase(TR_LOCALE);
+					String str2 = prefix.toLowerCase(TR_LOCALE);
+					sonuc = str1.startsWith(str2);
+				}
+			} else
+				sonuc = true;
+
+		}
+		return sonuc;
+	}
 
 	/**
 	 * @return
@@ -2587,13 +2620,13 @@ public class PdksUtil implements Serializable {
 			String dakikaStr = st.nextToken();
 			List<String> saatList = new ArrayList<String>(), dakikaList = new ArrayList<String>();
 			try {
-				getQuartList(saatStr, saatList, 24);
-				getQuartList(dakikaStr, dakikaList, 60);
+				getQuartList(saatStr, saatList, 24, 1);
+				getQuartList(dakikaStr, dakikaList, 60, 5);
 			} catch (Exception e) {
 			}
 			durum = false;
 			st = null;
- 			for (String saatData : saatList) {
+			for (String saatData : saatList) {
 				try {
 					saatDeger = Integer.parseInt(saatData);
 				} catch (Exception e) {
@@ -2605,11 +2638,11 @@ public class PdksUtil implements Serializable {
 					try {
 						dakikaDeger = Integer.parseInt(dakikaData);
 					} catch (Exception e) {
- 						dakikaDeger = -1;
+						dakikaDeger = -1;
 					}
 					if (dakikaDeger < 0 || dakikaDeger > 59)
 						continue;
- 					durum = saat == saatDeger && dakika == dakikaDeger;
+					durum = saat == saatDeger && dakika == dakikaDeger;
 					if (durum)
 						break;
 				}
@@ -2627,8 +2660,10 @@ public class PdksUtil implements Serializable {
 	 * @param str
 	 * @param list
 	 * @param lastIndex
+	 * @param step
+	 * @throws Exception
 	 */
-	private static void getQuartList(String str, List<String> list, int lastIndex) throws Exception {
+	private static void getQuartList(String str, List<String> list, int lastIndex, int step) throws Exception {
 		if (str.equals("*") || str.equals("-") || str.equals(",")) {
 			for (int i = 0; i < lastIndex; i++)
 				list.add(String.valueOf(i));
@@ -2653,7 +2688,7 @@ public class PdksUtil implements Serializable {
 					bit = lastIndex;
 			}
 
-			for (int i = bas; i < bit; i++)
+			for (int i = bas; i < bit; i += step)
 				list.add(String.valueOf(i));
 
 		} else
@@ -3528,6 +3563,14 @@ public class PdksUtil implements Serializable {
 
 	public static void setPuantajSorguAltBolumGir(boolean puantajSorguAltBolumGir) {
 		PdksUtil.puantajSorguAltBolumGir = puantajSorguAltBolumGir;
+	}
+
+	public static Integer getSicilNoUzunluk() {
+		return sicilNoUzunluk;
+	}
+
+	public static void setSicilNoUzunluk(Integer sicilNoUzunluk) {
+		PdksUtil.sicilNoUzunluk = sicilNoUzunluk;
 	}
 
 }

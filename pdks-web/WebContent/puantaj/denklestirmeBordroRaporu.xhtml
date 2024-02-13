@@ -23,7 +23,7 @@
 									reRender="denklestirmeDonemiTable,anaForm" />
 							</rich:inputNumberSpinner>
 						</s:decorate>
-						<s:decorate template="/layout/edit.xhtml">
+						<s:decorate template="/layout/edit.xhtml" rendered="#{denklestirmeBordroRaporuHome.aylar!=null}">
 							<ui:define name="label">Ay</ui:define>
 							<h:selectOneMenu value="#{denklestirmeBordroRaporuHome.ay}" required="true" requiredMessage="Başlangıç ay seçiniz">
 								<f:selectItem itemLabel="Lütfen seçiniz" />
@@ -99,11 +99,21 @@
 						<h:panelGrid columns="4">
 							<a4j:commandButton status="ajaxStatus" action="#{denklestirmeBordroRaporuHome.fillPersonelDenklestirmeList}" value="Getir"
 								reRender="denklestirmeDonemiTable,anaForm" />
-							<ui:fragment
-								rendered="#{denklestirmeBordroRaporuHome.denklestirmeAy.durum and (denklestirmeBordroRaporuHome.adminRole or ortakIslemler.getParameterKeyHasStringValue('sirketFazlaMesaiGuncelleme')) }">
+							<ui:fragment rendered="#{denklestirmeBordroRaporuHome.adminRole or ortakIslemler.getParameterKeyHasStringValue('sirketFazlaMesaiGuncelleme') }">
 								<ui:fragment rendered="#{denklestirmeBordroRaporuHome.sirket.tesisDurum==false or denklestirmeBordroRaporuHome.tesisId gt 0 }">
-									<a4j:commandButton status="ajaxStatus" value="#{denklestirmeBordroRaporuHome.fazlaMesaiGuncellemeAciklama} Fazla Mesai Hesapla"
-										action="#{denklestirmeBordroRaporuHome.sirketFazlaMesaiGuncelleme()}" reRender="denklestirmeDonemiTable,anaForm" />
+									<ui:fragment rendered="#{denklestirmeBordroRaporuHome.denklestirmeAy.durum}">
+										<a4j:commandButton status="ajaxStatus" value="#{denklestirmeBordroRaporuHome.fazlaMesaiGuncellemeAciklama} Fazla Mesai Hesapla"
+											action="#{denklestirmeBordroRaporuHome.sirketFazlaMesaiGuncelleme()}" reRender="denklestirmeDonemiTable,anaForm" />
+									</ui:fragment>
+									<ui:fragment rendered="#{denklestirmeBordroRaporuHome.denklestirmeAy.durum==false and denklestirmeBordroRaporuHome.adminRole}">
+										<a4j:commandButton id="donemKapali#{denklestirmeBordroRaporuHome.denklestirmeAy.id}" status="ajaxStatus"
+											value="#{denklestirmeBordroRaporuHome.fazlaMesaiGuncellemeAciklama} Fazla Mesai Hesapla"
+											oncomplete="#{rich:component('onayFazlaMesaiHesapPanel')}.show()" reRender="onayFazlaMesaiHesapPanel">
+										</a4j:commandButton>
+										<rich:toolTip for="donemKapali#{denklestirmeBordroRaporuHome.denklestirmeAy.id}">
+											 Dönem kapalı hesaplama onaylı hesaplama yapılacaktır.
+											</rich:toolTip>
+									</ui:fragment>
 								</ui:fragment>
 							</ui:fragment>
 							<h:commandLink value="Excel" action="#{denklestirmeBordroRaporuHome.denklestirmeExcelAktar}" target="blank"
@@ -142,11 +152,43 @@
 												<h:graphicImage value="/img/msgerror.png" style="border:0" height="20" width="20" />
 												<rich:toolTip for="denk#{puantaj.pdksPersonel.id}">
 													<ui:fragment rendered="#{puantaj.personelDenklestirmeAylik.onaylandi}">
-														<span style="color: red; font-style: 14;">#{denklestirmeBordroRaporuHome.fazlaMesaiHesaplaMenuAdi} Hatalı Göster</span>
+														<span style="color: red; font-size: 14px;">#{denklestirmeBordroRaporuHome.fazlaMesaiHesaplaMenuAdi} Hatalı Göster</span>
+														<ui:fragment rendered="#{not empty puantaj.vardiyalar}">
+															<p style="height: 10px;"></p>
+															<rich:dataTable rowClasses="acik,koyu" value="#{puantaj.vardiyalar}" var="vardiyaGun">
+
+																<f:facet name="header">
+																	<ui:fragment>
+																		<h:outputText value="#{puantaj.pdksPersonel.pdksSicilNo} #{puantaj.pdksPersonel.adSoyad}" />
+																		<br></br>
+																		<br></br>
+												
+														Kapı Giriş Hatalı veya Fazla Çalışması Onay Bekleyen Günler
+														</ui:fragment>
+																</f:facet>
+
+																<rich:column style="text-align: center;">
+																	<f:facet name="header">
+															Tarih
+														</f:facet>
+																	<h:outputText value="#{authenticatedUser.dateFormatla(vardiyaGun.vardiyaDate)}" />
+																</rich:column>
+																<rich:column style="text-align: left;">
+																	<f:facet name="header">
+															Vardiya
+														</f:facet>
+																	<h:outputText value="#{vardiyaGun.vardiya.kisaAdi } [ #{vardiyaGun.vardiyaAdi } ]" />
+																</rich:column>
+
+															</rich:dataTable>
+														</ui:fragment>
+
+
+
 													</ui:fragment>
 													<ui:fragment rendered="#{puantaj.personelDenklestirmeAylik.onaylandi==false}">
 
-														<span style="color: blue; font-style: 14;">Çalışma planı onaylanmamıştır!</span>
+														<span style="color: blue; font-size: 14px;">Çalışma planı onaylanmamıştır!</span>
 													</ui:fragment>
 												</rich:toolTip>
 											</ui:fragment>
@@ -186,8 +228,8 @@
 											</ui:fragment>
 
 											<ui:fragment rendered="#{puantaj.vardiyalar!=null}">
+												<p style="height: 10px;"></p>
 												<rich:dataTable rowClasses="acik,koyu" value="#{puantaj.vardiyalar}" var="vardiyaGun">
-
 													<f:facet name="header">
 														<ui:fragment>
 															<h:outputText value="#{puantaj.pdksPersonel.pdksSicilNo} #{puantaj.pdksPersonel.adSoyad}" />
@@ -195,7 +237,7 @@
 															<br></br>
 												
 														Kapı Giriş Kayıtı ve İzin Girilmeyen Günler
-</ui:fragment>
+														</ui:fragment>
 													</f:facet>
 
 													<rich:column style="text-align: center;">
@@ -266,7 +308,8 @@
 									</f:facet>
 									<h:outputText value="#{puantaj.calismaModeli.aciklama}" style="font-size: 9px;width:autostretch ;white-space: nowrap;" />
 								</rich:column>
-								<rich:column style="text-align:center">
+								<rich:column style="text-align:center"
+									rendered="#{denklestirmeBordroRaporuHome.baslikMap.containsKey(denklestirmeBordroRaporuHome.COL_ISE_BASLAMA_TARIHI)}">
 									<f:facet name="header">
 										<h:outputText value="#{denklestirmeBordroRaporuHome.getBaslikAciklama(denklestirmeBordroRaporuHome.COL_ISE_BASLAMA_TARIHI)}" />
 									</f:facet>
@@ -274,7 +317,8 @@
 										<h:outputText value="#{authenticatedUser.dateFormatla(puantaj.pdksPersonel.iseBaslamaTarihi)}" />
 									</ui:fragment>
 								</rich:column>
-								<rich:column style="text-align:center">
+								<rich:column style="text-align:center"
+									rendered="#{denklestirmeBordroRaporuHome.baslikMap.containsKey(denklestirmeBordroRaporuHome.COL_SSK_CIKIS_TARIHI)}">
 									<f:facet name="header">
 										<h:outputText value="#{denklestirmeBordroRaporuHome.getBaslikAciklama(denklestirmeBordroRaporuHome.COL_SSK_CIKIS_TARIHI)}" />
 									</f:facet>
@@ -298,14 +342,16 @@
 									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(puantaj.denklestirmeBordro.haftaTatilAdet)}"
 										rendered="#{puantaj.denklestirmeBordro.haftaTatilAdet!=0}" />
 								</rich:column>
-								<rich:column style="text-align: right;" rendered="#{denklestirmeBordroRaporuHome.resmiTatilGunDurum}">
+								<rich:column style="text-align: right;"
+									rendered="#{denklestirmeBordroRaporuHome.resmiTatilGunDurum and denklestirmeBordroRaporuHome.baslikMap.containsKey(denklestirmeBordroRaporuHome.COL_RESMI_TATIL_ADET)}">
 									<f:facet name="header">
 										<h:outputText value="#{denklestirmeBordroRaporuHome.getBaslikAciklama(denklestirmeBordroRaporuHome.COL_RESMI_TATIL_ADET)}" />
 									</f:facet>
 									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(puantaj.denklestirmeBordro.resmiTatilAdet)}"
 										rendered="#{puantaj.denklestirmeBordro.resmiTatilAdet!=0}" />
 								</rich:column>
-								<rich:column style="text-align: right;" rendered="#{denklestirmeBordroRaporuHome.artikGunDurum}">
+								<rich:column style="text-align: right;"
+									rendered="#{denklestirmeBordroRaporuHome.artikGunDurum and denklestirmeBordroRaporuHome.baslikMap.containsKey(denklestirmeBordroRaporuHome.COL_ARTIK_ADET)}">
 									<f:facet name="header">
 										<h:outputText value="#{denklestirmeBordroRaporuHome.getBaslikAciklama(denklestirmeBordroRaporuHome.COL_ARTIK_ADET)}" />
 									</f:facet>
@@ -361,6 +407,7 @@
 									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(puantaj.denklestirmeBordro.haftaTatilMesai)}"
 										rendered="#{puantaj.denklestirmeBordro.haftaTatilMesai!=0}" />
 								</rich:column>
+
 								<rich:column style="text-align: right;" rendered="#{denklestirmeBordroRaporuHome.resmiTatilDurum}">
 									<f:facet name="header">
 										<h:outputText value="#{denklestirmeBordroRaporuHome.getBaslikAciklama(denklestirmeBordroRaporuHome.COL_RESMI_TATIL_MESAI)}" />
@@ -384,12 +431,29 @@
 										rendered="#{puantaj.denklestirmeBordro.aksamSaatMesai!=0}" />
 
 								</rich:column>
-								<rich:column style="text-align: right;" rendered="#{denklestirmeBordroRaporuHome.maasKesintiGoster}">
+								<rich:column style="text-align: right;" rendered="#{denklestirmeBordroRaporuHome.aksamSaat}">
 									<f:facet name="header">
-										<h:outputText value="#{denklestirmeBordroRaporuHome.getBaslikAciklama(denklestirmeBordroRaporuHome.COL_EKSIK_CALISMA)}" />
+										<h:outputText value="#{denklestirmeBordroRaporuHome.getBaslikAciklama(denklestirmeBordroRaporuHome.COL_AKSAM_SAAT_MESAI)}" />
 									</f:facet>
-									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(puantaj.denklestirmeBordro.eksikCalismaSure)}"
-										rendered="#{puantaj.denklestirmeBordro.eksikCalismaSure!=0}" />
+									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(puantaj.denklestirmeBordro.aksamSaatMesai)}"
+										rendered="#{puantaj.denklestirmeBordro.aksamSaatMesai!=0}" />
+
+								</rich:column>
+								<rich:column style="text-align: center;"
+									rendered="#{denklestirmeBordroRaporuHome.baslikMap.containsKey(denklestirmeBordroRaporuHome.COL_DEVAMLILIK_PRIMI)}">
+									<f:facet name="header">
+										<h:outputText value="#{denklestirmeBordroRaporuHome.getBaslikAciklama(denklestirmeBordroRaporuHome.COL_DEVAMLILIK_PRIMI)}" />
+									</f:facet>
+									<ui:fragment rendered="#{puantaj.denklestirmeBordro.devamlilikPrimi!=null}">
+
+										<ui:fragment rendered="#{puantaj.denklestirmeBordro.devamlilikPrimi}">
+											<SPAN style="color: black; font-weight: bold; font-size: 16px;">+</SPAN>
+										</ui:fragment>
+										<ui:fragment rendered="#{puantaj.denklestirmeBordro.devamlilikPrimi==false}">
+											<SPAN style="color: red; font-weight: bold; font-size: 16px;">-</SPAN>
+										</ui:fragment>
+
+									</ui:fragment>
 								</rich:column>
 								<f:facet name="footer">
 									<rich:datascroller renderIfSinglePage="false" maxPages="5" />
@@ -413,7 +477,34 @@
 			</rich:panel>
 
 		</h:form>
+		<rich:modalPanel id="onayFazlaMesaiHesapPanel" autosized="true" width="750">
+			<f:facet name="header">
+				<ui:fragment>
+					<DIV>#{denklestirmeBordroRaporuHome.fazlaMesaiGuncellemeAciklama} Fazla Mesai Hesapla</DIV>
 
+				</ui:fragment>
+			</f:facet>
+			<f:facet name="controls">
+				<h:panelGroup>
+					<h:graphicImage value="/img/close.png" id="editIzinliHareketlink" styleClass="hidelink" />
+					<rich:componentControl for="onayFazlaMesaiHesapPanel" attachTo="editIzinliHareketlink" operation="hide" event="onclick" />
+				</h:panelGroup>
+			</f:facet>
+			<h:form>
+				<table width="100%">
+					<tbody>
+						<tr>
+							<td align="center" width="20%"><a4j:commandButton status="ajaxStatus" value="Evet"
+									action="#{denklestirmeBordroRaporuHome.sirketFazlaMesaiGuncelleme()}" reRender="denklestirmeDonemiTable,anaForm"
+									oncomplete="#{rich:component('onayFazlaMesaiHesapPanel')}.hide();" /> <a4j:commandButton status="ajaxStatus" value="Vazgeç"
+									oncomplete="#{rich:component('onayFazlaMesaiHesapPanel')}.hide();" /></td>
+						</tr>
+					</tbody>
+				</table>
+
+
+			</h:form>
+		</rich:modalPanel>
 
 	</ui:define>
 

@@ -314,7 +314,7 @@
 		<rich:modalPanel id="editAylikPanel" autosized="true" width="900" top="30">
 			<f:facet name="header">
 				<h:outputText
-					value="#{vardiyaGunHome.personelAylikPuantaj.pdksPersonel.pdksSicilNo} #{vardiyaGunHome.personelAylikPuantaj.pdksPersonel.adSoyad} Çalışma Planı Güncelleme" />
+					value="#{vardiyaGunHome.personelAylikPuantaj.pdksPersonel.pdksSicilNo} #{vardiyaGunHome.personelAylikPuantaj.pdksPersonel.adSoyad} Çalışma Planı Güncelleme [ #{vardiyaGunHome.seciliBolum.aciklama} #{vardiyaGunHome.seciliAltBolum.aciklama} ]" />
 			</f:facet>
 			<f:facet name="controls">
 				<h:panelGroup>
@@ -332,6 +332,7 @@
 					<h:messages id="messages" styleClass="message" errorClass="errormsg" infoClass="infomsg" warnClass="warnmsg" />
 				</a4j:outputPanel>
 				<a4j:outputPanel id="secimler">
+
 					<table class="mars">
 						<a4j:repeat value="#{vardiyaGunHome.personelAylikPuantaj.vardiyaHaftaList}" var="vardiyaHafta">
 							<ui:fragment rendered="#{vardiyaHafta.hafta==1}">
@@ -489,7 +490,7 @@
 						<s:decorate template="/layout/edit.xhtml"
 							rendered="#{vardiyaGunHome.personelDenklestirme.calismaModeliAy!=null and vardiyaGunHome.personelDenklestirme.calismaModeliAy.calismaModeli.updateCGS}">
 							<ui:define name="label">Planlan Süre</ui:define>
-							<h:inputText value="#{vardiyaGunHome.personelDenklestirme.planlanSure}" disabled="#{vardiyaGunHome.denklestirmeAyDurum==false}"
+							<h:inputText value="#{vardiyaGunHome.personelDenklestirme.sutIzniSaatSayisi}" disabled="#{vardiyaGunHome.denklestirmeAyDurum==false}"
 								validatorMessage="Hatalı giriş">
 								<a4j:support event="onchange" action="#{vardiyaGunHome.personelDenklestirme.setGuncellendi(true)}" />
 							</h:inputText>
@@ -545,7 +546,7 @@
 							</rich:inputNumberSpinner>
 
 						</s:decorate>
-						<ui:fragment rendered="#{ vardiyaGunHome.gebeSutIzniGuncelle}">
+						<ui:fragment rendered="#{vardiyaGunHome.gebeSutIzniGuncelle}">
 							<c:choose>
 								<c:when test="#{ vardiyaGunHome.personelDenklestirme.sutIzniDurum or  vardiyaGunHome.personelDenklestirme.personel.sutIzniKullan}">
 									<s:decorate template="/layout/edit.xhtml">
@@ -590,6 +591,7 @@
 						</s:decorate>
 
 					</h:panelGrid>
+
 				</a4j:outputPanel>
 				<a4j:commandButton value="Kaydet" action="#{vardiyaGunHome.aylikKaydet}" reRender="vardiyaPanel" onclick="#{rich:component('wait')}.show()"
 					oncomplete="if (#{facesContext.maximumSeverity==null}) { #{rich:component('editAylikPanel')}.hide();}#{rich:component('wait')}.hide();" />
