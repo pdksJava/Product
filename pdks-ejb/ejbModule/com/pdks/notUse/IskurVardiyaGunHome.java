@@ -24,10 +24,8 @@ import org.apache.log4j.Logger;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.ClientAnchor;
-import org.apache.poi.ss.usermodel.Comment;
 import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.Drawing;
-import org.apache.poi.ss.usermodel.RichTextString;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
@@ -413,7 +411,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 			for (Iterator iterator = list.iterator(); iterator.hasNext();) {
 				AylikPuantaj aylikPuantaj = (AylikPuantaj) iterator.next();
 				if (durum.equals("suaDurum")) {
-					if (aylikPuantaj.getPersonelDenklestirmeAylik() != null && aylikPuantaj.getPersonelDenklestirmeAylik().getSuaDurum() != null) {
+					if (aylikPuantaj.getPersonelDenklestirme() != null && aylikPuantaj.getPersonelDenklestirme().getSuaDurum() != null) {
 						goster = true;
 						break;
 					}
@@ -435,7 +433,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 						break;
 					}
 				} else if (durum.equals("fiiliDonem")) {
-					if (aylikPuantaj.getPersonelDenklestirmeAylik() != null && aylikPuantaj.getPersonelDenklestirmeAylik().getId() != null && aylikPuantaj.getPersonelDenklestirmeAylik().getHesaplananSure() != 0) {
+					if (aylikPuantaj.getPersonelDenklestirme() != null && aylikPuantaj.getPersonelDenklestirme().getId() != null && aylikPuantaj.getPersonelDenklestirme().getHesaplananSure() != 0) {
 						goster = true;
 						break;
 					}
@@ -984,9 +982,9 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(bolumAciklama);
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(aylikPuantajDefault.getIlkGun());
-		CreationHelper factory = wb.getCreationHelper();
+		CreationHelper helper = wb.getCreationHelper();
+		ClientAnchor anchor = helper.createClientAnchor();
 		Drawing drawing = sheet.createDrawingPatriarch();
-		ClientAnchor anchor = factory.createClientAnchor();
 
 		for (int i = 0; i < aylikPuantajDefault.getGunSayisi(); i++) {
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(cal.get(Calendar.DAY_OF_MONTH) + "\n " + authenticatedUser.getTarihFormatla(cal.getTime(), "EEE"));
@@ -1024,10 +1022,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 				String titlePersonel = "";
 
 				if (titlePersonel != null) {
-					Comment comment1 = drawing.createCellComment(anchor);
-					RichTextString str1 = factory.createRichTextString(titlePersonel);
-					comment1.setString(str1);
-					personelCell.setCellComment(comment1);
+					ExcelUtil.setCellComment(personelCell, anchor, helper, drawing, titlePersonel);
 				}
 				ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(aylikPuantaj.getYonetici() != null && aylikPuantaj.getYonetici().getId() != null ? aylikPuantaj.getYonetici().getAdSoyad() : "");
 				if (aramaSecenekleri.getSirketId() == null)
@@ -1056,13 +1051,9 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 					}
 
 					String title = !help || calisan(pdksVardiyaGun) ? pdksVardiyaGun.getTitle() : null;
-					if (title != null) {
-						Comment comment1 = drawing.createCellComment(anchor);
-						RichTextString str1 = factory.createRichTextString(title);
-						comment1.setString(str1);
-						cell.setCellComment(comment1);
+					if (title != null)
+						ExcelUtil.setCellComment(cell, anchor, helper, drawing, title);
 
-					}
 					cell.setCellValue(aciklama);
 
 				}
@@ -1359,7 +1350,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 			boolean izinGirisYok = izin.getIzinTipi().getPersonelGirisTipi().equals(IzinTipi.GIRIS_TIPI_YOK);
 			CalismaModeli cm = null;
 			try {
-				cm = offIzinGuncelle && izinGirisYok && puantaj != null ? puantaj.getPersonelDenklestirmeAylik().getCalismaModeli() : null;
+				cm = offIzinGuncelle && izinGirisYok && puantaj != null ? puantaj.getPersonelDenklestirme().getCalismaModeli() : null;
 			} catch (Exception e) {
 				cm = null;
 			}
@@ -2020,7 +2011,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 			sb.append(" INNER  JOIN " + IsKurVardiyaGun.TABLE_NAME + " V ON YEAR(V." + IsKurVardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + ")= D." + DenklestirmeAy.COLUMN_NAME_YIL);
 			sb.append(" AND  MONTH(V." + IsKurVardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + ")= D." + DenklestirmeAy.COLUMN_NAME_AY);
 		}
- 		sb.append(" WHERE D." + DenklestirmeAy.COLUMN_NAME_YIL + " = :y  AND D." + DenklestirmeAy.COLUMN_NAME_AY + ">0 ");
+		sb.append(" WHERE D." + DenklestirmeAy.COLUMN_NAME_YIL + " = :y  AND D." + DenklestirmeAy.COLUMN_NAME_AY + ">0 ");
 		if (yil == maxYil) {
 			sb.append(" AND ((D." + DenklestirmeAy.COLUMN_NAME_YIL + "*100)+" + DenklestirmeAy.COLUMN_NAME_AY + ")<=:s");
 			fields.put("s", sonDonem);
@@ -2949,7 +2940,6 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 				}
 				TreeMap<String, VardiyaGun> vardiyaGunMap = new TreeMap<String, VardiyaGun>();
 				for (VardiyaGun pdksVardiyaGun : vardiyaGunler) {
-				 
 
 					vardiyaGunMap.put(String.valueOf(pdksVardiyaGun.getVardiyaDateStr()), pdksVardiyaGun);
 				}
@@ -3402,7 +3392,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 			sb.append("WITH VARDIYA_DATA AS ( ");
 			sb.append("SELECT V.* FROM " + Vardiya.TABLE_NAME + " V WITH(nolock) ");
 			if (pd == null)
-				pd = aylikPuantaj.getPersonelDenklestirmeAylik();
+				pd = aylikPuantaj.getPersonelDenklestirme();
 			boolean calismaOlmayanVardiyalar = false;
 			if (pd != null) {
 
@@ -4215,7 +4205,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 				try {
 
 					if (vardiyaPlanKontrol(vardiyaMap, pdksVardiyaPlan, personel.getSicilNo() + " " + personel.getAdSoyad() + " ", true)) {
-						// PersonelDenklestirme personelDenklestirme = aylikPuantaj.getPersonelDenklestirmeAylik();
+						// PersonelDenklestirme personelDenklestirme = aylikPuantaj.getPersonelDenklestirme();
 						perIdList.add(personel.getId());
 						aylikPuantaj.setSecili(Boolean.FALSE);
 						perNoList.add(aylikPuantaj.getPdksPersonel().getPdksSicilNo());
@@ -4504,7 +4494,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 									boolean calisiyor = personel.getIseGirisTarihi().before(aylikPuantajSablon.getIlkGun()) && personel.getIstenAyrilisTarihi().after(sonGun);
 									AylikPuantaj aylikPuantajSablonNew = new AylikPuantaj();
 									PersonelDenklestirme personelDenklestirmeAylik = personelDenklestirmeMap.containsKey(sicilNo) ? personelDenklestirmeMap.get(sicilNo) : null;
-									aylikPuantajSablonNew.setPersonelDenklestirmeAylik(personelDenklestirmeAylik);
+									aylikPuantajSablonNew.setPersonelDenklestirme(personelDenklestirmeAylik);
 									aylikPuantajSablonNew.setKaydet(Boolean.FALSE);
 									aylikPuantajSablonNew.setSecili(Boolean.FALSE);
 									aylikPuantajSablonNew.setPdksPersonel(personel);
@@ -4575,7 +4565,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 										if (!calisiyor) {
 											if (!personel.isCalisiyorGun(vardiyaDate)) {
 												pdksVardiyaGun.setYeniVardiya(null);
-	 											pdksVardiyaGun.setGuncellendi(Boolean.TRUE);
+												pdksVardiyaGun.setGuncellendi(Boolean.TRUE);
 
 											}
 										}
@@ -4587,7 +4577,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 									}
 
 									aylikPuantajSablonNew.setVardiyaOlustu(!hataVar);
-									if (hataVar || aylikPuantajSablonNew.getPersonelDenklestirmeAylik() == null) {
+									if (hataVar || aylikPuantajSablonNew.getPersonelDenklestirme() == null) {
 										aylikPuantajSablonNew.setKaydet(Boolean.FALSE);
 										aylikPuantajSablonNew.setTrClass("hata");
 									} else {

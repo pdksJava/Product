@@ -197,14 +197,119 @@
 									</ui:fragment>
 
 								</TABLE>
+								<h:panelGrid columns="2" rendered="#{fazlaMesaiHesaplaHome.planTanimsizBolumList!=null}">
+
+									<s:decorate template="/layout/edit.xhtml">
+										<ui:define name="label">Plansız #{fazlaMesaiHesaplaHome.bolumAciklama}</ui:define>
+										<h:selectOneMenu value="#{fazlaMesaiHesaplaHome.planTanimsizBolumId}">
+											<f:selectItem itemLabel="Lütfen seçiniz" />
+											<f:selectItems value="#{fazlaMesaiHesaplaHome.planTanimsizBolumList}" />
+											<a4j:support event="onchange" status="ajaxStatus" ajaxSingle="true" reRender="denklestirmeDonemiTable,girisler" />
+										</h:selectOneMenu>
+									</s:decorate>
+									<a4j:commandButton value=" #{fazlaMesaiHesaplaHome.bolumAciklama} Plan Oluştur" action="#{fazlaMesaiHesaplaHome.bolumCalismaPlaniOlustur()}"
+										onclick="#{rich:component('wait')}.show()" reRender="onayPanel" rendered="#{fazlaMesaiHesaplaHome.planTanimsizBolumId!=null}"
+										oncomplete="#{rich:component('wait')}.hide(); " />
+								</h:panelGrid>
+
 							</c:if>
-							<c:if test="#{fazlaMesaiHesaplaHome.denklestirmeAy!=null and not empty fazlaMesaiHesaplaHome.aylikPuantajList}">
+							<c:if
+								test="#{fazlaMesaiHesaplaHome.denklestirmeAy!=null and (not empty fazlaMesaiHesaplaHome.aylikPuantajList or fazlaMesaiHesaplaHome.tumBolumPersonelleri!=null)}">
 								<c:choose>
 									<c:when test="#{ortakIslemler.getParameterKey('puantajPageSize')!=''}">
 										<ui:include src="/puantaj/includes/aylikFazlaMesaiTable.xhtml" />
 									</c:when>
 									<c:otherwise>
-										<ui:include src="/puantaj/includes/aylikFazlaMesai.xhtml" />
+										<ui:fragment rendered="#{fazlaMesaiHesaplaHome.tumBolumPersonelleri==null}">
+											<ui:include src="/puantaj/includes/aylikFazlaMesai.xhtml" />
+										</ui:fragment>
+										<ui:fragment rendered="#{fazlaMesaiHesaplaHome.tumBolumPersonelleri!=null}">
+											<a4j:region>
+												<rich:tabPanel binding="#{componentState.someTabPanel}" width="100%" headerAlignment="left" switchType="ajax">
+
+													<rich:tab label="Tüm Personeller" name="tab2">
+														<rich:dataTable rowClasses="acik,koyu" value="#{fazlaMesaiHesaplaHome.tumBolumPersonelleri}" var="personel" style="width: 80%;"
+															rows="50" rowKeyVar="row">
+
+															<f:facet name="header">
+																<h:outputText value="Personel Listesi" />
+															</f:facet>
+															<rich:column style="text-align: center;width: 30px;">
+																<f:facet name="header">
+
+																</f:facet>
+
+																<a4j:commandLink title="Fazla Mesai Getir" status="ajaxStatus" reRender="denklestirmeDonemiTable,anaForm" ajaxSingle="true"
+																	action="#{fazlaMesaiHesaplaHome.fillBolumPersonelDenklestirmeList(personel)}">
+																	<h:graphicImage value="/img/rightArrow.gif" style="border:0" />
+																</a4j:commandLink>
+															</rich:column>
+															<rich:column style="text-align: center;width: 30px;">
+																<f:facet name="header">
+																	<h:outputText value="#{ortakIslemler.personelNoAciklama()}" />
+																</f:facet>
+
+																<h:outputText value="#{personel.sicilNo}" />
+															</rich:column>
+															<rich:column style="width: 60px;width:autostretch ;white-space: nowrap;" filterBy="#{personel.adSoyad}" filterEvent="onkeyup">
+																<f:facet name="header">
+																	<h:outputText value="Adı Soyadı" />
+																</f:facet>
+																<h:outputText value="#{personel.adSoyad}" />
+															</rich:column>
+															<rich:column style="width: 60px;width:autostretch ;white-space: nowrap;">
+																<f:facet name="header">
+																	<h:outputText value="#{fazlaMesaiHesaplaHome.bolumAciklama}" />
+																</f:facet>
+																<h:outputText value="#{personel.ekSaha3.aciklama}" />
+															</rich:column>
+															<rich:column style="width: 60px;width:autostretch ;white-space: nowrap;" rendered="#{fazlaMesaiHesaplaHome.ekSaha4Tanim!=null}">
+																<f:facet name="header">
+																	<h:outputText value="#{fazlaMesaiHesaplaHome.ekSaha4Tanim.aciklama}" />
+																</f:facet>
+																<h:outputText value="#{personel.ekSaha4.aciklama}" />
+															</rich:column>
+															<rich:column style="width: 60px;width:autostretch ;white-space: nowrap;">
+																<f:facet name="header">
+																	<h:outputText value="#{ortakIslemler.yoneticiAciklama()}" />
+																</f:facet>
+																<ui:fragment rendered="#{personel.yoneticisi!=null}">
+																	<h:outputText value="#{personel.yoneticisi.adSoyad}" />
+
+																</ui:fragment>
+															</rich:column>
+															<rich:column style="text-align:center">
+																<f:facet name="header">
+																	<h:outputText value="İşe Giriş Tarihi" />
+																</f:facet>
+																<ui:fragment rendered="#{personel.iseBaslamaTarihi.before(fazlaMesaiHesaplaHome.denklestirmeAy.basTarih)==false}">
+																	<h:outputText value="#{authenticatedUser.dateFormatla(personel.iseBaslamaTarihi)}" />
+																</ui:fragment>
+															</rich:column>
+															<rich:column style="text-align:center">
+																<f:facet name="header">
+																	<h:outputText value="İşten Ayrılma Tarihi" />
+																</f:facet>
+																<ui:fragment rendered="#{personel.istenAyrilisTarihi.after(fazlaMesaiHesaplaHome.denklestirmeAy.bitTarih)==false}">
+																	<h:outputText value="#{authenticatedUser.dateFormatla(pdksPersonel.istenAyrilisTarihi)}" />
+																</ui:fragment>
+															</rich:column>
+
+															<f:facet name="footer">
+																<rich:datascroller renderIfSinglePage="false" maxPages="5" />
+															</f:facet>
+														</rich:dataTable>
+													</rich:tab>
+													<rich:tab label="Fazla Mesai Listesi" name="tab1">
+														<ui:fragment rendered="#{not empty fazlaMesaiHesaplaHome.aylikPuantajList}">
+															<ui:include src="/puantaj/includes/aylikFazlaMesai.xhtml" />
+														</ui:fragment>
+
+													</rich:tab>
+												</rich:tabPanel>
+											</a4j:region>
+										</ui:fragment>
+
 
 									</c:otherwise>
 								</c:choose>
@@ -260,7 +365,8 @@
 						rowKeyVar="row">
 						<f:facet name="header">
 							<ui:fragment>
-								<h:outputText value="Giriş Çıkış Hareketleri [ #{fazlaMesaiHesaplaHome.seciliBolum.aciklama} #{fazlaMesaiHesaplaHome.seciliAltBolum.aciklama}  ]" />
+								<h:outputText
+									value="Giriş Çıkış Hareketleri [ #{fazlaMesaiHesaplaHome.seciliBolum.aciklama} #{fazlaMesaiHesaplaHome.seciliAltBolum.aciklama}  ]" />
 
 							</ui:fragment>
 						</f:facet>
@@ -393,7 +499,7 @@
 
 					</ui:fragment>
 					<ui:fragment
-						rendered="#{fazlaMesaiHesaplaHome.denklestirmeAyDurum and fazlaMesaiHesaplaHome.seciliAylikPuantaj!=null and  fazlaMesaiHesaplaHome.seciliAylikPuantaj.personelDenklestirmeAylik.onaylandi==false}">
+						rendered="#{fazlaMesaiHesaplaHome.denklestirmeAyDurum and fazlaMesaiHesaplaHome.seciliAylikPuantaj!=null and  fazlaMesaiHesaplaHome.seciliAylikPuantaj.personelDenklestirme.onaylandi==false}">
 						<H2>
 							<SPAN style="color: red; font-size: 16px; font-weight: bold;">Aylık plan onaylanmamıştır.</SPAN>
 						</H2>
