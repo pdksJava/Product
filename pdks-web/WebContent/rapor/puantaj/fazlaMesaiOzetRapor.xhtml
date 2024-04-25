@@ -326,7 +326,7 @@
 												</ui:fragment>
 											</f:facet>
 											<ui:fragment rendered="#{ap.getVardiyaGun(vg)!=null }">
-												<DIV id="vardiya#{ap.vardiyaGun.vardiyaKeyStr}" align="center" style="width: 8px;">
+												<DIV id="vardiya#{ap.vardiyaGun.vardiyaKeyStr}" align="center">
 													<ui:fragment rendered="#{ap.vardiyaGun.vardiya==null}">
 														<SPAN style="text-align: center;">-</SPAN>
 														<rich:toolTip for="vardiya#{ap.vardiyaGun.vardiyaKeyStr}">
@@ -364,7 +364,12 @@
 
 															</ui:fragment>
 															<ui:fragment rendered="#{ap.vardiyaGun.izin!=null and ap.vardiyaGun.vardiya!=null}">
-																<br />[#{ap.vardiyaGun.vardiya.kisaAdi}]</ui:fragment>
+																#{ap.vardiyaGun.izin.izinTipi.kisaAciklama}
+																<rich:toolTip for="vardiya#{ap.vardiyaGun.vardiyaKeyStr}">
+																	#{ap.vardiyaGun.izin.izinTipi.izinTipiTanim.aciklama} [#{ap.vardiyaGun.vardiya.kisaAdi}]
+																</rich:toolTip>
+
+															</ui:fragment>
 														</ui:fragment>
 
 

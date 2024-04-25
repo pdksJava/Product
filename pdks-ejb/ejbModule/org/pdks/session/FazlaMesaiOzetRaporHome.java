@@ -628,13 +628,13 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 					if (session != null)
 						map.put(PdksEntityController.MAP_KEY_SESSION, session);
 					sirket = (Sirket) pdksEntityController.getObjectByInnerObject(map, Sirket.class);
-					ekSaha4Tanim = ortakIslemler.getEkSaha4(sirket, sirketId, session);
 				}
 			}
 			setPdksSirketList(sirketler);
 		} else {
 			setSirket(authenticatedUser.getPdksPersonel().getSirket());
 		}
+		ekSaha4Tanim = ortakIslemler.getEkSaha4(sirket, sirketId, session);
 
 		if (aylikPuantajList == null)
 			aylikPuantajList = new ArrayList<AylikPuantaj>();
