@@ -871,6 +871,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 							Date bitTarih = vardiya.getVardiyaFazlaMesaiBitZaman(), basTarih = vardiya.getVardiyaFazlaMesaiBasZaman();
 							if (vardiya.getVardiyaBitZaman().after(bitTarih))
 								bitTarih = vardiya.getVardiyaBitZaman();
+							bitTarih = PdksUtil.addTarih(bitTarih, Calendar.SECOND, 1);
 							list = ortakIslemler.getHareketBilgileri(kapiIdler, personeller, basTarih, bitTarih, HareketKGS.class, session);
 						}
 					}
