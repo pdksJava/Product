@@ -127,11 +127,11 @@
 								</f:facet>
 								<h:outputText value="#{pdksPersonel.pdksSicilNo}" id="pdksname" />
 							</rich:column>
-							<rich:column>
-								<f:facet name="header" filterEvent="onkeyup">
+							<rich:column style="width:autostretch ;white-space: nowrap;" filterBy="#{pdksPersonel.adSoyad}" filterEvent="onkeyup">
+								<f:facet name="header">
 									<h:outputText value="Adı Soyadı" />
 								</f:facet>
-								<h:outputText value="#{pdksPersonel.adSoyad}" id="adSoyad" />
+								#{pdksPersonel.adSoyad} 
 							</rich:column>
 							<rich:column>
 								<f:facet name="header">
