@@ -109,6 +109,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 	@In(required = false, create = true)
 	String linkAdres;
 
+	public static String sayfaURL = "personelIzinGirisi";
 	private User seciliUser;
 	private Tanim redSebebiTanim;
 	private PersonelIzinOnay redOnay;
@@ -1054,12 +1055,12 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() throws Exception {
+		if (session == null)
+			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
 		servisAktarDurum = Boolean.FALSE;
 		boolean ayniSayfa = authenticatedUser.getCalistigiSayfa() != null && authenticatedUser.getCalistigiSayfa().equals("personelIzinGirisi");
 		try {
-			if (session == null)
-				session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-			session.clear();
 			boolean tableERPOku = ortakIslemler.getParameterKeyHasStringValue(ortakIslemler.getParametreIzinERPTableView());
 			updateValue = false;
 			if (tableERPOku && (authenticatedUser.isIK() || authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi()))
@@ -3222,7 +3223,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 								if (vardiya != null) {
 									cal.setTime(PdksUtil.getDate(personelIzin.getBitisZamani()));
 									if (isSaatGosterilecek() == false) {
-										if (vardiya.getBasSaat() < vardiya.getBitSaat()) {
+										if (vardiya.getBasDonem() < vardiya.getBitDonem()) {
 											cal.set(Calendar.HOUR_OF_DAY, vardiya.getBasSaat());
 											cal.set(Calendar.MINUTE, vardiya.getBasDakika());
 										} else {
@@ -6189,5 +6190,13 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 	public Personel getPersonel() {
 
 		return izinliSahibi;
+	}
+
+	public static String getSayfaURL() {
+		return sayfaURL;
+	}
+
+	public static void setSayfaURL(String sayfaURL) {
+		PersonelIzinGirisiHome.sayfaURL = sayfaURL;
 	}
 }
