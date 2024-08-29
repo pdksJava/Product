@@ -182,28 +182,30 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 					if (vg.isAyinGunu()) {
 						cal.setTime(vg.getVardiyaDate());
 						int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
-						if (dayOfWeek != Calendar.SUNDAY) {
-							if (vg.getTatil() == null) {
-								double gunSure = dayOfWeek != Calendar.SATURDAY ? cm.getHaftaIci() : cm.getHaftaSonu();
-								sure += gunSure;
-								double izinSure = gunSure > 7.5d ? 7.5d : gunSure;
-								if (dayOfWeek != Calendar.SATURDAY) {
-									if (sutIzniHaftaIci != null && sutIzniHaftaIci.doubleValue() > 0)
-										izinSure = sutIzniHaftaIci;
-								} else if (sutIzniCumartesi != null)
-									izinSure = sutIzniCumartesi;
-								toplamIzinSure += izinSure;
-							} else if (vg.getTatil().isYarimGunMu()) {
-								if (PdksUtil.tarihKarsilastirNumeric(vg.getVardiyaDate(), vg.getTatil().getBasTarih()) == 0) {
-									if (cm.getHaftaSonu() > 0 || dayOfWeek != Calendar.SATURDAY) {
-										sure += cm.getArife();
-										toplamIzinSure += cm.getArife();
-									}
 
+						if (vg.getTatil() == null) {
+							double gunSure = cm.getSaat(dayOfWeek);
+
+							sure += gunSure;
+							double sutIzinSure = cm.getSutIzinSaat(dayOfWeek);
+							double izinSure = sutIzinSure > 7.5d ? 7.5d : sutIzinSure;
+							// if (dayOfWeek != Calendar.SATURDAY ) {
+							// if (sutIzniHaftaIci != null && sutIzniHaftaIci.doubleValue() > 0)
+							// izinSure = sutIzniHaftaIci;
+							// } else if (sutIzniCumartesi != null)
+							// izinSure = sutIzniCumartesi;
+							toplamIzinSure += izinSure;
+						} else if (vg.getTatil().isYarimGunMu()) {
+							if (PdksUtil.tarihKarsilastirNumeric(vg.getVardiyaDate(), vg.getTatil().getBasTarih()) == 0) {
+								if (vg.isHaftaIci() || cm.getSaat(dayOfWeek) > 0.0d) {
+									sure += cm.getArife();
+									toplamIzinSure += cm.getArife();
 								}
 
 							}
+
 						}
+
 					}
 				}
 
@@ -295,7 +297,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 					vg.setFiiliHesapla(vg.getTatil() != null);
 				}
 
-				if (vg.isFiiliHesapla() == false && islemVardiya.getBasSaat() > islemVardiya.getBitSaat() && vg.getTatil() == null) {
+				if (vg.isFiiliHesapla() == false && islemVardiya.getBasDonem() > islemVardiya.getBitDonem() && vg.getTatil() == null) {
 					cal.setTime(vg.getVardiyaDate());
 					int day = cal.get(Calendar.DATE), sonGun = cal.getActualMaximum(Calendar.DATE);
 					if (day == sonGun)
@@ -1930,7 +1932,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 						VardiyaGun oncekiVardiyaGun = vardiyaGun.getOncekiVardiyaGun();
 						if (oncekiVardiyaGun != null && oncekiVardiyaGun.isAyinGunu() == false && oncekiVardiyaGun.getVardiya() != null) {
 							Vardiya tmpVardiya = vardiyaGun.getOncekiVardiyaGun().getIslemVardiya();
-							if (tmpVardiya.getBasSaat() > tmpVardiya.getBitSaat()) {
+							if (tmpVardiya.getBasDonem() > tmpVardiya.getBitDonem()) {
 								sb.append("<B>" + PdksUtil.convertToDateString(oncekiVardiyaGun.getVardiyaDate(), PdksUtil.getDateFormat()) + " Vardiya : </B>" + oncekiVardiyaGun.getVardiyaPlanAdi() + brStr);
 							}
 						}
