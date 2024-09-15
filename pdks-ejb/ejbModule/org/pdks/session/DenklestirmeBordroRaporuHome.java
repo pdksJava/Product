@@ -20,7 +20,6 @@ import javax.persistence.EntityManager;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.log4j.Logger;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.Component;
 import org.jboss.seam.ScopeType;
@@ -64,6 +63,7 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 	 * 
 	 */
 	private static final long serialVersionUID = -9211132861369205688L;
+
 	public static String sayfaURL = "denklestirmeBordroRaporu";
 
 	static Logger logger = Logger.getLogger(DenklestirmeBordroRaporuHome.class);
@@ -318,7 +318,7 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 		List<SelectItem> bolumList = fazlaMesaiOrtakIslemler.getFazlaMesaiBolumList(seciliSirket, seciliTesisId != null ? String.valueOf(seciliTesisId) : "", aylikPuantaj, authenticatedUser.isAdmin() == false, session);
 		fazlaMesaiHesaplaHome.setTesisId(seciliTesisId);
 		fazlaMesaiHesaplaHome.setTopluGuncelle(true);
-		
+
 		HashMap fields = new HashMap();
 		Tanim tesis = null;
 		if (seciliTesisId != null && seciliSirket.isTesisDurumu()) {
@@ -400,6 +400,8 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 				break;
 
 		}
+		logger.info(baslik + " OK " + PdksUtil.getCurrentTimeStampStr());
+
 		return hataYok;
 	}
 
@@ -447,6 +449,9 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		try {
+			if (session == null)
+				session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			ortakIslemler.setUserMenuItemTime(session, sayfaURL);
 			fazlaMesaiHesaplaMenuAdi = "";
 			String str = ortakIslemler.getParameterKey("bordroVeriOlustur");
 			boolean ayniSayfa = authenticatedUser.getCalistigiSayfa() != null && authenticatedUser.getCalistigiSayfa().equals(sayfaURL);
@@ -464,9 +469,13 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 			yil = cal.get(Calendar.YEAR);
 			maxYil = yil;
 			try {
-				minYil = Integer.parseInt(ortakIslemler.getParameterKey("sistemBaslangicYili"));
-				if (str.length() > 5)
-					minYil = Integer.parseInt(str.substring(0, 4));
+				minYil = maxYil;
+				if (str.length() > 5) {
+					int yil = Integer.parseInt(str.substring(0, 4));
+					if (yil > minYil && maxYil >= yil)
+						minYil = yil;
+				}
+
 			} catch (Exception e) {
 
 			}
@@ -474,11 +483,7 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 				baslikMap = new TreeMap<String, Tanim>();
 
 			sicilNo = "";
-			if (session == null)
-				session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-			session.setFlushMode(FlushMode.MANUAL);
 
-			session.clear();
 			setDepartmanId(null);
 			setDepartman(null);
 			setInstance(new DenklestirmeAy());
@@ -1919,5 +1924,13 @@ public class DenklestirmeBordroRaporuHome extends EntityHome<DenklestirmeAy> imp
 
 	public void setDenklestirmeAyDurum(Boolean denklestirmeAyDurum) {
 		this.denklestirmeAyDurum = denklestirmeAyDurum;
+	}
+
+	public static String getSayfaURL() {
+		return sayfaURL;
+	}
+
+	public static void setSayfaURL(String sayfaURL) {
+		DenklestirmeBordroRaporuHome.sayfaURL = sayfaURL;
 	}
 }

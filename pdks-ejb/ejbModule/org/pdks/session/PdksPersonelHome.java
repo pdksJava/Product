@@ -111,6 +111,8 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	@In(create = true)
 	Renderer renderer;
 
+	public static String sayfaURL = "personelTanimlama";
+
 	public static final String MAIL_CC = MailGrubu.TIPI_CC;
 	public static final String MAIL_BCC = MailGrubu.TIPI_BCC;
 	public static final String MAIL_HAREKET = MailGrubu.TIPI_HAREKET;
@@ -677,18 +679,27 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	 */
 	private void fillCalismaModeli(Personel pdksPersonel) {
 		Departman pdksDepartman = pdksPersonel.getSirket().getDepartman();
-		HashMap parametreMap = new HashMap();
-		parametreMap.put("durum", Boolean.TRUE);
-		if (pdksPersonel.getGebeMi().equals(Boolean.FALSE) && pdksPersonel.getSutIzni().equals(Boolean.FALSE))
-			parametreMap.put("toplamGunGuncelle", Boolean.FALSE);
+		StringBuffer sb = new StringBuffer();
+		sb.append(" SELECT D.* FROM " + CalismaModeli.TABLE_NAME + " D WITH(nolock) ");
+		sb.append(" WHERE D." + CalismaModeli.COLUMN_NAME_DURUM + "=1  ");
+		HashMap fields = new HashMap();
+		if (pdksDepartman != null) {
+			sb.append(" AND ( D." + CalismaModeli.COLUMN_NAME_DEPARTMAN + " IS NULL OR D." + CalismaModeli.COLUMN_NAME_DEPARTMAN + "=:d )");
+			fields.put("d", pdksDepartman.getId());
+		}
 		if (session != null)
-			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-		calismaModeliList = pdksEntityController.getObjectByInnerObjectList(parametreMap, CalismaModeli.class);
+			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+		calismaModeliList = pdksEntityController.getObjectBySQLList(sb, fields, CalismaModeli.class);
 		for (Iterator iterator = calismaModeliList.iterator(); iterator.hasNext();) {
 			CalismaModeli cm = (CalismaModeli) iterator.next();
-			if (pdksDepartman != null && cm.getDepartman() != null && !cm.getDepartman().getId().equals(pdksDepartman.getId()))
-				iterator.remove();
-			else if (pdksPersonel.getCalismaModeli() == null && cm.isIdariModelMi())
+			if (pdksPersonel.getGebeMi().equals(Boolean.FALSE) && pdksPersonel.getSutIzni().equals(Boolean.FALSE)) {
+				if (cm.getToplamGunGuncelle().equals(Boolean.TRUE)) {
+					iterator.remove();
+					continue;
+				}
+
+			}
+			if (pdksPersonel.getCalismaModeli() == null && cm.isIdariModelMi())
 				pdksPersonel.setCalismaModeli(cm);
 		}
 	}
@@ -2171,11 +2182,11 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	 */
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void fillPersonelList() {
-		personelDurumMap.clear();
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(session, "personelListesi");
+		personelDurumMap.clear();
+
 		sanalPersonelAciklama = ortakIslemler.sanalPersonelAciklama();
 		yoneticiRolVarmi = ortakIslemler.yoneticiRolKontrol(session);
 		fillEkSahaTanim();
@@ -3183,7 +3194,9 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	 */
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-
+		if (session == null)
+			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
 		fazlaMesaiIzinKullan = Boolean.FALSE;
 		yeniPersonelGuncelle = Boolean.FALSE;
 		bakiyeIzinGoster = Boolean.FALSE;
@@ -3215,14 +3228,12 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 			dinamikAciklamaList = new ArrayList<Tanim>();
 		else
 			dinamikAciklamaList.clear();
-		if (session == null)
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+
 		if (personelERPList == null)
 			personelERPList = new ArrayList<PersonelERP>();
 		else
 			personelERPList.clear();
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+
 		personelERPGuncelleme = ortakIslemler.getParameterKey("personelERPOku");
 		sanalPersonelAciklama = ortakIslemler.sanalPersonelAciklama();
 		setPdks(Boolean.TRUE);
@@ -5643,6 +5654,14 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 
 	public void setCalismaModeliVardiyaList(List<Vardiya> calismaModeliVardiyaList) {
 		this.calismaModeliVardiyaList = calismaModeliVardiyaList;
+	}
+
+	public static String getSayfaURL() {
+		return sayfaURL;
+	}
+
+	public static void setSayfaURL(String sayfaURL) {
+		PdksPersonelHome.sayfaURL = sayfaURL;
 	}
 
 }

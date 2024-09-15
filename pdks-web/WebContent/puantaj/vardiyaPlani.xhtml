@@ -285,9 +285,10 @@
 
 						<a4j:outputPanel id="hareketTables" rendered="#{not empty vardiyaGunHome.aylikPuantajDosyaList}">
 							<DIV class="#{authenticatedUser.scroolClass}" id="#{authenticatedUser.scroolDiv}">
-								<table class="mars" cellpadding="1" cellspacing="1">
-									<thead>
-										<tr>
+
+								<table class="rich-table">
+									<thead class="rich-table-thead">
+										<tr class="rich-table-subheader">
 											<ui:fragment rendered="#{ vardiyaGunHome.degisti}">
 												<th style="width: 30px"><h:outputText value="Seçim" /> <br></br> <h:selectBooleanCheckbox value="#{vardiyaGunHome.onayDurum}">
 														<a4j:support event="onclick" status="ajaxStatus" action="#{vardiyaGunHome.durumDegistir}" reRender="hareketTables" />
@@ -424,24 +425,26 @@
 				</a4j:outputPanel>
 				<a4j:outputPanel id="secimler">
 
-					<table class="mars">
+					<table class="rich-table">
+
 						<a4j:repeat value="#{vardiyaGunHome.personelAylikPuantaj.vardiyaHaftaList}" var="vardiyaHafta">
 							<ui:fragment rendered="#{vardiyaHafta.hafta==1}">
-
-								<tr>
-									<a4j:repeat value="#{vardiyaHafta.vardiyaGunler}" var="vardiyaGun">
-										<th><h:outputText value="#{authenticatedUser.getTarihFormatla(vardiyaGun.vardiyaDate, 'EEEEE')}" /></th>
-									</a4j:repeat>
-									<ui:fragment rendered="#{vardiyaGunHome.sablonGuncelle}">
-										<th width="100px">Vardiya</th>
-									</ui:fragment>
-								</tr>
+								<thead class="rich-table-thead">
+									<tr class="rich-table-subheader">
+										<a4j:repeat value="#{vardiyaHafta.vardiyaGunler}" var="vardiyaGun">
+											<th><h:outputText value="#{authenticatedUser.getTarihFormatla(vardiyaGun.vardiyaDate, 'EEEEE')}" /></th>
+										</a4j:repeat>
+										<ui:fragment rendered="#{vardiyaGunHome.sablonGuncelle}">
+											<th width="100px">Vardiya</th>
+										</ui:fragment>
+									</tr>
+								</thead>
 							</ui:fragment>
 							<tr>
 								<a4j:repeat value="#{vardiyaHafta.vardiyaGunler}" var="vardiyaGun">
 									<ui:fragment rendered="#{vardiyaGun.tatil==null}">
-										<th style="width: 90px; height: 15px;"><h:outputText
-												value="#{authenticatedUser.getTarihFormatla(vardiyaGun.vardiyaDate, 'd MMMMM yyyy')}" /></th>
+										<td class="koyu" style="width: 90px; height: 15px; font-weight: bold; text-align: center;"><h:outputText
+												value="#{authenticatedUser.getTarihFormatla(vardiyaGun.vardiyaDate, 'd MMMMM yyyy')}" /></td>
 									</ui:fragment>
 
 									<ui:fragment rendered="#{vardiyaGun.tatil.yarimGun==true}">
@@ -461,7 +464,7 @@
 									<th width="100px">Şablonu</th>
 								</ui:fragment>
 							</tr>
-							<tr>
+							<tr class="acik">
 
 								<a4j:repeat value="#{vardiyaHafta.vardiyaGunler}" var="vardiyaGun">
 									<td style="width: 90px; height: 20px;" id="vardiya#{vardiyaGun.vardiyaDateStr}" class="#{vardiyaGun.getAylikClassAdi(aylikPuantaj.trClass)}"
@@ -581,30 +584,51 @@
 							<ui:fragment rendered="#{vardiyaGunHome.personelDenklestirme.calismaModeliAy!=null}">
 								<rich:toolTip for="perCalismaModeli">
 									<h:panelGrid columns="1">
-										<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaGunHome.personelDenklestirme.calismaModeliAy.calismaModeli.izin!=0}">
-											<ui:define name="label">Hafta İçi İzin Saati</ui:define>
-											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(vardiyaGunHome.personelDenklestirme.calismaModeliAy.calismaModeli.izin)}" />
-										</s:decorate>
-										<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaGunHome.personelDenklestirme.calismaModeliAy.calismaModeli.izinhaftaSonu!=0}">
-											<ui:define name="label">#{ortakIslemler.getGunAdi(6,null)} İzin Saati </ui:define>
-											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(vardiyaGunHome.personelDenklestirme.calismaModeliAy.calismaModeli.izinhaftaSonu)}" />
-										</s:decorate>
-									</h:panelGrid>
-									<rich:dataTable rowClasses="acik,koyu" value="#{vardiyaGunHome.calismaModeliVardiyaList}" var="vardiya" rows="20" rowKeyVar="row"
-										rendered="#{vardiyaGunHome.calismaModeliVardiyaList!=null}" id="vardiyaTable">
-										<f:facet name="header">
-											<h:outputText value="#{vardiyaGunHome.personelDenklestirme.calismaModeliAy.calismaModeli.aciklama} Çalışma Modeli" />
-										</f:facet>
-										<rich:column>
+										<rich:dataTable rowClasses="acik,koyu" value="#{vardiyaGunHome.calismaModeliVardiyaList}" var="vardiya" rows="20" rowKeyVar="row"
+											rendered="#{vardiyaGunHome.calismaModeliVardiyaList!=null}" id="vardiyaTable">
 											<f:facet name="header">
-												<h:outputText value="Vardiya" />
+												<h:outputText value="#{vardiyaGunHome.personelDenklestirme.calismaModeliAy.calismaModeli.aciklama} Çalışma Modeli" />
 											</f:facet>
-											<h:outputText value="#{vardiya.vardiyaAdi}" />
-										</rich:column>
-										<f:facet name="footer">
-											<rich:datascroller renderIfSinglePage="false" maxPages="5" />
-										</f:facet>
-									</rich:dataTable>
+											<rich:column>
+												<f:facet name="header">
+													<h:outputText value="Vardiya" />
+												</f:facet>
+												<h:outputText value="#{vardiya.vardiyaAdi}" />
+											</rich:column>
+											<f:facet name="footer">
+												<rich:datascroller renderIfSinglePage="false" maxPages="5" />
+											</f:facet>
+										</rich:dataTable>
+										<ui:fragment>
+											<span><B>Hafta Tatili : </B>#{vardiyaGunHome.personelDenklestirme.calismaModeliAy.calismaModeli.haftaTatil}</span>
+										</ui:fragment>
+
+
+										<rich:dataTable rowClasses="acik,koyu" value="#{vardiyaGunHome.personelDenklestirme.calismaModeliAy.calismaModeli.haftaSaatList}" var="hs"
+											rows="10" rowKeyVar="row">
+											<f:facet name="header">
+												<h:outputText value="Haftalık Çalışma Saatleri" />
+											</f:facet>
+											<rich:column>
+												<f:facet name="header">
+													<h:outputText value="Gün" />
+												</f:facet>
+												<h:outputText value="#{hs.id}" />
+											</rich:column>
+											<rich:column style="text-align:center;">
+												<f:facet name="header">
+													<h:outputText value="Saat" />
+												</f:facet>
+												<h:outputText value="#{hs.value}" />
+											</rich:column>
+											<f:facet name="footer">
+												<rich:datascroller renderIfSinglePage="false" maxPages="5" />
+											</f:facet>
+										</rich:dataTable>
+
+
+
+									</h:panelGrid>
 								</rich:toolTip>
 							</ui:fragment>
 						</s:decorate>
@@ -1074,23 +1098,25 @@
 					<h:messages id="messages" styleClass="message" errorClass="errormsg" infoClass="infomsg" warnClass="warnmsg" />
 				</a4j:outputPanel>
 				<a4j:outputPanel id="secimlerMesai">
-					<table class="mars">
+					<table class="rich-table">
 						<a4j:repeat value="#{vardiyaGunHome.personelAylikPuantaj.vardiyaHaftaList}" var="vardiyaHafta">
 							<ui:fragment rendered="#{vardiyaHafta.hafta==1}">
-
-								<tr>
-									<a4j:repeat value="#{vardiyaHafta.vardiyaGunler}" var="vardiyaGun">
-										<th><h:outputText value="#{authenticatedUser.getTarihFormatla(vardiyaGun.vardiyaDate, 'EEEEE')}" /></th>
-									</a4j:repeat>
-									<ui:fragment rendered="#{vardiyaGunHome.sablonGuncelle}">
-										<th width="100px">Vardiya</th>
-									</ui:fragment>
-								</tr>
+								<thead class="rich-table-thead">
+									<tr>
+										<a4j:repeat value="#{vardiyaHafta.vardiyaGunler}" var="vardiyaGun">
+											<th><h:outputText value="#{authenticatedUser.getTarihFormatla(vardiyaGun.vardiyaDate, 'EEEEE')}" /></th>
+										</a4j:repeat>
+										<ui:fragment rendered="#{vardiyaGunHome.sablonGuncelle}">
+											<th width="100px">Vardiya</th>
+										</ui:fragment>
+									</tr>
+								</thead>
 							</ui:fragment>
-							<tr>
+							<tr class="acik">
 								<a4j:repeat value="#{vardiyaHafta.vardiyaGunler}" var="vardiyaGun">
 									<ui:fragment rendered="#{vardiyaGun.tatil==null}">
-										<th style="width: 90px"><h:outputText value="#{authenticatedUser.getTarihFormatla(vardiyaGun.vardiyaDate, 'd MMMMM yyyy')}" /></th>
+										<td style="width: 90px; font-weight: bold; text-align: center;"><h:outputText
+												value="#{authenticatedUser.getTarihFormatla(vardiyaGun.vardiyaDate, 'd MMMMM yyyy')}" /></td>
 									</ui:fragment>
 
 									<ui:fragment rendered="#{vardiyaGun.tatil.yarimGun==true}">
@@ -1108,7 +1134,7 @@
 								</a4j:repeat>
 
 							</tr>
-							<tr>
+							<tr class="koyu">
 								<a4j:repeat value="#{vardiyaHafta.vardiyaGunler}" var="vardiyaGun">
 									<td style="width: 90px; height: 25px;" class="#{vardiyaGun.getAylikClassAdi(aylikPuantaj.trClass)}" align="center"><ui:fragment
 											rendered="#{vardiyaGun.ayinGunu==false or vardiyaGun.fazlaMesaiTalepDurum==false or vardiyaGun.vardiya==null   or vardiyaGun.izin!=null or vardiyaGun.kullaniciYetkili==false}">

@@ -1,8 +1,12 @@
 package org.pdks.entity;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -10,10 +14,12 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.pdks.security.entity.User;
@@ -26,6 +32,8 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = -445686730459083532L;
+
+	static Logger logger = Logger.getLogger(CalismaModeli.class);
 	public static final String TABLE_NAME = "CALISMA_MODELI";
 	public static final String COLUMN_NAME_DURUM = "DURUM";
 	public static final String COLUMN_NAME_GENEL_VARDIYA = "GENEL_VARDIYA";
@@ -48,20 +56,29 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_ILK_PLAN_ONAYLI = "ILK_PLAN_ONAYLI";
 	public static final String COLUMN_NAME_GUN_MAX_CALISMA_SURESI_ODENIR = "GUN_MAX_CALISMA_SURESI_ODENIR";
 	public static final String COLUMN_NAME_PERSONEL_TIPI = "PERSONEL_TIPI_ID";
-	public static final String COLUMN_NAME_HAFTA_TATIL_PAZAR = "HAFTA_TATIL_PAZAR";
+	public static final String COLUMN_NAME_HAFTA_TATIL = "HT_GUN";
 	public static final String COLUMN_NAME_GENEL_MODEL = "GENEL_MODEL";
 	public static final String COLUMN_NAME_IDARI_MODEL = "IDARI_MODEL";
 	public static final String COLUMN_NAME_HAFTA_ICI_SUT_IZNI_SURE = "HAFTA_ICI_SUT_IZNI_SURE";
 	public static final String COLUMN_NAME_CUMARTESI_SUT_IZNI_SURE = "CUMARTESI_SUT_IZNI_SURE";
+	public static final String COLUMN_NAME_CUMARTESI_SAAT = "CUMARTESI_SAAT";
+	public static final String COLUMN_NAME_PAZAR_SAAT = "PAZAR_SAAT";
+
+	public static final String COLUMN_NAME_IZIN_SAAT = "IZIN_SAAT";
+	public static final String COLUMN_NAME_IZIN_CUMARTESI_SAAT = "IZIN_CUMARTESI_SAAT";
+	public static final String COLUMN_NAME_IZIN_PAZAR_SAAT = "IZIN_PAZAR_SAAT";
+	public static final String COLUMN_NAME_PAZAR_SUT_IZNI_SURE = "PAZAR_SUT_IZNI_SURE";
+
 	public static final String COLUMN_NAME_ACIKLAMA = "ACIKLAMA";
 
 	private String aciklama = "";
-	private double haftaIci = 0.0d, haftaSonu = 0.0d, arife = 0.0d, izin = 9.0d, izinhaftaSonu = 0.0d, negatifBakiyeDenkSaat = 0.0d;
-	private Double haftaIciSutIzniSure = 7.5d, cumartesiSutIzniSure = 0.0d;
+	private double haftaIci = 0.0d, arife = 0.0d, negatifBakiyeDenkSaat = 0.0d;
+	private Double haftaIciSutIzniSure = 7.5d, cumartesiSaat = 0.0d, izin = 0.0d, cumartesiIzinSaat = 0.0d, cumartesiSutIzniSure = 0.0d, pazarSaat = 0.0d, pazarIzinSaat = 0.0d, pazarSutIzniSure = 0.0d;
 	private Boolean fazlaMesaiVar = Boolean.TRUE, toplamGunGuncelle = Boolean.FALSE, durum = Boolean.TRUE, genelVardiya = Boolean.TRUE, hareketKaydiVardiyaBul = Boolean.FALSE;
 	private Boolean haftaTatilMesaiOde = Boolean.FALSE, geceHaftaTatilMesaiParcala = Boolean.FALSE, geceCalismaOdemeVar = Boolean.FALSE, otomatikFazlaCalismaOnaylansin = Boolean.FALSE;
 	private Boolean ortakVardiya = Boolean.FALSE, fazlaMesaiGoruntulensin = Boolean.TRUE, ilkPlanOnayliDurum = Boolean.FALSE, gunMaxCalismaOdemeDurum = Boolean.TRUE;
-	private Boolean haftaTatilPazar = Boolean.FALSE, genelModel = Boolean.TRUE, idariModel = Boolean.FALSE;
+	private Boolean genelModel = Boolean.TRUE, idariModel = Boolean.FALSE;
+	private Integer haftaTatilGun = Calendar.SUNDAY;
 	private VardiyaSablonu bagliVardiyaSablonu;
 	private Departman departman;
 	private Tanim personelTipi;
@@ -69,6 +86,7 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 
 	private User guncelleyenUser, olusturanUser;
 	private Date olusturmaTarihi = new Date(), guncellemeTarihi;
+	private Set<CalismaModeliGun> calismaModeliGunler;
 
 	@Column(name = COLUMN_NAME_ACIKLAMA)
 	public String getAciklama() {
@@ -88,31 +106,61 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 		this.haftaIci = haftaIci;
 	}
 
-	@Column(name = "CUMARTESI_SAAT")
-	public double getHaftaSonu() {
-		return haftaSonu;
+	@Column(name = COLUMN_NAME_CUMARTESI_SAAT)
+	public Double getCumartesiSaat() {
+		return cumartesiSaat;
 	}
 
-	public void setHaftaSonu(double haftaSonu) {
-		this.haftaSonu = haftaSonu;
+	public void setCumartesiSaat(Double cumartesiSaat) {
+		this.cumartesiSaat = cumartesiSaat;
 	}
 
-	@Column(name = "IZIN_SAAT")
-	public double getIzin() {
+	@Column(name = COLUMN_NAME_PAZAR_SAAT)
+	public Double getPazarSaat() {
+		return pazarSaat;
+	}
+
+	public void setPazarSaat(Double pazarSaat) {
+		this.pazarSaat = pazarSaat;
+	}
+
+	@OneToMany(cascade = CascadeType.REFRESH, fetch = FetchType.EAGER, mappedBy = "calismaModeli", targetEntity = CalismaModeliGun.class)
+	public Set<CalismaModeliGun> getCalismaModeliGunler() {
+		return calismaModeliGunler;
+	}
+
+	public void setCalismaModeliGunler(Set<CalismaModeliGun> calismaModeliGunler) {
+		this.calismaModeliGunler = calismaModeliGunler;
+	}
+
+	@Transient
+	// @Column(name = COLUMN_NAME_IZIN_SAAT)
+	public Double getIzin() {
 		return izin;
 	}
 
-	public void setIzin(double izin) {
+	public void setIzin(Double izin) {
 		this.izin = izin;
 	}
 
-	@Column(name = "IZIN_CUMARTESI_SAAT")
-	public double getIzinhaftaSonu() {
-		return izinhaftaSonu;
+	@Transient
+	// @Column(name = COLUMN_NAME_IZIN_CUMARTESI_SAAT)
+	public Double getCumartesiIzinSaat() {
+		return cumartesiIzinSaat;
 	}
 
-	public void setIzinhaftaSonu(double izinhaftaSonu) {
-		this.izinhaftaSonu = izinhaftaSonu;
+	public void setCumartesiIzinSaat(Double cumartesiIzinSaat) {
+		this.cumartesiIzinSaat = cumartesiIzinSaat;
+	}
+
+	@Transient
+	// @Column(name = COLUMN_NAME_IZIN_PAZAR_SAAT)
+	public Double getPazarIzinSaat() {
+		return pazarIzinSaat;
+	}
+
+	public void setPazarIzinSaat(Double pazarIzinSaat) {
+		this.pazarIzinSaat = pazarIzinSaat;
 	}
 
 	@Column(name = "ARIFE_SAAT")
@@ -268,13 +316,13 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 		this.gunMaxCalismaOdemeDurum = gunMaxCalismaOdemeDurum;
 	}
 
-	@Column(name = COLUMN_NAME_HAFTA_TATIL_PAZAR)
-	public Boolean getHaftaTatilPazar() {
-		return haftaTatilPazar;
+	@Column(name = COLUMN_NAME_HAFTA_TATIL)
+	public Integer getHaftaTatilGun() {
+		return haftaTatilGun;
 	}
 
-	public void setHaftaTatilPazar(Boolean haftaTatilPazar) {
-		this.haftaTatilPazar = haftaTatilPazar;
+	public void setHaftaTatilGun(Integer haftaTatilGun) {
+		this.haftaTatilGun = haftaTatilGun;
 	}
 
 	@Column(name = COLUMN_NAME_GENEL_MODEL)
@@ -335,6 +383,15 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 
 	public void setCumartesiSutIzniSure(Double cumartesiSutIzniSure) {
 		this.cumartesiSutIzniSure = cumartesiSutIzniSure;
+	}
+
+	@Column(name = COLUMN_NAME_PAZAR_SUT_IZNI_SURE)
+	public Double getPazarSutIzniSure() {
+		return pazarSutIzniSure;
+	}
+
+	public void setPazarSutIzniSure(Double pazarSutIzniSure) {
+		this.pazarSutIzniSure = pazarSutIzniSure;
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
@@ -402,6 +459,11 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
+	public boolean isHaftaTatilVar() {
+		return (cumartesiSaat != null && cumartesiSaat > 0.0d) || (pazarSaat != null && pazarSaat > 0.0d);
+	}
+
+	@Transient
 	public boolean isHareketKaydiVardiyaBulsunmu() {
 		return hareketKaydiVardiyaBul != null && hareketKaydiVardiyaBul.booleanValue();
 	}
@@ -440,25 +502,11 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 
 	@Transient
 	public double getIzinSaat(VardiyaGun pdksVardiyaGun) {
-		double izinSure = this.getIzin();
-		Calendar cal = Calendar.getInstance();
-		Date vardiyaDate = pdksVardiyaGun.getVardiyaDate();
-		cal.setTime(vardiyaDate);
-		int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
-		if (dayOfWeek == Calendar.SATURDAY)
-			izinSure = izinhaftaSonu;
-		else if (dayOfWeek == Calendar.SUNDAY) {
-			if (isHaftaTatilPazardir())
-				izinSure = 0.0d;
-		}
+		int dayOfWeek = PdksUtil.getDateField(pdksVardiyaGun.getVardiyaDate(), Calendar.DAY_OF_WEEK);
+		double izinSure = this.getIzinSaat(dayOfWeek);
+		if (pdksVardiyaGun.getVardiyaDateStr().equals("20240801"))
+			logger.debug(izinSure);
 
-		if (this.isSaatlikOdeme()) {
-			// IzinTipi izinTipi = pdksVardiyaGun.getIzin() != null ? pdksVardiyaGun.getIzin().getIzinTipi() : null;
-			// if (izinTipi != null) {
-			// if (izinTipi.isUcretsizIzinTipi())
-			// izinSure = 0.0d;
-			// }
-		}
 
 		return izinSure;
 	}
@@ -490,13 +538,195 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
-	public boolean isHaftaTatilPazardir() {
-		return haftaTatilPazar != null && haftaTatilPazar;
+	public boolean isHaftaTatilSabitDegil() {
+		return haftaTatilGun == null || (haftaTatilGun >= 1 && haftaTatilGun <= 7) == false;
 	}
 
 	@Transient
 	public boolean isGenelModelGorunsun() {
 		return genelModel != null && genelModel;
+	}
+
+	@Transient
+	public double getIzinSaat(int dayOfWeek) {
+		Double izinSure = null;
+		switch (dayOfWeek) {
+		case Calendar.SATURDAY:
+			izinSure = this.getCumartesiIzinSaat();
+			break;
+		case Calendar.SUNDAY:
+			izinSure = this.getPazarIzinSaat();
+			break;
+
+		default:
+			izinSure = this.getIzin();
+			break;
+		}
+		if (izinSure == null || izinSure.doubleValue() == 0.0d)
+			izinSure = getSaat(dayOfWeek);
+		if (izinSure > 0.0d)
+			logger.debug(dayOfWeek + " : " + izinSure);
+		return izinSure;
+	}
+
+	@Transient
+	public double getSutIzinSaat(int dayOfWeek) {
+		Double sutIzinSure = 0.0d;
+		switch (dayOfWeek) {
+		case Calendar.SATURDAY:
+			sutIzinSure = this.getCumartesiSutIzniSure();
+			break;
+		case Calendar.SUNDAY:
+			sutIzinSure = this.getPazarSutIzniSure();
+			break;
+
+		default:
+			sutIzinSure = this.getHaftaIciSutIzniSure();
+			break;
+		}
+		if (sutIzinSure == null) {
+			if (this.getDepartman() != null) {
+				Departman dm = this.getDepartman();
+				switch (dayOfWeek) {
+				case Calendar.SATURDAY:
+					sutIzinSure = dm.getCumartesiSutIzniSure();
+					break;
+				case Calendar.SUNDAY:
+					sutIzinSure = dm.getPazarSutIzniSure();
+					break;
+
+				default:
+					sutIzinSure = this.getGunSure(CalismaModeliGun.GUN_IZIN, dayOfWeek);
+					if (sutIzinSure == null)
+						sutIzinSure = dm.getHaftaIciSutIzniSure();
+					break;
+				}
+			}
+			if (sutIzinSure == null)
+				sutIzinSure = 0.0d;
+		}
+
+		if (sutIzinSure > 0.0d)
+			logger.debug(dayOfWeek + " : " + sutIzinSure);
+		return sutIzinSure;
+	}
+
+	/**
+	 * @param gunTipi
+	 * @param dayOfWeek
+	 * @return
+	 */
+	@Transient
+	public Double getGunSure(int gunTipi, int dayOfWeek) {
+		Double sure = null;
+		if (calismaModeliGunler != null && !calismaModeliGunler.isEmpty()) {
+			for (Iterator iterator = calismaModeliGunler.iterator(); iterator.hasNext();) {
+				CalismaModeliGun gun = (CalismaModeliGun) iterator.next();
+				if (gun.getGunTipi() == gunTipi && gun.getHaftaGun() == dayOfWeek) {
+					sure = gun.getSure();
+					break;
+				}
+			}
+		}
+		return sure;
+	}
+
+	@Transient
+	public String getHaftaTatil() {
+		String str = "Sabit Gün Değil";
+		if (haftaTatilGun != null) {
+			if (haftaTatilGun >= 1 && haftaTatilGun <= 7) {
+				Calendar cal = Calendar.getInstance();
+				cal.set(Calendar.DAY_OF_WEEK, haftaTatilGun);
+				str = PdksUtil.convertToDateString(cal.getTime(), "EEEEE");
+			}
+		}
+		return str;
+	}
+
+	@Transient
+	public double getSaat(int dayOfWeek) {
+		Double gunSure = null;
+		switch (dayOfWeek) {
+		case Calendar.SATURDAY:
+			gunSure = this.getCumartesiSaat();
+			break;
+		case Calendar.SUNDAY:
+			gunSure = this.getPazarSaat();
+			break;
+
+		default:
+			gunSure = this.getGunSure(CalismaModeliGun.GUN_SAAT, dayOfWeek);
+			if (gunSure == null)
+				gunSure = this.getHaftaIci();
+			break;
+		}
+		if (gunSure == null)
+			gunSure = 0.0d;
+		if (gunSure > 0.0d)
+			logger.debug(dayOfWeek + " : " + gunSure);
+		return gunSure;
+	}
+
+	@Transient
+	public List<Liste> getHaftaSaatList() {
+		List<Liste> list = getHaftaList(CalismaModeliGun.GUN_SAAT);
+		return list;
+	}
+
+	@Transient
+	public List<Liste> getHaftaIzinList() {
+		List<Liste> list = getHaftaList(CalismaModeliGun.GUN_IZIN);
+		return list;
+	}
+
+	@Transient
+	public List<Liste> getHaftaList(int gunTipi) {
+		List<Liste> list = new ArrayList<Liste>();
+		List<Integer> gunler = new ArrayList<Integer>();
+		for (int i = Calendar.MONDAY; i <= Calendar.SATURDAY; i++)
+			gunler.add(i);
+		gunler.add(Calendar.SUNDAY);
+		Calendar cal = Calendar.getInstance();
+		double toplam = 0.0d;
+		for (Integer dayOfWeek : gunler) {
+			double sure = 0.0d;
+			if (gunTipi == CalismaModeliGun.GUN_SAAT)
+				sure = getSaat(dayOfWeek);
+			else if (gunTipi == CalismaModeliGun.GUN_IZIN)
+				sure = getIzinSaat(dayOfWeek);
+			if (sure > 0.0d) {
+				cal.set(Calendar.DAY_OF_WEEK, dayOfWeek);
+				try {
+					list.add(new Liste(PdksUtil.convertToDateString(cal.getTime(), "EEEEE"), PdksUtil.numericValueFormatStr(sure, null)));
+					toplam += sure;
+				} catch (Exception e) {
+
+				}
+
+			}
+		}
+		try {
+			if (toplam > 0.0d)
+				list.add(new Liste("TOPLAM", PdksUtil.numericValueFormatStr(toplam, null)));
+		} catch (Exception e) {
+
+		}
+
+		gunler = null;
+		return list;
+	}
+
+	@Transient
+	public String getAciklamaHT() {
+		String st = aciklama;
+		if (haftaTatilGun != null) {
+			String ht = this.getHaftaTatil();
+			if (PdksUtil.hasStringValue(ht)) {
+				st = aciklama + " [ HT : " + ht + " ]";
+			}
+		}
+		return st;
 	}
 
 	@Transient

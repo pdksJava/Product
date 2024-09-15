@@ -155,9 +155,9 @@
 											rendered="#{not empty personelKalanIzinHome.personelBakiyeIzinList}" reRender="izinPanel" />
 
 										<rich:toolTip for="dosyaOku" rendered="#{personelKalanIzinHome.personelBakiyeIzinList.isEmpty()}">
-											<TABLE class="mars">
-												<thead>
-													<tr>
+											<TABLE class="rich-table">
+												<thead class="rich-table-thead">
+													<tr class="rich-table-subheader">
 														<th>#{ortakIslemler.personelNoAciklama()}</th>
 														<th>ADI SOYADI</th>
 														<th>GRUBA GIRIS</th>
@@ -176,7 +176,7 @@
 													</tr>
 												</thead>
 												<tbody>
-													<tr class="odd">
+													<tr class="acik">
 														<td align="center">90015654</td>
 														<td>PAKIZE YILMAZ</td>
 														<td align="center">17/05/2011</td>
@@ -193,7 +193,7 @@
 														<td align="center">16/06/2012</td>
 														<td align="center">01/07/2012</td>
 													</tr>
-													<tr class="even">
+													<tr class="koyu">
 														<td align="center">90015654</td>
 														<td>PAKIZE YILMAZ</td>
 														<td align="center">17/05/2011</td>
@@ -210,7 +210,7 @@
 														<td align="center">10/09/2012</td>
 														<td align="center">25/09/2012</td>
 													</tr>
-													<tr class="odd">
+													<tr class="acik">
 														<td align="center">90015654</td>
 														<td>PAKIZE YILMAZ</td>
 														<td align="center">17/05/2011</td>
@@ -238,12 +238,13 @@
 					</a4j:outputPanel>
 					<DIV class="#{authenticatedUser.scroolClass}" id="#{authenticatedUser.scroolDiv}1">
 						<ui:fragment id="bakiyeIzinTable" rendered="#{not empty personelKalanIzinHome.personelBakiyeIzinList}">
-							<table class="mars">
+							<table class="rich-table">
+
 								<caption>
 									<B>Personeller Bakiye İzinleri</B>
 								</caption>
-								<thead>
-									<tr>
+								<thead class="rich-table-thead">
+									<tr class="rich-table-subheader">
 
 										<th style="width: 90px"><h:outputText value="#{ortakIslemler.personelNoAciklama()}" /></th>
 										<th><h:outputText value="Adı Soyadı" /></th>
@@ -267,7 +268,8 @@
 											<td align="right"><h:outputText
 													value="#{authenticatedUser.sayiFormatliGoster(bakiyeIzinler.toplamBakiyeIzin - bakiyeIzinler.kullanilanIzin)}" /></td>
 											<td colspan="8" style="width: 500px">
-												<table class="mars" style="width: 100%">
+												<table class="rich-table">
+
 													<tbody>
 														<ui:repeat value="#{bakiyeIzinler.yillikIzinler}" var="yillikIzin">
 															<tr class="#{bakiyeIzinler.styleClass}">
@@ -278,7 +280,7 @@
 																<td align="right" style="width: 30px"><h:outputText value="#{yillikIzin.aciklama}" /></td>
 																<td><h:outputText value="#{yillikIzin.izinTipi.bakiyeIzinTipi.izinTipiTanim.aciklama}" /></td>
 																<td style="width: 150px">
-																	<table class="mars" style="width: 100%">
+																	<table class="rich-table">
 																		<tbody>
 																			<ui:repeat value="#{yillikIzin.harcananDigerIzinler}" var="kullanilan">
 																				<tr class="#{bakiyeIzinler.styleClass}">
@@ -295,7 +297,7 @@
 														</ui:repeat>
 													</tbody>
 												</table>
-											</td>
+										</td>
 										</tr>
 									</ui:repeat>
 
@@ -542,7 +544,8 @@
 				<h:panelGrid width="500">
 					<rich:dataTable rowClasses="acik,koyu" value="#{personelKalanIzinHome.harcananIzinler}" var="harcananIzin" rows="20" rowKeyVar="row">
 						<f:facet name="header">
-							<h:outputText value="#{authenticatedUser.getTarihFormatla(personelKalanIzinHome.updateIzin.baslangicZamani,'yyyy')} İzin Hakediş Yılı Kullanılan İzinler" />
+							<h:outputText
+								value="#{authenticatedUser.getTarihFormatla(personelKalanIzinHome.updateIzin.baslangicZamani,'yyyy')} İzin Hakediş Yılı Kullanılan İzinler" />
 						</f:facet>
 
 						<rich:column style="text-align:center">

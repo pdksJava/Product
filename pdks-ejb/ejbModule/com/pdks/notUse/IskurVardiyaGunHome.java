@@ -30,7 +30,6 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.hibernate.validator.InvalidStateException;
 import org.hibernate.validator.InvalidValue;
@@ -116,6 +115,8 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 	PersonelIzinGirisiHome personelIzinGirisiHome;
 	@In(required = false, create = true)
 	String linkAdres;
+	
+	public static String sayfaURL = "isKurVardiyaPlani";
 
 	private TreeMap<String, Tanim> fazlaMesaiMap;
 
@@ -1360,7 +1361,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 				izinGuncelleme = true;
 			else if (cm != null) {
 				int haftaGun = vg.getHaftaninGunu();
-				boolean cumartesiCalisiyor = cm.getHaftaSonu() > 0.0d;
+				boolean cumartesiCalisiyor = cm.getCumartesiSaat() > 0.0d;
 				if (haftaGun != Calendar.SUNDAY && (cumartesiCalisiyor == false || haftaGun != Calendar.SATURDAY))
 					izinGuncelleme = !offIzinGuncelle;
 			}
@@ -1509,7 +1510,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 					cal.setTime(pdksVardiyaGun.getVardiyaDate());
 					cal.set(Calendar.HOUR_OF_DAY, aksamVardiyaBitSaat);
 					cal.set(Calendar.MINUTE, aksamVardiyaBitDakika);
-					if (vardiya.getBasSaat() > vardiya.getBitSaat())
+					if (vardiya.getBasDonem() > vardiya.getBitDonem())
 						cal.add(Calendar.DATE, 1);
 					aksamVardiyaBitisZamani = cal.getTime();
 				}
@@ -1517,7 +1518,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 					cal.setTime(pdksVardiyaGun.getVardiyaDate());
 					cal.set(Calendar.HOUR_OF_DAY, aksamVardiyaBasSaat);
 					cal.set(Calendar.MINUTE, aksamVardiyaBasDakika);
-					if (vardiya.getBasSaat() < vardiya.getBitSaat())
+					if (vardiya.getBasDonem() < vardiya.getBitDonem())
 						cal.add(Calendar.DATE, -1);
 					aksamVardiyaBaslangicZamani = cal.getTime();
 				}
@@ -1543,7 +1544,7 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 						if (vardiyaMap != null && pdksVardiyaGun.getVardiya().isCalisma() && !pdksVardiyaGun.isRaporIzni()) {
 							int index = PdksUtil.getDateField(pdksVardiyaGun.getVardiyaDate(), Calendar.DATE) - 1;
 							Vardiya islemVardiya = pdksVardiyaGun.getIslemVardiya();
-							if (!gorevli && islemVardiya.getBasSaat() >= islemVardiya.getBitSaat()) {
+							if (!gorevli && islemVardiya.getBasDonem() >= islemVardiya.getBitDonem()) {
 								if (pdksVardiyaGun.getSonrakiVardiyaGun() != null) {
 									try {
 										if (pdksVardiyaGun.getSonrakiVardiya().isHaftaTatil() && (haftaTatilDurum.equals("1"))) {
@@ -2600,11 +2601,11 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 						int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
 						if (dayOfWeek != Calendar.SUNDAY) {
 							if (vg.getTatil() == null) {
-								sure += dayOfWeek != Calendar.SATURDAY ? cm.getHaftaIci() : cm.getHaftaSonu();
+								sure += dayOfWeek != Calendar.SATURDAY ? cm.getHaftaIci() : cm.getCumartesiSaat();
 								toplamIzinSure += dayOfWeek != Calendar.SATURDAY ? 7.5d : 0;
 							} else if (vg.getTatil().isYarimGunMu()) {
 								if (PdksUtil.tarihKarsilastirNumeric(vg.getVardiyaDate(), vg.getTatil().getBasTarih()) == 0) {
-									if (cm.getHaftaSonu() > 0 || dayOfWeek != Calendar.SATURDAY)
+									if (cm.getCumartesiSaat() > 0 || dayOfWeek != Calendar.SATURDAY)
 										sure += cm.getArife();
 									toplamIzinSure += cm.getArife();
 								}
@@ -3637,10 +3638,8 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 	public void sayfaGirisAction() throws Exception {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
+		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
 		adminRoleDurum(authenticatedUser);
-
-		session.clear();
 		donusAdres = "";
 		denklestirmeAyDurum = Boolean.FALSE;
 		modelList = new ArrayList<CalismaModeliAy>();
@@ -5669,5 +5668,13 @@ public class IskurVardiyaGunHome extends EntityHome<VardiyaPlan> implements Seri
 
 	public void setBolumAciklama(String bolumAciklama) {
 		this.bolumAciklama = bolumAciklama;
+	}
+
+	public static String getSayfaURL() {
+		return sayfaURL;
+	}
+
+	public static void setSayfaURL(String sayfaURL) {
+		IskurVardiyaGunHome.sayfaURL = sayfaURL;
 	}
 }

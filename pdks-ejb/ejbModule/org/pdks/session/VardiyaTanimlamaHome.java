@@ -16,7 +16,6 @@ import javax.persistence.EntityManager;
 import org.apache.log4j.Logger;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -64,7 +63,8 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 	OrtakIslemler ortakIslemler;
 	@In(required = false, create = true)
 	FazlaMesaiOrtakIslemler fazlaMesaiOrtakIslemler;
-
+	
+	public static String sayfaURL = "pdksVardiyaTanimlama";
 	private List<DenklestirmeAy> aylikList = null;
 	private String maxYil = null, vardiyaTanimKodu = null;
 	private int yilEdit, yilModal, yilSelect, yil;
@@ -191,12 +191,15 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 					da.setTrClass(renk ? VardiyaGun.STYLE_CLASS_ODD : VardiyaGun.STYLE_CLASS_EVEN);
 					for (Iterator iterator = calismaModeliList.iterator(); iterator.hasNext();) {
 						CalismaModeli cm = (CalismaModeli) iterator.next();
+						long donem = cm.getOlusturmaTarihi() != null ? PdksUtil.getDateField(cm.getOlusturmaTarihi(), Calendar.YEAR) * 100 + 1 : da.getDonem();
 						CalismaModeliAy calismaModeliAy = null;
 						String key = CalismaModeliAy.getKey(da, cm);
 						if (cm.getDurum().booleanValue() == false) {
 							continue;
 						}
 						if (!modelMap.containsKey(key)) {
+							if (donem > da.getDonem())
+								continue;
 							calismaModeliAy = new CalismaModeliAy(da, cm);
 							calismaModeliAy.setDurum(Boolean.FALSE);
 							pdksEntityController.saveOrUpdate(xSession, entityManager, calismaModeliAy);
@@ -224,8 +227,7 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 	public void sayfaGirisAction() {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
 		Calendar calendar = Calendar.getInstance();
 		yil = calendar.get(Calendar.YEAR);
 		calendar.add(Calendar.MONTH, 1);
@@ -719,7 +721,7 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 		if (xSession == null)
 			xSession = session;
 		xSession.clear();
- 		fillCalismaModeller(xSession);
+		fillCalismaModeller(xSession);
 		HashMap map = new HashMap();
 		map.put(PdksEntityController.MAP_KEY_MAP, "getAy");
 		map.put("yil=", yil);
@@ -969,6 +971,14 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 
 	public void setModelMap(TreeMap<String, CalismaModeliAy> modelMap) {
 		this.modelMap = modelMap;
+	}
+
+	public static String getSayfaURL() {
+		return sayfaURL;
+	}
+
+	public static void setSayfaURL(String sayfaURL) {
+		VardiyaTanimlamaHome.sayfaURL = sayfaURL;
 	}
 
 }

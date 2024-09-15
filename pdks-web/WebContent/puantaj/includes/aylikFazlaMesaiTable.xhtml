@@ -288,7 +288,7 @@
 					<ui:fragment>
 						<h:outputText value="#{ortakIslemler.yasalFazlaCalismaAsanSaatKod()}" id="yfmc" />
 						<rich:toolTip for="yfmc">
-							<SPAN class="rich-table-subheadercell"><b>Yasal Çalışmayı Aşan Mesai : </b>#{authenticatedUser.sayiFormatliGoster(fazlaMesaiOzetRaporHome.denklestirmeAy.fazlaMesaiMaxSure)}
+							<SPAN class="rich-table-subheader"><b>Yasal Çalışmayı Aşan Mesai : </b>#{authenticatedUser.sayiFormatliGoster(fazlaMesaiOzetRaporHome.denklestirmeAy.fazlaMesaiMaxSure)}
 								saati aşan çalışma toplam miktarı</SPAN>
 						</rich:toolTip>
 					</ui:fragment>
@@ -792,7 +792,7 @@
 				</c:forEach>
 
 			</c:if>
-			<rich:column rendered="#{fazlaMesaiHesaplaHome.ikRole}" class="#{aylikPuantaj.trSonucClass}" style="width: 30px">
+			<rich:column rendered="#{fazlaMesaiHesaplaHome.istifaGoster and fazlaMesaiHesaplaHome.ikRole}" class="#{aylikPuantaj.trSonucClass}" style="width: 30px">
 				<f:facet name="header">
 							Durum
 						</f:facet>

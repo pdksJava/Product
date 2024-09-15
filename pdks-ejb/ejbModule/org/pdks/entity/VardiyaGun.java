@@ -52,8 +52,8 @@ public class VardiyaGun extends BaseObject {
 	public static final String STYLE_CLASS_IZIN = "izinAylik";
 	public static final String STYLE_CLASS_HAFTA_TATIL = "tatilAylik";
 	public static final String STYLE_CLASS_DIGER_AY = "digerAy";
-	public static final String STYLE_CLASS_ODD = "odd";
-	public static final String STYLE_CLASS_EVEN = "even";
+	public static final String STYLE_CLASS_ODD = "acik";
+	public static final String STYLE_CLASS_EVEN = "koyu";
 	public static final String STYLE_CLASS_HATA = "hata";
 	public static boolean haftaTatilDurum;
 
@@ -803,7 +803,7 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	public void setIzin(PersonelIzin value) {
-		if (vardiyaDateStr.equals("20231112")) {
+		if (vardiyaDateStr.equals("20240821")) {
 			if (value != null)
 				logger.debug(vardiyaDateStr + " " + value.getId() + " " + value.getAciklama());
 			else
@@ -1026,8 +1026,8 @@ public class VardiyaGun extends BaseObject {
 
 	@Transient
 	public String getVardiyaKey() {
-		if (!fiiliHesapla)
-			setIzin(null);
+		// if (!fiiliHesapla)
+		// setIzin(null);
 		String key = getVardiyaKeyStr();
 		return key;
 

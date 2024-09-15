@@ -56,6 +56,7 @@ import org.apache.poi.ss.usermodel.Drawing;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.hibernate.FlushMode;
 import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.jboss.seam.ScopeType;
@@ -1124,11 +1125,11 @@ public class OrtakIslemler implements Serializable {
 						idMap.put(pdksVardiyaGun.getId(), pdksVardiyaGun);
 
 					if (pdksVardiyaGun.getVardiyaDate().before(date)) {
-						if (!(islemVardiya.getBitSaat() < islemVardiya.getBasSaat() && gunDurum == 0) || pdksVardiyaGun.getIzin() != null)
+						if (!(islemVardiya.getBitDonem() < islemVardiya.getBasDonem() && gunDurum == 0) || pdksVardiyaGun.getIzin() != null)
 							sil = true;
 
 					} else {
-						if (islemVardiya.getBitSaat() < islemVardiya.getBasSaat() && gunDurum == 0 && bugun.before(islemVardiya.getVardiyaBasZaman()))
+						if (islemVardiya.getBitDonem() < islemVardiya.getBasDonem() && gunDurum == 0 && bugun.before(islemVardiya.getVardiyaBasZaman()))
 							sil = true;
 					}
 				}
@@ -2156,10 +2157,13 @@ public class OrtakIslemler implements Serializable {
 		Workbook wb = null;
 		if (dosya != null && dosya.getDosyaIcerik() != null) {
 			ByteArrayInputStream bis = new ByteArrayInputStream(dosya.getDosyaIcerik());
-			if (dosya.getDosyaAdi() != null && dosya.getDosyaAdi().endsWith(".xls"))
-				wb = new HSSFWorkbook(bis);
-			else
-				wb = new XSSFWorkbook(bis);
+			if (dosya.getDosyaAdi() != null) {
+				if (dosya.getDosyaAdi().endsWith(".xlsx") || dosya.getDosyaAdi().endsWith(".xls"))
+					wb = new XSSFWorkbook(bis);
+				else
+					wb = new HSSFWorkbook(bis);
+			}
+
 			bis = null;
 		}
 
@@ -3960,7 +3964,7 @@ public class OrtakIslemler implements Serializable {
 						departman = (Departman) pdksEntityController.getObjectByInnerObject(fields, Departman.class);
 					}
 					order = Sirket.COLUMN_NAME_AD;
-				} else if (tipi.equalsIgnoreCase("B")) {
+				} else if (tipi.startsWith("B")) {
 					class1 = Tanim.class;
 					order = Tanim.COLUMN_NAME_ACIKLAMATR;
 				} else if (tipi.startsWith("AB")) {
@@ -8299,6 +8303,40 @@ public class OrtakIslemler implements Serializable {
 	}
 
 	/**
+	 * @param session
+	 * @param menuAdi
+	 * @return
+	 */
+	public void setUserMenuItemTime(Session session, String menuAdi) {
+		try {
+			if (session != null) {
+				session.setFlushMode(FlushMode.MANUAL);
+				session.clear();
+				if (authenticatedUser != null && getParameterKeyHasStringValue("userMenuGirisGoster")) {
+					UserMenuItemTime menuItemTime = null;
+					if (authenticatedUser.getId() != null && PdksUtil.hasStringValue(authenticatedUser.getCalistigiSayfa())) {
+						if (authenticatedUser.isAdmin() || authenticatedUser.isIK() || authenticatedUser.isSistemYoneticisi()) {
+							HashMap fields = new HashMap();
+							fields.put("user.id", authenticatedUser.getId());
+							fields.put("menu.name", menuAdi);
+							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+							menuItemTime = (UserMenuItemTime) pdksEntityController.getObjectByInnerObject(fields, UserMenuItemTime.class);
+							if (menuItemTime != null) {
+								menuItemTime.setLastTime(new Date());
+								session.saveOrUpdate(menuItemTime);
+								session.flush();
+							}
+						}
+					}
+					authenticatedUser.setMenuItemTime(menuItemTime);
+				}
+			}
+		} catch (Exception e) {
+		}
+
+	}
+
+	/**
 	 * @param sessionx
 	 * @param menuAdi
 	 * @return
@@ -8306,6 +8344,19 @@ public class OrtakIslemler implements Serializable {
 	public String getMenuUserAdi(Session sessionx, String menuAdi) {
 		boolean logYaz = authenticatedUser.getCalistigiSayfa() == null || !authenticatedUser.getCalistigiSayfa().equals(menuAdi);
 		String menuTanimAdi = getMenuUserLogAdi(sessionx, menuAdi, logYaz);
+		// try {
+		// if (authenticatedUser != null && authenticatedUser.getId() != null && PdksUtil.hasStringValue(authenticatedUser.getCalistigiSayfa())) {
+		// HashMap fields = new HashMap();
+		// fields.put("user.id", authenticatedUser.getId());
+		// fields.put("menu.name", menuAdi);
+		// if (sessionx != null)
+		// fields.put(PdksEntityController.MAP_KEY_SESSION, sessionx);
+		// UserMenuItemTime menuItemTime = (UserMenuItemTime) pdksEntityController.getObjectByInnerObject(fields, UserMenuItemTime.class);
+		// authenticatedUser.setMenuItemTime(menuItemTime);
+		// }
+		// } catch (Exception e) {
+		// }
+
 		return menuTanimAdi;
 	}
 
@@ -8331,7 +8382,8 @@ public class OrtakIslemler implements Serializable {
 					if (logYaz)
 						logger.info(mesaj);
 				}
-				authenticatedUser.setMenuItemTime(null);
+				if (authenticatedUser.getMenuItemTime() != null && !authenticatedUser.getMenuItemTime().getMenu().getName().equals(menuAdi))
+					authenticatedUser.setMenuItemTime(null);
 				if (sessionx != null) {
 					try {
 						HttpSession mySession = (HttpSession) FacesContext.getCurrentInstance().getExternalContext().getSession(false);
@@ -12087,7 +12139,7 @@ public class OrtakIslemler implements Serializable {
 						Vardiya vardiya = oncekiVardiya.getIslemVardiya();
 						Date vardiyaBitZaman = null;
 
-						if (vardiya != null && vardiya.isCalisma() && vardiya.getBasSaat() >= vardiya.getBitSaat()) {
+						if (vardiya != null && vardiya.isCalisma() && vardiya.getBasDonem() >= vardiya.getBitDonem()) {
 							vardiyaBitZaman = vardiya.getVardiyaTelorans2BitZaman();
 							vardiya.setVardiyaFazlaMesaiBitZaman(vardiyaBitZaman);
 							islemVardiya.setVardiyaBasZaman(vardiyaBitZaman);
@@ -12099,7 +12151,7 @@ public class OrtakIslemler implements Serializable {
 					}
 				}
 
-				if (vardiyaGun.getVardiya().isCalisma() && islemVardiya.getBasSaat() <= islemVardiya.getBitSaat()) {
+				if (vardiyaGun.getVardiya().isCalisma() && islemVardiya.getBasDonem() <= islemVardiya.getBitDonem()) {
 					VardiyaGun sonrakiVardiyaGun = vardiyaGun.getSonrakiVardiyaGun();
 					if (sonrakiVardiyaGun != null) {
 						Vardiya vardiya = sonrakiVardiyaGun.getIslemVardiya();
@@ -12446,11 +12498,11 @@ public class OrtakIslemler implements Serializable {
 								VardiyaGun oncekiVardiyaGun = vardiyaMap.get(gun.getVardiyaKeyStr());
 								Vardiya oncekiVardiya = oncekiVardiyaGun.getVardiya();
 								oncekiStr = oncekiVardiyaGun.getVardiyaDateStr();
-								if (oncekiVardiya != null && oncekiVardiya.getId() != null && oncekiVardiya.getBasSaat() > oncekiVardiya.getBitSaat() && tatilMap.containsKey(oncekiStr))
+								if (oncekiVardiya != null && oncekiVardiya.getId() != null && oncekiVardiya.getBasDonem() > oncekiVardiya.getBitDonem() && tatilMap.containsKey(oncekiStr))
 									tatil = tatilMap.get(oncekiStr);
 							}
 							gun = null;
-						} else if (vardiya.getBasSaat() > vardiya.getBitSaat()) {
+						} else if (vardiya.getBasDonem() > vardiya.getBitDonem()) {
 							VardiyaGun gun = new VardiyaGun(vardiyaGun.getPdksPersonel(), null, tariheGunEkleCikar(cal, vardiyaGun.getVardiyaDate(), 1));
 							String sonrakiStr = gun.getVardiyaDateStr();
 							if (sonrakiStr.endsWith("01") && vardiyaMap.containsKey(gun.getVardiyaKeyStr()) && tatilMap.containsKey(sonrakiStr))
@@ -15486,7 +15538,7 @@ public class OrtakIslemler implements Serializable {
 				else
 					calismaModeli = puantajData.getPdksPersonel().getCalismaModeli();
 				if (calismaModeli != null)
-					gunduzCalismaSaat = (calismaModeli.getHaftaIci() * 5.0d) + calismaModeli.getHaftaSonu();
+					gunduzCalismaSaat = (calismaModeli.getHaftaIci() * 5.0d) + calismaModeli.getCumartesiSaat() + calismaModeli.getPazarSaat();
 			}
 
 			HashMap parametreMap = new HashMap();
@@ -15576,7 +15628,9 @@ public class OrtakIslemler implements Serializable {
 							if (ilkGiris)
 								puantajData.setResmiTatilToplami(0.0d);
 							ilkGiris = false;
-
+							if (pdksVardiyaGun.getVardiya() != null && pdksVardiyaGun.getVardiya().isHaftaTatil()) {
+								personelDenklestirme.setIzinVardiyaGun(pdksVardiyaGun);
+							}
 							List<YemekIzin> yemekList = yemekHesapla ? pdksVardiyaGun.getYemekList() : yemekBosList;
 							Double izinSaat = null;
 							Tatil tatilOrj = tatilGunleriMap.get(key);
@@ -15585,9 +15639,22 @@ public class OrtakIslemler implements Serializable {
 							boolean arifeGunu = false;
 							Vardiya vardiyaIzin = pdksVardiyaGun.getVardiya();
 							if (personelDenklestirme != null && personelDenklestirme.getCalismaModeliAy() != null) {
-								CalismaModeli calismaModeliAy = personelDenklestirme.getCalismaModeli();
-
+								CalismaModeli calismaModeliAy = pdksVardiyaGun.getCalismaModeli() != null ? pdksVardiyaGun.getCalismaModeli() : personelDenklestirme.getCalismaModeli();
 								izinSaat = pdksVardiyaGun.isIzinli() ? calismaModeliAy.getIzinSaat(pdksVardiyaGun) : 0.0d;
+								if (pdksVardiyaGun.isIzinli() && personelDenklestirme != null && calismaModeli.isHaftaTatilSabitDegil()) {
+									Vardiya vardiya = pdksVardiyaGun.getVardiya();
+									if (izinSaat == 0 || vardiya.isHaftaTatil()) {
+										if (vardiya.isHaftaTatil()) {
+											personelDenklestirme.setIzinVardiyaGun(pdksVardiyaGun);
+											izinSaat = 0.0d;
+										} else if (personelDenklestirme.getIzinVardiyaGun() != null) {
+											VardiyaGun izinVardiyaGun = personelDenklestirme.getIzinVardiyaGun();
+											int haftaGun = PdksUtil.getDateField(izinVardiyaGun.getVardiyaDate(), Calendar.DAY_OF_WEEK);
+											izinSaat = calismaModeli.getSaat(haftaGun);
+										}
+									}
+
+								}
 								if (pdksVardiyaGun.getIzin() != null && pdksVardiyaGun.getIzin().getIzinTipi().isIslemYokCGS()) {
 									izinSaat = 0.0d;
 								}
@@ -15656,19 +15723,15 @@ public class OrtakIslemler implements Serializable {
 								if (pdksVardiyaGun.getVardiya() != null) {
 									if (haftaTatiliFarkHesapla && !pdksVardiyaGun.isIzinli()) {
 										cal.setTime(pdksVardiyaGun.getVardiyaDate());
-										boolean pazarGunu = cal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY, cumartesiGunu = cal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY;
 										if (pdksVardiyaGun.getVardiya().isHaftaTatil()) {
 											if (pdksVardiyaGun.getTatil() == null) {
-												if (cumartesiGunu)
-													haftaTatiliFark += calismaModeli.getHaftaSonu();
-												else
-													haftaTatiliFark += calismaModeli.getHaftaIci();
+
+												haftaTatiliFark += calismaModeli.getSaat(cal.get(Calendar.DAY_OF_WEEK));
+
 											} else if (pdksVardiyaGun.getTatil().isYarimGunMu())
 												haftaTatiliFark += calismaModeli.getArife();
 										}
-										if (pazarGunu) {
-											haftaTatiliFark -= calismaModeli.getHaftaIci();
-										}
+
 									}
 									if (!gebeMi)
 										gebeMi = suaVar || pdksVardiyaGun.getVardiya().isGebelikMi();
@@ -15773,22 +15836,23 @@ public class OrtakIslemler implements Serializable {
 
 								if (!normalGun) {
 									boolean offIzinli = pdksVardiyaGun.isIzinli() && !(pdksVardiyaGun.getVardiya().isOffGun() || pdksVardiyaGun.getVardiya().isHaftaTatil());
-									if (pdksVardiyaGun.getIzin() != null && haftaIciIzinGunTarih != null && pdksVardiyaGun.getVardiyaDate().getTime() >= haftaIciIzinGunTarih.getTime() && calismaModeli != null) {
+									if ((pdksVardiyaGun.getIzin() != null) && haftaIciIzinGunTarih != null && pdksVardiyaGun.getVardiyaDate().getTime() >= haftaIciIzinGunTarih.getTime() && calismaModeli != null) {
 										cal.setTime(pdksVardiyaGun.getVardiyaDate());
-										int dayOffWeek = cal.get(Calendar.DAY_OF_WEEK);
+										int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+										double saat = calismaModeli.getSaat(dayOfWeek);
 										if (offIzinli == false) {
 											if (pdksVardiyaGun.getVardiya().isOff()) {
 												if (haftaIciIzinGunTarih != null && pdksVardiyaGun.getVardiyaDate().after(haftaIciIzinGunTarih) && calismaModeli != null) {
-													if (dayOffWeek == Calendar.SATURDAY)
-														offIzinli = calismaModeli.getHaftaSonu() == calismaModeli.getHaftaIci();
+													if (dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY)
+														offIzinli = saat == calismaModeli.getHaftaIci();
 													else {
-														if (dayOffWeek != Calendar.SUNDAY)
-															offIzinli = calismaModeli.getHaftaIci() > 0;
+
+														offIzinli = calismaModeli.getHaftaIci() > 0;
 													}
 												}
 											}
-										} else if (dayOffWeek == Calendar.SATURDAY && pdksVardiyaGun.getVardiya().isCalisma()) {
-											izinHesapla = calismaModeli.getHaftaSonu() > 0;
+										} else if ((dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY) && pdksVardiyaGun.getVardiya().isCalisma()) {
+											izinHesapla = saat > 0;
 										}
 									}
 
@@ -16231,25 +16295,31 @@ public class OrtakIslemler implements Serializable {
 				boolean raporIzni = getParameterKey("raporIzniKontrolEt").equals("1") && izinTipi.isRaporIzin();
 				if (izinTipi != null && !raporIzni) {
 					// TODO İzin
-					CalismaModeli calismaModeli = personelDenklestirme.getCalismaModeli();
+					CalismaModeli calismaModeli = pdksVardiyaGun.getCalismaModeli() != null ? pdksVardiyaGun.getCalismaModeli() : personelDenklestirme.getCalismaModeli();
 					if (calismaModeli != null) {
 						int haftaGun = PdksUtil.getDateField(pdksVardiyaGun.getVardiyaDate(), Calendar.DAY_OF_WEEK);
-						switch (haftaGun) {
-						case Calendar.SATURDAY:
-							if (calismaModeli.getHaftaSonu() <= 0.0d)
+						double saat = calismaModeli.getSaat(haftaGun), izinSaat = calismaModeli.getIzinSaat(haftaGun);
+						if (calismaModeli.isHaftaTatilSabitDegil() && personelDenklestirme != null) {
+							Vardiya vardiya = pdksVardiyaGun.getVardiya();
+							if (izinSaat == 0 || vardiya.isHaftaTatil()) {
+								if (vardiya.isHaftaTatil()) {
+									personelDenklestirme.setIzinVardiyaGun(pdksVardiyaGun);
+									izinSaat = 0.0d;
+								} else if (personelDenklestirme.getIzinVardiyaGun() != null) {
+									VardiyaGun izinVardiyaGun = personelDenklestirme.getIzinVardiyaGun();
+									haftaGun = PdksUtil.getDateField(izinVardiyaGun.getVardiyaDate(), Calendar.DAY_OF_WEEK);
+									izinSaat = calismaModeli.getSaat(haftaGun);
+								}
+							}
+
+						}
+						if (haftaGun == Calendar.SATURDAY || haftaGun == Calendar.SUNDAY) {
+							if (saat <= 0.0d)
 								sure = 0.0d;
 							else
-								sure = calismaModeli.getIzinhaftaSonu();
-							break;
-						case Calendar.SUNDAY:
-							sure = 0.0d;
-							break;
-
-						default:
-							if (calismaModeli.getIzin() > 0.0d)
-								sure = calismaModeli.getIzin();
-							break;
-						}
+								sure = izinSaat;
+						} else
+							sure = izinSaat;
 
 						Tatil tatil = pdksVardiyaGun.getTatil();
 						if (tatil != null) {
@@ -16285,10 +16355,10 @@ public class OrtakIslemler implements Serializable {
 			Tatil tatil = pdksVardiyaGun.getTatil();
 			if (tatil == null) {
 				// boolean sua = pdksVardiyaGun.getVardiya().getSua() != null ? pdksVardiyaGun.getVardiya().getSua() : null;
-				calismayanSure = dayOfWeek != Calendar.SATURDAY ? calismaModeli.getHaftaIci() : calismaModeli.getHaftaSonu();
+				calismayanSure = calismaModeli.getSaat(dayOfWeek);
 			} else if (tatil.isYarimGunMu()) {
 				if (PdksUtil.tarihKarsilastirNumeric(vardiyaDate, tatil.getBasTarih()) == 0) {
-					if (calismaModeli.getHaftaSonu() > 0 || dayOfWeek != Calendar.SATURDAY)
+					if (calismaModeli.isHaftaTatilVar() || pdksVardiyaGun.isHaftaIci())
 						calismayanSure = calismaModeli.getArife();
 				}
 			}
@@ -17323,7 +17393,7 @@ public class OrtakIslemler implements Serializable {
 								// TODO Hafta Tatili vardiya bitiminden sonra başlasın
 								// if (vardiyaGun.getIslemVardiya().getVardiyaBitZaman().after(basHaftaTatil))
 								// basHaftaTatil = vardiyaGun.getIslemVardiya().getVardiyaBitZaman();
-								if (vardiyaGun.getVardiya().getBasSaat() >= vardiyaGun.getVardiya().getBitSaat()) {
+								if (vardiyaGun.getVardiya().getBasDonem() >= vardiyaGun.getVardiya().getBitDonem()) {
 									List<HareketKGS> girisHareketleri = vardiyaGun.getGirisHareketleri(), cikisHareketleri = vardiyaGun.getCikisHareketleri();
 									if (cikisHareketleri != null && cikisHareketleri != null && girisHareketleri.size() == cikisHareketleri.size()) {
 										for (int i = 0; i < cikisHareketleri.size(); i++) {
@@ -17957,10 +18027,13 @@ public class OrtakIslemler implements Serializable {
 		boolean offVardiya = offDahil && vardiyaGun != null && islemVardiya != null && vardiyaGun.getVardiya().isOff();
 		Double sure = personelIzin.getIzinSuresi();
 		Calendar cal = Calendar.getInstance();
+		String vardiyaDateStr = vardiyaGun.getVardiyaDateStr();
+		if (vardiyaDateStr.equals("20240801"))
+			logger.debug(personelIzin.getId());
 		try {
 			boolean girisYok = izinTipi.getPersonelGirisTipi() == null || izinTipi.getPersonelGirisTipi().equals(IzinTipi.GIRIS_TIPI_YOK);
 			Tatil tatil = girisYok == false ? vardiyaGun.getTatil() : null;
-			String vardiyaDateStr = vardiyaGun.getVardiyaDateStr();
+
 			boolean vardiyaIzin = vardiyaGun.getVardiya().isIzin();
 			if (personelIzin != null && vardiyaGun != null && islemVardiya != null && vardiyaGun.getPersonel().getId().equals(personelIzin.getIzinSahibi().getId())) {
 				BordroDetayTipi bordroDetayTipi = null;
@@ -17987,8 +18060,6 @@ public class OrtakIslemler implements Serializable {
 					} else
 						kontrol = bitisZamani.getTime() >= vardiyaDate.getTime() && baslangicZamani.getTime() <= vardiyaDate.getTime();
 					if (tatil != null) {
-						if (vardiyaDateStr.equals("20240101"))
-							logger.debug(personelIzin.getId());
 						if (tatilSay)
 							tatil = null;
 
@@ -18025,6 +18096,9 @@ public class OrtakIslemler implements Serializable {
 						}
 
 						if (gunIzin) {
+							if (vardiyaDateStr.equals("20240822")) {
+								logger.debug("");
+							}
 							if (izinVardiyaKontrol) {
 								baslangicZamani = islemVardiya.getVardiyaBasZaman();
 								if (vardiyaGun.getOncekiVardiyaGun() != null && vardiyaGun.getOncekiVardiyaGun().getIzin() != null)
@@ -18034,8 +18108,11 @@ public class OrtakIslemler implements Serializable {
 							}
 							if (islemVardiya.isOff() && izinTipi.isOffDahilMi() == false)
 								izinDurum = false;
-							if (islemVardiya.isHaftaTatil() && izinTipi.isHTDahil() == false)
+							if (islemVardiya.isHaftaTatil() && izinTipi.isHTDahil() == false) {
 								izinDurum = false;
+								// if (vardiyaGun.getCalismaModeli() != null && vardiyaGun.getCalismaModeli().isHaftaTatilSabitDegil())
+								// vardiyaGun.setIzinHT(izin);
+							}
 
 							if (!izinTipi.getPersonelGirisTipi().equals(IzinTipi.GIRIS_TIPI_YOK) && islemVardiya.isCalisma() == false) {
 								izinDurum = sonGun.after(vardiyaDate);
@@ -18705,12 +18782,6 @@ public class OrtakIslemler implements Serializable {
 					if (oncekiVardiyaGun.getVardiya().isHaftaTatil()) {
 						if (oncekiVardiyaGun.getIzin() != null && oncekiVardiyaGun.getIzin().getIzinTipi().isSenelikIzin())
 							oncekiVardiyaGun.setIzin(null);
-						// PersonelIzin izin = oncekiVardiyaGun.getIzin();
-						// if (izin != null) {
-						// IzinTipi izinTipi = izin.getIzinTipi();
-						// if (!(izinTipi.isTakvimGunuMu() || izinTipi.isHTDahil()))
-						// oncekiVardiyaGun.setIzin(null);
-						// }
 
 					}
 
@@ -19241,6 +19312,37 @@ public class OrtakIslemler implements Serializable {
 	}
 
 	/**
+	 * @param session
+	 * @return
+	 */
+	public boolean yoneticiRolVar(Session session) {
+		String yoneticiRolleriHaric = getParameterKey("yoneticiRolleriHaric");
+		List<String> yoneticiRolleriHaricList = PdksUtil.getListByString(yoneticiRolleriHaric, null);
+		yoneticiRolleriHaricList.add(Role.TIPI_ANAHTAR_KULLANICI);
+		yoneticiRolleriHaricList.add(Role.TIPI_SISTEM_YONETICI);
+		yoneticiRolleriHaricList.add(Role.TIPI_ADMIN);
+		yoneticiRolleriHaricList.add(Role.TIPI_IK_DIREKTOR);
+		yoneticiRolleriHaricList.add(Role.TIPI_IK_Tesis);
+		yoneticiRolleriHaricList.add(Role.TIPI_IK_YETKILI_RAPOR_KULLANICI);
+		HashMap fields = new HashMap();
+		fields.put("role.rolename not ", yoneticiRolleriHaricList);
+		if (session != null)
+			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+		List<UserRoles> rolList = pdksEntityController.getObjectByInnerObjectList(fields, UserRoles.class);
+		for (Iterator iterator = rolList.iterator(); iterator.hasNext();) {
+			UserRoles userRoles = (UserRoles) iterator.next();
+			User user = userRoles.getUser();
+			if (user.isDurum() == false || user.getPdksPersonel().isCalisiyor() == false)
+				iterator.remove();
+		}
+		boolean rolVar = !rolList.isEmpty();
+		rolList = null;
+		yoneticiRolleriHaricList = null;
+		return rolVar;
+
+	}
+
+	/**
 	 * @param loginUser
 	 * @param aylikPuantajList
 	 * @param calismayanPersonelYoneticiDurum
@@ -19248,9 +19350,13 @@ public class OrtakIslemler implements Serializable {
 	 */
 	public void yoneticiPuantajKontrol(User loginUser, List<AylikPuantaj> aylikPuantajList, Boolean calismayanPersonelYoneticiDurum, Session session) {
 		String key = getParameterKey("yoneticiPuantajKontrol");
+
 		boolean kontrolEtme = !PdksUtil.hasStringValue(key);
 		if (aylikPuantajList != null) {
+			boolean rolVar = yoneticiRolVar(session);
+
 			Calendar cal = Calendar.getInstance();
+
 			HashMap fields = new HashMap();
 			fields.put("tipi", Tanim.TIPI_PERSONEL_DINAMIK_DURUM);
 			fields.put("kodu", Tanim.IKINCI_YONETICI_ONAYLAMAZ);
@@ -19264,13 +19370,16 @@ public class OrtakIslemler implements Serializable {
 			List<Long> idList = new ArrayList<Long>(), id2List = new ArrayList<Long>(), idPasifList = new ArrayList<Long>();
 			try {
 				Personel yonetici = null;
-				if (key.equals("0") || loginUser.isAdmin() || loginUser.isSistemYoneticisi()) {
-					yonetici = new Personel();
-					if (kontrolEtme == false)
-						yonetici.setId(-1L);
-					yonetici.setAd(yoneticiAciklama());
-					yonetici.setSoyad("tanımsız!");
+				if (rolVar) {
+					if (key.equals("0") || loginUser.isAdmin() || loginUser.isSistemYoneticisi()) {
+						yonetici = new Personel();
+						if (kontrolEtme == false)
+							yonetici.setId(-1L);
+						yonetici.setAd(yoneticiAciklama());
+						yonetici.setSoyad("tanımsız!");
+					}
 				}
+
 				Date sonGun = null;
 				boolean yoneticiTanimli = !PdksUtil.hasStringValue(getParameterKey("yoneticiTanimsiz"));
 				if (calismayanPersonelYoneticiDurum && !aylikPuantajList.isEmpty())
@@ -19321,11 +19430,15 @@ public class OrtakIslemler implements Serializable {
 
 				if (kontrolEtme == false && !idList.isEmpty()) {
 					Personel yoneticiUser = new Personel();
+
 					if (kontrolEtme)
 						yoneticiUser.setId(-1L);
-					yoneticiUser.setAd("");
-					if (yoneticiTanimli)
-						yoneticiUser.setSoyad("kullanıcı tanımsız!");
+					if (rolVar) {
+						yoneticiUser.setAd("");
+						if (yoneticiTanimli)
+							yoneticiUser.setSoyad("kullanıcı tanımsız!");
+					}
+
 					String fieldName = "pdksPersonel.id";
 					fields.clear();
 					fields.put(PdksEntityController.MAP_KEY_SELECT, "pdksPersonel");

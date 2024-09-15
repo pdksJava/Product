@@ -109,6 +109,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 	@In(required = false, create = true)
 	String linkAdres;
 
+	public static String sayfaURL = "personelIzinGirisi";
 	private User seciliUser;
 	private Tanim redSebebiTanim;
 	private PersonelIzinOnay redOnay;
@@ -1054,12 +1055,12 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() throws Exception {
+		if (session == null)
+			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
 		servisAktarDurum = Boolean.FALSE;
 		boolean ayniSayfa = authenticatedUser.getCalistigiSayfa() != null && authenticatedUser.getCalistigiSayfa().equals("personelIzinGirisi");
 		try {
-			if (session == null)
-				session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-			session.clear();
 			boolean tableERPOku = ortakIslemler.getParameterKeyHasStringValue(ortakIslemler.getParametreIzinERPTableView());
 			updateValue = false;
 			if (tableERPOku && (authenticatedUser.isIK() || authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi()))
@@ -3222,7 +3223,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 								if (vardiya != null) {
 									cal.setTime(PdksUtil.getDate(personelIzin.getBitisZamani()));
 									if (isSaatGosterilecek() == false) {
-										if (vardiya.getBasSaat() < vardiya.getBitSaat()) {
+										if (vardiya.getBasDonem() < vardiya.getBitDonem()) {
 											cal.set(Calendar.HOUR_OF_DAY, vardiya.getBasSaat());
 											cal.set(Calendar.MINUTE, vardiya.getBasDakika());
 										} else {
@@ -4637,8 +4638,10 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 			StringBuffer sb = new StringBuffer();
 			Double yemekMolasiYuzdesi = ortakIslemler.getYemekMolasiYuzdesi(null, session);
 			boolean cumaBasla = false;
-			if (izinTipi.isCumaCumartesiTekIzinSaysin() && izinTipi.isOffDahilMi())
-				cumaBasla = PdksUtil.getDateField(izinBasTarih, Calendar.DAY_OF_WEEK) == Calendar.FRIDAY;
+			if (izinTipi.isCumaCumartesiTekIzinSaysin() && izinTipi.isOffDahilMi()) {
+				cumaBasla = PdksUtil.getDateField(izinBasTarih, Calendar.DAY_OF_WEEK) != Calendar.SATURDAY && PdksUtil.getDateField(izinBasTarih, Calendar.DAY_OF_WEEK) != Calendar.SUNDAY;
+
+			}
 			int cumartesi = 0;
 			ortakIslemler.setVardiyaYemekList(new ArrayList<VardiyaGun>(vardiyalar.values()), yemekGenelList);
 			if (izinTipi.isSenelikIzin() == false) {
@@ -4660,6 +4663,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 					}
 				}
 			}
+			int tatilSuresi = 0;
 
 			while (PdksUtil.tarihKarsilastirNumeric(personelIzin.getBitisZamani(), vardiyaDate) >= durum) {
 				pdksVardiyaGun.setVardiyaDate(vardiyaDate);
@@ -4690,6 +4694,7 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 						eklenecekGun = 1.0d;
 						if (resmiTatilGunleri.containsKey(tatilGunuKey) && tatilSay == false) {
 							eklenecekGun = 0.0d;
+							++tatilSuresi;
 						}
 						if (artiklarMap != null) {
 							if (!artikIizinVar && bayramArtikIzinSifirla.equals("1"))
@@ -4802,9 +4807,10 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 			if (cumartesi == 1 && izinSuresiSaatGun == 2) {
 				izinSuresiSaatGun = 1;
 				cal.setTime(personelIzin.getBaslangicZamani());
-				cal.add(Calendar.DATE, 1);
+				cal.add(Calendar.DATE, 1 + tatilSuresi);
 				Date bitisZamani = cal.getTime();
 				personelIzin.setBitisZamani(bitisZamani);
+
 			}
 		} else if (izinTipi.getTakvimGunumu()) {
 			// 2 tarih arasindaki gun sayısı kadar izinden dusulur
@@ -6189,5 +6195,13 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 	public Personel getPersonel() {
 
 		return izinliSahibi;
+	}
+
+	public static String getSayfaURL() {
+		return sayfaURL;
+	}
+
+	public static void setSayfaURL(String sayfaURL) {
+		PersonelIzinGirisiHome.sayfaURL = sayfaURL;
 	}
 }
