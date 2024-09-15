@@ -2186,11 +2186,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		ortakIslemler.setUserMenuItemTime(session, "personelListesi");
 		personelDurumMap.clear();
-<<<<<<< HEAD
 
-=======
-		
->>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 		sanalPersonelAciklama = ortakIslemler.sanalPersonelAciklama();
 		yoneticiRolVarmi = ortakIslemler.yoneticiRolKontrol(session);
 		fillEkSahaTanim();

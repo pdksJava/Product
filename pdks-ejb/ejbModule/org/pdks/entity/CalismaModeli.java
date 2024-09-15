@@ -5,10 +5,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
-<<<<<<< HEAD
 import java.util.List;
-=======
->>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 import java.util.Set;
 
 import javax.persistence.CascadeType;
@@ -319,16 +316,9 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 		this.gunMaxCalismaOdemeDurum = gunMaxCalismaOdemeDurum;
 	}
 
-<<<<<<< HEAD
 	@Column(name = COLUMN_NAME_HAFTA_TATIL)
 	public Integer getHaftaTatilGun() {
 		return haftaTatilGun;
-=======
-	@Transient
-	// @Column(name = COLUMN_NAME_HAFTA_TATIL_PAZAR)
-	public Boolean getHaftaTatilPazar() {
-		return haftaTatilPazar;
->>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 	}
 
 	public void setHaftaTatilGun(Integer haftaTatilGun) {
@@ -514,17 +504,9 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	public double getIzinSaat(VardiyaGun pdksVardiyaGun) {
 		int dayOfWeek = PdksUtil.getDateField(pdksVardiyaGun.getVardiyaDate(), Calendar.DAY_OF_WEEK);
 		double izinSure = this.getIzinSaat(dayOfWeek);
-<<<<<<< HEAD
 		if (pdksVardiyaGun.getVardiyaDateStr().equals("20240801"))
 			logger.debug(izinSure);
 
-=======
-
-		// if (dayOfWeek == Calendar.SUNDAY) {
-		// if (isHaftaTatilPazardir())
-		// izinSure = 0.0d;
-		// }
->>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 
 		return izinSure;
 	}
@@ -650,7 +632,6 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
-<<<<<<< HEAD
 	public String getHaftaTatil() {
 		String str = "Sabit Gün Değil";
 		if (haftaTatilGun != null) {
@@ -664,8 +645,6 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
-=======
->>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 	public double getSaat(int dayOfWeek) {
 		Double gunSure = null;
 		switch (dayOfWeek) {
@@ -690,7 +669,6 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
-<<<<<<< HEAD
 	public List<Liste> getHaftaSaatList() {
 		List<Liste> list = getHaftaList(CalismaModeliGun.GUN_SAAT);
 		return list;
@@ -752,8 +730,6 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
-=======
->>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 	public Boolean isIdariModelMi() {
 		return idariModel != null && idariModel;
 	}

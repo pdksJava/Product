@@ -6607,11 +6607,7 @@ public class VardiyaGunHome extends EntityHome<VardiyaPlan> implements Serializa
 							pdksVardiyaGunMaster.setTatil(null);
 					}
 					TreeMap<String, CalismaModeliAy> cmaMap = new TreeMap<String, CalismaModeliAy>();
-<<<<<<< HEAD
 					List<Long> plansizList = new ArrayList<Long>();
-=======
-
->>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 					for (Personel personel : personelList) {
 
 						boolean pdks = false;
