@@ -61,7 +61,10 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 	private List<Vardiya> vardiyaList = new ArrayList<Vardiya>(), kayitliVardiyaList = new ArrayList<Vardiya>();
 	private List<CalismaModeliGun> cmGunList;
 	private List<Departman> departmanList;
+<<<<<<< HEAD
 	private List<SelectItem> haftaTatilGunleri;
+=======
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 	private HashMap<Integer, List<CalismaModeliGun>> cmGunMap;
 
 	private CalismaModeliGun cmgPage = new CalismaModeliGun();
@@ -190,6 +193,7 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 	}
 
 	public String fillVardiyalar() {
+<<<<<<< HEAD
 
 		haftaTatilGunleri.clear();
 		Calendar cal = Calendar.getInstance();
@@ -198,6 +202,8 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 			cal.set(Calendar.DAY_OF_WEEK, i);
 			haftaTatilGunleri.add(new SelectItem(i, PdksUtil.convertToDateString(cal.getTime(), "EEEEE")));
 		}
+=======
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 		gunleriSifirla();
 		HashMap parametreMap = new HashMap();
 		parametreMap.put("durum", Boolean.TRUE);
@@ -357,10 +363,35 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 				session.flush();
 				fillCalismaModeliList();
 			}
+<<<<<<< HEAD
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
+=======
+			for (Iterator iterator2 = kayitliCalismaModeliVardiyaList.iterator(); iterator2.hasNext();) {
+				CalismaModeliVardiya cmv = (CalismaModeliVardiya) iterator2.next();
+				pdksEntityController.deleteObject(session, entityManager, cmv);
+			}
+			if (cmGunMap != null && !cmGunMap.isEmpty()) {
+				for (Integer gunTipi : cmGunMap.keySet()) {
+					double sure = gunTipi.equals(CalismaModeliGun.GUN_SAAT) ? calismaModeli.getHaftaIci() : calismaModeli.getHaftaIciSutIzniSure();
+					List<CalismaModeliGun> list = cmGunMap.get(gunTipi);
+					for (CalismaModeliGun calismaModeliGun : list) {
+						if (calismaModeliGun.getSure() == sure) {
+							if (calismaModeliGun.getId() != null)
+								session.delete(calismaModeliGun);
+						} else if (calismaModeliGun.isGuncellendi())
+							pdksEntityController.saveOrUpdate(session, entityManager, calismaModeliGun);
+					}
+				}
+			}
+			session.flush();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		fillCalismaModeliList();
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 		return "";
 	}
 
@@ -374,9 +405,12 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 	}
 
 	public void fillCalismaModeliList() {
+<<<<<<< HEAD
 		if (haftaTatilGunleri == null)
 			haftaTatilGunleri = new ArrayList<SelectItem>();
 
+=======
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 		izinGoster = false;
 		session.clear();
 		hareketKaydiVardiyaBul = ortakIslemler.getParameterKey("hareketKaydiVardiyaBul").equals("1");
@@ -548,6 +582,7 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 		CalismaModeliHome.sayfaURL = sayfaURL;
 	}
 
+<<<<<<< HEAD
 	public List<SelectItem> getHaftaTatilGunleri() {
 		return haftaTatilGunleri;
 	}
@@ -556,4 +591,6 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 		this.haftaTatilGunleri = haftaTatilGunleri;
 	}
 
+=======
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 }

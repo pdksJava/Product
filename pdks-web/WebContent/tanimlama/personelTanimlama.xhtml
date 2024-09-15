@@ -994,6 +994,7 @@
 											<ui:fragment rendered="#{pdksPersonelHome.instance.calismaModeli!=null}">
 												<rich:toolTip for="perCalismaModeli">
 													<h:panelGrid columns="1">
+<<<<<<< HEAD
 														<rich:dataTable rowClasses="acik,koyu" value="#{pdksPersonelHome.calismaModeliVardiyaList}" var="vardiya" rows="20" rowKeyVar="row"
 															rendered="#{pdksPersonelHome.calismaModeliVardiyaList!=null}" id="vardiyaTable">
 															<f:facet name="header">
@@ -1033,6 +1034,20 @@
 																<rich:datascroller renderIfSinglePage="false" maxPages="5" />
 															</f:facet>
 														</rich:dataTable>
+=======
+														<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.instance.calismaModeli.izin!=0}">
+															<ui:define name="label">Hafta İçi İzin Saati</ui:define>
+															<h:outputText value="#{authenticatedUser.sayiFormatliGoster(pdksPersonelHome.instance.calismaModeli.izin)}" />
+														</s:decorate>
+														<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.instance.calismaModeli.cumartesiSaat!=0}">
+															<ui:define name="label">#{ortakIslemler.getGunAdi(6,null)} İzin Saati </ui:define>
+															<h:outputText value="#{authenticatedUser.sayiFormatliGoster(pdksPersonelHome.instance.calismaModeli.cumartesiSaat)}" />
+														</s:decorate>
+														<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.instance.calismaModeli.pazarSaat!=0}">
+															<ui:define name="label">#{ortakIslemler.getGunAdi(7,null)} İzin Saati </ui:define>
+															<h:outputText value="#{authenticatedUser.sayiFormatliGoster(pdksPersonelHome.instance.calismaModeli.pazarSaat)}" />
+														</s:decorate>
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 													</h:panelGrid>
 
 

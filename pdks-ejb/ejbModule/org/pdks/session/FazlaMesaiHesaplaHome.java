@@ -301,7 +301,11 @@ public class FazlaMesaiHesaplaHome extends EntityHome<DepartmanDenklestirmeDonem
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
 		userLogin = authenticatedUser;
+<<<<<<< HEAD
 		planTanimsizBolumList = null;
+=======
+ 		planTanimsizBolumList = null;
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 		componentState.setSeciliTab("tab1");
 
 		tumBolumPersonelleri = null;

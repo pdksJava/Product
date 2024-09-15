@@ -16299,6 +16299,7 @@ public class OrtakIslemler implements Serializable {
 					if (calismaModeli != null) {
 						int haftaGun = PdksUtil.getDateField(pdksVardiyaGun.getVardiyaDate(), Calendar.DAY_OF_WEEK);
 						double saat = calismaModeli.getSaat(haftaGun), izinSaat = calismaModeli.getIzinSaat(haftaGun);
+<<<<<<< HEAD
 						if (calismaModeli.isHaftaTatilSabitDegil() && personelDenklestirme != null) {
 							Vardiya vardiya = pdksVardiyaGun.getVardiya();
 							if (izinSaat == 0 || vardiya.isHaftaTatil()) {
@@ -16313,6 +16314,8 @@ public class OrtakIslemler implements Serializable {
 							}
 
 						}
+=======
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 						if (haftaGun == Calendar.SATURDAY || haftaGun == Calendar.SUNDAY) {
 							if (saat <= 0.0d)
 								sure = 0.0d;

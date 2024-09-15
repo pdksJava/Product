@@ -25,11 +25,17 @@ import org.pdks.genel.model.PdksUtil;
 @Entity(name = CalismaModeli.TABLE_NAME)
 public class CalismaModeli extends BasePDKSObject implements Serializable {
 
+ 
+
 	/**
 	 * 
 	 */
+<<<<<<< HEAD
 	private static final long serialVersionUID = -445686730459083532L;
 
+=======
+	private static final long serialVersionUID = -3382850324318778123L;
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 	static Logger logger = Logger.getLogger(CalismaModeli.class);
 	public static final String TABLE_NAME = "CALISMA_MODELI";
 	public static final String COLUMN_NAME_DURUM = "DURUM";
@@ -53,7 +59,11 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_ILK_PLAN_ONAYLI = "ILK_PLAN_ONAYLI";
 	public static final String COLUMN_NAME_GUN_MAX_CALISMA_SURESI_ODENIR = "GUN_MAX_CALISMA_SURESI_ODENIR";
 	public static final String COLUMN_NAME_PERSONEL_TIPI = "PERSONEL_TIPI_ID";
+<<<<<<< HEAD
 	public static final String COLUMN_NAME_HAFTA_TATIL = "HT_GUN";
+=======
+	public static final String COLUMN_NAME_HAFTA_TATIL_PAZAR = "HAFTA_TATIL_PAZAR";
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 	public static final String COLUMN_NAME_GENEL_MODEL = "GENEL_MODEL";
 	public static final String COLUMN_NAME_IDARI_MODEL = "IDARI_MODEL";
 	public static final String COLUMN_NAME_HAFTA_ICI_SUT_IZNI_SURE = "HAFTA_ICI_SUT_IZNI_SURE";
@@ -74,8 +84,12 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	private Boolean fazlaMesaiVar = Boolean.TRUE, toplamGunGuncelle = Boolean.FALSE, durum = Boolean.TRUE, genelVardiya = Boolean.TRUE, hareketKaydiVardiyaBul = Boolean.FALSE;
 	private Boolean haftaTatilMesaiOde = Boolean.FALSE, geceHaftaTatilMesaiParcala = Boolean.FALSE, geceCalismaOdemeVar = Boolean.FALSE, otomatikFazlaCalismaOnaylansin = Boolean.FALSE;
 	private Boolean ortakVardiya = Boolean.FALSE, fazlaMesaiGoruntulensin = Boolean.TRUE, ilkPlanOnayliDurum = Boolean.FALSE, gunMaxCalismaOdemeDurum = Boolean.TRUE;
+<<<<<<< HEAD
 	private Boolean genelModel = Boolean.TRUE, idariModel = Boolean.FALSE;
 	private Integer haftaTatilGun = Calendar.SUNDAY;
+=======
+	private Boolean haftaTatilPazar = Boolean.FALSE, genelModel = Boolean.TRUE, idariModel = Boolean.FALSE;
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 	private VardiyaSablonu bagliVardiyaSablonu;
 	private Departman departman;
 	private Tanim personelTipi;
@@ -313,6 +327,7 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 		this.gunMaxCalismaOdemeDurum = gunMaxCalismaOdemeDurum;
 	}
 
+<<<<<<< HEAD
 	@Column(name = COLUMN_NAME_HAFTA_TATIL)
 	public Integer getHaftaTatilGun() {
 		return haftaTatilGun;
@@ -320,6 +335,16 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 
 	public void setHaftaTatilGun(Integer haftaTatilGun) {
 		this.haftaTatilGun = haftaTatilGun;
+=======
+	@Transient
+	// @Column(name = COLUMN_NAME_HAFTA_TATIL_PAZAR)
+	public Boolean getHaftaTatilPazar() {
+		return haftaTatilPazar;
+	}
+
+	public void setHaftaTatilPazar(Boolean haftaTatilPazar) {
+		this.haftaTatilPazar = haftaTatilPazar;
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 	}
 
 	@Column(name = COLUMN_NAME_GENEL_MODEL)
@@ -537,8 +562,13 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
+<<<<<<< HEAD
 	public boolean isHaftaTatilSabitDegil() {
 		return haftaTatilGun == null || (haftaTatilGun >= 1 && haftaTatilGun <= 7) == false;
+=======
+	public boolean isHaftaTatilPazardir() {
+		return haftaTatilPazar != null && haftaTatilPazar;
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 	}
 
 	@Transient
@@ -631,6 +661,7 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
+<<<<<<< HEAD
 	public String getHaftaTatil() {
 		String str = "Sabit Gün Değil";
 		if (haftaTatilGun != null) {
@@ -644,6 +675,8 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	}
 
 	@Transient
+=======
+>>>>>>> a923a7f67d3ea86a7c0809773728588aec54cc3c
 	public double getSaat(int dayOfWeek) {
 		Double gunSure = null;
 		switch (dayOfWeek) {
