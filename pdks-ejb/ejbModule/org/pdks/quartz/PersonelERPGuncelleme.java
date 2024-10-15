@@ -106,7 +106,7 @@ public class PersonelERPGuncelleme implements Serializable {
 					parameter = ortakIslemler.getParameter(session, PARAMETER_KEY);
 					String value = (parameter != null) ? parameter.getValue() : null;
 					hataKonum = "Paramatre okundu ";
-					guncellemeDBDurum = false;
+					 
 					String personelERPTableViewAdi = ortakIslemler.getParameterKey(ortakIslemler.getParametrePersonelERPTableView());
 					boolean tableERPOku = PdksUtil.hasStringValue(personelERPTableViewAdi);
 					if (value != null || tableERPOku) {
@@ -169,6 +169,7 @@ public class PersonelERPGuncelleme implements Serializable {
 				String uygulamaBordro = ortakIslemler.getParameterKey("uygulamaBordro");
 				logger.info(uygulamaBordro + " personel bilgileri güncelleniyor in " + PdksUtil.getCurrentTimeStampStr());
 				ortakIslemler.personelERPDBGuncelle(guncellemeDBDurum, null, session);
+				ortakIslemler.yeniPersonelleriOlustur(session);
 				logger.info(uygulamaBordro + " personel bilgileri güncelleniyor out " + PdksUtil.getCurrentTimeStampStr());
 			} else if (guncellemeDBDurum == false) {
 
@@ -457,7 +458,7 @@ public class PersonelERPGuncelleme implements Serializable {
 
 		StringBuffer sb = new StringBuffer();
 		sb.append("select P.* from " + Personel.TABLE_NAME + " P  WITH(nolock) ");
-		sb.append(" INNER JOIN " + Sirket.TABLE_NAME + " S ON S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET + " AND S." + Sirket.COLUMN_NAME_DURUM + " = 1 AND S." + Sirket.COLUMN_NAME_ERP_DURUM + " = 1 ");
+		sb.append(" INNER JOIN " + Sirket.TABLE_NAME + " S WITH(nolock) ON S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET + " AND S." + Sirket.COLUMN_NAME_DURUM + " = 1 AND S." + Sirket.COLUMN_NAME_ERP_DURUM + " = 1 ");
 		sb.append(" AND S." + Sirket.COLUMN_NAME_PDKS + " = 1  AND S." + Sirket.COLUMN_NAME_FAZLA_MESAI + " = 1   ");
 		sb.append(" WHERE P." + Personel.COLUMN_NAME_DURUM + " = 0 and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
 		sb.append(" ORDER BY P." + Personel.COLUMN_NAME_PDKS_SICIL_NO);
@@ -482,7 +483,7 @@ public class PersonelERPGuncelleme implements Serializable {
 			if (sapKodu != null && sapKodu.trim().length() == 4) {
 				StringBuffer sb = new StringBuffer();
 				sb.append("select P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " from " + Personel.TABLE_NAME + " P  WITH(nolock)");
-				sb.append(" INNER JOIN " + Sirket.TABLE_NAME + " S ON S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET + " AND S." + Sirket.COLUMN_NAME_DURUM + " = 1 AND S." + Sirket.COLUMN_NAME_DURUM + " = 1 ");
+				sb.append(" INNER JOIN " + Sirket.TABLE_NAME + " S WITH(nolock) ON S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET + " AND S." + Sirket.COLUMN_NAME_DURUM + " = 1 AND S." + Sirket.COLUMN_NAME_DURUM + " = 1 ");
 				sb.append(" AND S." + Sirket.COLUMN_NAME_PDKS + " = 1  AND S." + Sirket.COLUMN_NAME_FAZLA_MESAI + " = 1 AND S.ERP_KODU=:sapKodu ");
 				sb.append(" WHERE P." + Personel.COLUMN_NAME_DURUM + " = 1 and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
 				sb.append(" ORDER BY P." + Personel.COLUMN_NAME_PDKS_SICIL_NO);

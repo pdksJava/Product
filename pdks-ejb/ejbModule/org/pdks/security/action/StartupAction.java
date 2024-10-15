@@ -155,6 +155,9 @@ public class StartupAction implements Serializable {
 	public String projePowerURL;
 
 	@Out(scope = ScopeType.APPLICATION, required = false)
+	public String projeURL;
+
+	@Out(scope = ScopeType.APPLICATION, required = false)
 	public String projeHeaderImageHeight = "83";
 
 	@Out(scope = ScopeType.APPLICATION, required = false)
@@ -414,10 +417,14 @@ public class StartupAction implements Serializable {
 		List<Parameter> parameterList = null;
 		parameterMap.clear();
 		try {
-			// fields.put("active", Boolean.TRUE);
+
+			StringBuffer sb = new StringBuffer();
+			sb.append("SELECT   T.* FROM " + Parameter.TABLE_NAME + " T WITH(nolock) ");
+
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-			parameterList = (ArrayList<Parameter>) pdksEntityController.getObjectByInnerObjectList(fields, Parameter.class);
+			parameterList = pdksEntityController.getObjectBySQLList(sb, fields, Parameter.class);
+
 		} catch (Exception e) {
 			logger.error("PDKS hata out : " + e.getMessage());
 			parameterList = new ArrayList<Parameter>();
@@ -514,6 +521,11 @@ public class StartupAction implements Serializable {
 				MailManager.setHeaderRenk(deger);
 		}
 		String fontSize = "22px";
+
+		projeURL = null;
+		if (parameterMap.containsKey("projeURL")) {
+			projeURL = parameterMap.get("projeURL");
+		}
 		projePowerURL = null;
 		projeFooterBackgroundColor = "white";
 		if (parameterMap.containsKey("projePowerBy")) {
@@ -1287,5 +1299,13 @@ public class StartupAction implements Serializable {
 
 	public void setProjeFooterBackgroundColor(String projeFooterBackgroundColor) {
 		this.projeFooterBackgroundColor = projeFooterBackgroundColor;
+	}
+
+	public String getProjeURL() {
+		return projeURL;
+	}
+
+	public void setProjeURL(String projeURL) {
+		this.projeURL = projeURL;
 	}
 }

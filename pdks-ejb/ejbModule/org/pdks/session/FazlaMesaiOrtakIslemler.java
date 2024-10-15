@@ -177,35 +177,35 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 
 			if (calismaModeliAy.getSure() == 0.0d || calismaModeliAy.getToplamIzinSure() == 0.0d || ((dm.getSure() == 0.0d || dm.getToplamIzinSure() == 0.0d) && cm.getHaftaIci() == 9.0d)) {
 				double sure = 0.0d, toplamIzinSure = 0.0d;
-				Calendar cal = Calendar.getInstance();
-				for (VardiyaGun vg : vardiyaGunList) {
-					if (vg.isAyinGunu()) {
-						cal.setTime(vg.getVardiyaDate());
-						int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+				if (cm.isHaftaTatilSabitDegil() == false) {
+ 					Calendar cal = Calendar.getInstance();
+					for (VardiyaGun vg : vardiyaGunList) {
+						if (vg.isAyinGunu()) {
+							double gunSure = 0.0d;
+							cal.setTime(vg.getVardiyaDate());
+							int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+							if (vg.getTatil() == null) {
+								gunSure = cm.getSaat(dayOfWeek);
+								double sutIzinSure = cm.getSutIzinSaat(dayOfWeek);
+								double izinSure = sutIzinSure > 7.5d ? 7.5d : sutIzinSure;
+								toplamIzinSure += izinSure;
+							} else if (vg.getTatil().isYarimGunMu()) {
+								if (PdksUtil.tarihKarsilastirNumeric(vg.getVardiyaDate(), vg.getTatil().getBasTarih()) == 0) {
+									if (vg.isHaftaIci() || cm.getSaat(dayOfWeek) > 0.0d) {
+										gunSure += cm.getArife();
+										logger.debug(vg.getVardiyaDateStr() + " " + sure);
+										toplamIzinSure += cm.getArife();
+									}
 
-						if (vg.getTatil() == null) {
-							double gunSure = cm.getSaat(dayOfWeek);
-
-							sure += gunSure;
-							double sutIzinSure = cm.getSutIzinSaat(dayOfWeek);
-							double izinSure = sutIzinSure > 7.5d ? 7.5d : sutIzinSure;
-							// if (dayOfWeek != Calendar.SATURDAY ) {
-							// if (sutIzniHaftaIci != null && sutIzniHaftaIci.doubleValue() > 0)
-							// izinSure = sutIzniHaftaIci;
-							// } else if (sutIzniCumartesi != null)
-							// izinSure = sutIzniCumartesi;
-							toplamIzinSure += izinSure;
-						} else if (vg.getTatil().isYarimGunMu()) {
-							if (PdksUtil.tarihKarsilastirNumeric(vg.getVardiyaDate(), vg.getTatil().getBasTarih()) == 0) {
-								if (vg.isHaftaIci() || cm.getSaat(dayOfWeek) > 0.0d) {
-									sure += cm.getArife();
-									toplamIzinSure += cm.getArife();
 								}
 
 							}
+							if (gunSure > 0) {
+								sure += gunSure;
+								 
+							}
 
 						}
-
 					}
 				}
 
@@ -636,7 +636,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 				HashMap map = new HashMap();
 				sb = new StringBuffer();
 				sb.append("SELECT DISTINCT V.* FROM " + VardiyaGun.TABLE_NAME + " V WITH(nolock) ");
-				sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + " = V." + VardiyaGun.COLUMN_NAME_PERSONEL);
+				sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON P." + Personel.COLUMN_NAME_ID + " = V." + VardiyaGun.COLUMN_NAME_PERSONEL);
 				sb.append(" AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >= P." + Personel.getIseGirisTarihiColumn());
 				sb.append(" AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " <= P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI);
 				sb.append(" WHERE V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >= :basTarih AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + "< :bitTarih  ");
@@ -680,11 +680,11 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 					HashMap map = new HashMap();
 					sb = new StringBuffer();
 					sb.append("SELECT DISTINCT VG.* FROM VARDIYA_GUN_SAAT_VIEW V WITH(nolock) ");
-					sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + " = V." + VardiyaGun.COLUMN_NAME_PERSONEL);
+					sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON P." + Personel.COLUMN_NAME_ID + " = V." + VardiyaGun.COLUMN_NAME_PERSONEL);
 					sb.append(" AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >= P." + Personel.getIseGirisTarihiColumn());
 					sb.append(" AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " <= P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI);
-					sb.append(" INNER JOIN " + Vardiya.TABLE_NAME + " VA ON VA." + Vardiya.COLUMN_NAME_ID + " = V." + VardiyaGun.COLUMN_NAME_VARDIYA + " AND VA.VARDIYATIPI=''");
-					sb.append(" INNER JOIN " + VardiyaGun.TABLE_NAME + " VG ON VG." + VardiyaGun.COLUMN_NAME_ID + " = V.VARDIYA_GUN_ID ");
+					sb.append(" INNER JOIN " + Vardiya.TABLE_NAME + " VA WITH(nolock) ON VA." + Vardiya.COLUMN_NAME_ID + " = V." + VardiyaGun.COLUMN_NAME_VARDIYA + " AND VA.VARDIYATIPI=''");
+					sb.append(" INNER JOIN " + VardiyaGun.TABLE_NAME + " VG WITH(nolock) ON VG." + VardiyaGun.COLUMN_NAME_ID + " = V.VARDIYA_GUN_ID ");
 					sb.append(" WHERE V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >= :basTarih AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + "< :bitTarih  ");
 					sb.append("  AND V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " < CONVERT(DATE, GETDATE() ) AND  V." + VardiyaSaat.COLUMN_NAME_CALISMA_SURESI + " = 0 ");
 					sb.append("  AND  V." + VardiyaSaat.COLUMN_NAME_NORMAL_SURE + " > 0   AND  V." + VardiyaGun.COLUMN_NAME_PERSONEL + " :" + fieldName);
@@ -1164,7 +1164,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 		HashMap fields = new HashMap();
 		StringBuffer sb = new StringBuffer();
 		sb.append("SELECT DISTINCT D.* from " + DenklestirmeAy.TABLE_NAME + " D WITH(nolock) ");
-		sb.append(" INNER  JOIN " + PersonelDenklestirme.TABLE_NAME + " PD ON PD." + PersonelDenklestirme.COLUMN_NAME_DONEM + " = D." + DenklestirmeAy.COLUMN_NAME_ID);
+		sb.append(" INNER  JOIN " + PersonelDenklestirme.TABLE_NAME + " PD WITH(nolock) ON PD." + PersonelDenklestirme.COLUMN_NAME_DONEM + " = D." + DenklestirmeAy.COLUMN_NAME_ID);
 		sb.append("    AND  PD." + PersonelDenklestirme.COLUMN_NAME_DENKLESTIRME_DURUM + " = 1 ");
 		sb.append(" WHERE D." + DenklestirmeAy.COLUMN_NAME_YIL + " = :y  AND D." + DenklestirmeAy.COLUMN_NAME_AY + ">0 ");
 		if (donemYil == maxYil) {
@@ -1326,7 +1326,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 							if (gunlukKatsayi == null || gunlukKatsayi.doubleValue() < 7.5d)
 								gunlukKatsayi = gunlukKatsayi.doubleValue();
 						}
-
+						// boolean sonrakiIzinli = vardiyaGun.getSonrakiVardiyaGun() != null && vardiyaGun.getSonrakiVardiyaGun().getVardiya() != null && vardiyaGun.getSonrakiVardiyaGun().isIzinli();
 						Vardiya vardiya = vardiyaGun.getVardiya();
 						boolean haftaTatil = vardiya.isHaftaTatil();
 						Tatil tatil = vardiyaGun.getTatil();
@@ -1399,6 +1399,10 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 
 								if (haftaTatil && izinBordroDetayTipi != null) {
 									haftaTatil = (izinTipi != null && izinTipi.isHTDahil() == false) || izinBordroDetayTipi.value().equals(BordroDetayTipi.UCRETLI_IZIN.value());
+									if (izinBordroDetayTipi.value().equals(BordroDetayTipi.RAPORLU_IZIN.value()) && vardiya.isHaftaTatil()) {
+										artiGun = 0;
+									} else
+
 									if (haftaTatil == false)
 										artiGun = 1;
 								}
@@ -2033,9 +2037,9 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 			String fieldName = "s";
 			StringBuffer sb = new StringBuffer();
 			sb.append("SELECT DISTINCT P.* FROM " + PersonelDenklestirme.TABLE_NAME + " PD WITH(nolock) ");
-			sb.append(" INNER JOIN " + CalismaModeliAy.TABLE_NAME + " CD ON CD." + CalismaModeliAy.COLUMN_NAME_ID + " = PD." + PersonelDenklestirme.COLUMN_NAME_CALISMA_MODELI_AY);
-			sb.append(" INNER JOIN " + CalismaModeli.TABLE_NAME + " CM  ON CM." + CalismaModeli.COLUMN_NAME_ID + " = CD." + CalismaModeliAy.COLUMN_NAME_CALISMA_MODELI);
-			sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + " = " + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
+			sb.append(" INNER JOIN " + CalismaModeliAy.TABLE_NAME + " CD WITH(nolock) ON CD." + CalismaModeliAy.COLUMN_NAME_ID + " = PD." + PersonelDenklestirme.COLUMN_NAME_CALISMA_MODELI_AY);
+			sb.append(" INNER JOIN " + CalismaModeli.TABLE_NAME + " CM  WITH(nolock) ON CM." + CalismaModeli.COLUMN_NAME_ID + " = CD." + CalismaModeliAy.COLUMN_NAME_CALISMA_MODELI);
+			sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON P." + Personel.COLUMN_NAME_ID + " = " + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
 			sb.append(" WHERE PD." + PersonelDenklestirme.COLUMN_NAME_DONEM + " = " + dm.getId());
 			sb.append(" AND (P.MAIL_TAKIP=1 OR P.PDKS=1 OR CM.FAZLA_CALISMA_GORUNTULENSIN=1)");
 			sb.append(" AND PD." + PersonelDenklestirme.COLUMN_NAME_PERSONEL + " :" + fieldName);
@@ -2070,6 +2074,20 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 		if (loginUser == null)
 			loginUser = authenticatedUser;
 		List<Sirket> list = ortakIslemler.getFazlaMesaiList(loginUser, departmanId, null, null, null, null, aylikPuantaj, "S", denklestirme, session);
+		if (loginUser != null && loginUser.isIKSirket()) {
+			try {
+				Sirket sirketUser = list != null && loginUser.getPdksPersonel() != null ? loginUser.getPdksPersonel().getSirket() : null;
+				if (sirketUser != null) {
+					for (Iterator iterator = list.iterator(); iterator.hasNext();) {
+						Sirket sirket = (Sirket) iterator.next();
+						if (!sirket.getId().equals(sirketUser.getId()))
+							iterator.remove();
+					}
+				}
+			} catch (Exception e) {
+				// TODO: handle exception
+			}
+		}
 		List<SelectItem> selectList = new ArrayList<SelectItem>();
 		if (!list.isEmpty()) {
 			list = PdksUtil.sortObjectStringAlanList(list, "getAd", null);
@@ -2394,7 +2412,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 			StringBuffer sb = new StringBuffer();
 			String fieldName = "s";
 			sb.append("SELECT DISTINCT S.* FROM " + PersonelDenklestirme.TABLE_NAME + " PD WITH(nolock) ");
-			sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + " = " + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
+			sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON P." + Personel.COLUMN_NAME_ID + " = " + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
 			sb.append(" AND " + Personel.COLUMN_NAME_SIRKET + " :" + fieldName);
 			if (bitTarih != null) {
 				sb.append(" AND P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " <= :a1 ");
@@ -2404,7 +2422,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 				sb.append(" AND P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= :a2 ");
 				fields.put("a2", basTarih);
 			}
-			sb.append(" INNER JOIN " + Sirket.TABLE_NAME + " S ON S." + Tanim.COLUMN_NAME_ID + " = " + Personel.COLUMN_NAME_SIRKET);
+			sb.append(" INNER JOIN " + Sirket.TABLE_NAME + " S WITH(nolock) ON S." + Tanim.COLUMN_NAME_ID + " = " + Personel.COLUMN_NAME_SIRKET);
 			sb.append(" WHERE PD." + PersonelDenklestirme.COLUMN_NAME_DONEM + " = " + denklestirmeAy.getId());
 			sb.append(" AND PD." + PersonelDenklestirme.COLUMN_NAME_DENKLESTIRME_DURUM + " = 1 ");
 			sb.append(" ORDER BY S." + Sirket.COLUMN_NAME_AD);
@@ -2740,7 +2758,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 
 				StringBuffer sb = new StringBuffer();
 				sb.append("SELECT DISTINCT T.* FROM " + PersonelDenklestirme.TABLE_NAME + " PD WITH(nolock) ");
-				sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + " = " + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
+				sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON P." + Personel.COLUMN_NAME_ID + " = " + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
 				if (bitTarih != null) {
 					sb.append(" AND P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " <= :a1 ");
 					fields.put("a1", bitTarih);
@@ -2753,7 +2771,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 					sb.append(" AND P." + Personel.COLUMN_NAME_SIRKET + " = " + sirket.getId());
 				if (tesisId != null && tesisId > 0L)
 					sb.append(" AND P." + Personel.COLUMN_NAME_TESIS + " = " + tesisId);
-				sb.append(" INNER JOIN " + Tanim.TABLE_NAME + " T ON T." + Tanim.COLUMN_NAME_ID + " = " + (fieldAdi.equals("ekSaha3") ? Personel.COLUMN_NAME_EK_SAHA3 : Personel.COLUMN_NAME_TESIS));
+				sb.append(" INNER JOIN " + Tanim.TABLE_NAME + " T WITH(nolock) ON T." + Tanim.COLUMN_NAME_ID + " = " + (fieldAdi.equals("ekSaha3") ? Personel.COLUMN_NAME_EK_SAHA3 : Personel.COLUMN_NAME_TESIS));
 				String fieldName = "t";
 				sb.append(" AND T." + Tanim.COLUMN_NAME_ID + " :" + fieldName);
 				sb.append(" WHERE PD." + PersonelDenklestirme.COLUMN_NAME_DONEM + " = " + denklestirmeAy.getId());
@@ -2945,12 +2963,12 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 
 					StringBuffer sb = new StringBuffer();
 					sb.append("SELECT DISTINCT T.* FROM " + PersonelDenklestirme.TABLE_NAME + " PD WITH(nolock)  ");
-					sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + " = " + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
+					sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON P." + Personel.COLUMN_NAME_ID + " = " + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
 					if (sirketId != null)
 						sb.append(" AND P." + Personel.COLUMN_NAME_SIRKET + " = " + sirketId);
 
 					String fieldName = "t";
-					sb.append(" INNER JOIN " + Tanim.TABLE_NAME + " T ON T." + Tanim.COLUMN_NAME_ID + " = " + Personel.COLUMN_NAME_EK_SAHA3);
+					sb.append(" INNER JOIN " + Tanim.TABLE_NAME + " T WITH(nolock) ON T." + Tanim.COLUMN_NAME_ID + " = " + Personel.COLUMN_NAME_EK_SAHA3);
 					sb.append(" AND T." + Tanim.COLUMN_NAME_ID + " :" + fieldName);
 					sb.append(" WHERE PD." + PersonelDenklestirme.COLUMN_NAME_DONEM + " = " + denklestirmeAy.getId());
 					sb.append(" AND PD." + PersonelDenklestirme.COLUMN_NAME_DENKLESTIRME_DURUM + " = 1 ");

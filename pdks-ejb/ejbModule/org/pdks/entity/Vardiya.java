@@ -30,6 +30,8 @@ public class Vardiya extends BaseObject {
 	static Logger logger = Logger.getLogger(Vardiya.class);
 	public static final String TABLE_NAME = "VARDIYA";
 	public static final String COLUMN_NAME_VARDIYA_TIPI = "VARDIYATIPI";
+	public static final String COLUMN_NAME_ADI = "ADI";
+
 	public static final String COLUMN_NAME_SUA = "SUA";
 	public static final String COLUMN_NAME_ISKUR = "ISKUR";
 	public static final String COLUMN_NAME_GEBELIK = "GEBELIK";
@@ -46,6 +48,8 @@ public class Vardiya extends BaseObject {
 	public static final char TIPI_RADYASYON_IZNI = 'R';
 	public static final char TIPI_IZIN = 'I';
 	public static final char TIPI_HASTALIK_RAPOR = 'S';
+
+	public static final String GEBE_KEY = "g", SUA_KEY = "s", ICAP_KEY = "i", FMI_KEY = "f";
 
 	public static Date vardiyaKontrolTarih, vardiyaKontrolTarih2, vardiyaKontrolTarih3, vardiyaAySonuKontrolTarih;
 
@@ -84,7 +88,7 @@ public class Vardiya extends BaseObject {
 		this.version = version;
 	}
 
-	@Column(name = "ADI")
+	@Column(name = COLUMN_NAME_ADI)
 	public String getAdi() {
 		return adi;
 	}
@@ -445,8 +449,17 @@ public class Vardiya extends BaseObject {
 		return vardiyaBasZaman;
 	}
 
-	public void setVardiyaBasZaman(Date vardiyaBasZaman) {
-		this.vardiyaBasZaman = vardiyaBasZaman;
+	public void setVardiyaBasZaman(Date date) {
+		if (date != null && vardiyaDateStr.endsWith("0908")) {
+
+			++islemAdet;
+			String str = PdksUtil.convertToDateString(date, PdksUtil.getDateTimeFormat());
+			if (str.endsWith("10:30"))
+				logger.debug(str);
+
+		}
+
+		this.vardiyaBasZaman = date;
 	}
 
 	@Transient
@@ -668,6 +681,7 @@ public class Vardiya extends BaseObject {
 							Date tarih2 = PdksUtil.addTarih(oncekiVardiya.getVardiyaBitZaman(), Calendar.MINUTE, offCalisma.isHaftaTatil() ? -this.getHaftaTatiliFazlaMesaiBasDakika() : -this.getOffFazlaMesaiBasDakika());
 							offCalisma.setVardiyaFazlaMesaiBasZaman(tarih2);
 							offCalisma.setVardiyaBasZaman(tarih2);
+							offCalisma.setVardiyaTelorans1BasZaman(tarih2);
 							cal.setTime(tarih2);
 							cal.add(Calendar.MILLISECOND, -100);
 							Date tarih1 = (Date) cal.getTime().clone();
@@ -756,7 +770,7 @@ public class Vardiya extends BaseObject {
 
 						}
 					} else
-						logger.info(oncekiVardiya.getAdi());
+						logger.debug(oncekiVardiya.getAdi());
 				}
 				if (sonrakiVardiya != null && sonrakiVardiya.getVardiyaBasZaman() != null) {
 					if (sonGun != null) {
@@ -782,7 +796,7 @@ public class Vardiya extends BaseObject {
 			Vardiya oncekiIslemVardiya = pdksVardiyaGun.getOncekiVardiyaGun() != null && pdksVardiyaGun.getOncekiVardiyaGun().getIslemVardiya() != null ? pdksVardiyaGun.getOncekiVardiyaGun().getIslemVardiya() : null;
 			Vardiya sonrakiIslemVardiya = pdksVardiyaGun.getSonrakiVardiyaGun() != null && pdksVardiyaGun.getSonrakiVardiyaGun().getIslemVardiya().isCalisma() ? pdksVardiyaGun.getSonrakiVardiyaGun().getIslemVardiya() : null;
 			// if ((oncekiIslemVardiya != null || sonrakiIslemVardiya != null) && (pdksVardiyaGun.getVardiyaDateStr().equals("20200808") || pdksVardiyaGun.getVardiyaDateStr().equals("20200809")))
-			// logger.info(pdksVardiyaGun.getVardiyaDateStr());
+			// logger.debug(pdksVardiyaGun.getVardiyaDateStr());
 			vardiyaBasZaman = PdksUtil.convertToJavaDate(PdksUtil.convertToDateString(vardiyaTarih, "yyyyMMdd") + " 13:00", "yyyyMMdd HH:mm");
 			if (oncekiIslemVardiya != null && oncekiIslemVardiya.isCalisma() && vardiyaBasZaman.after(oncekiIslemVardiya.getVardiyaBitZaman())) {
 				Calendar cal = Calendar.getInstance();
@@ -1319,8 +1333,10 @@ public class Vardiya extends BaseObject {
 		return vardiyaTelorans1BasZaman;
 	}
 
-	public void setVardiyaTelorans1BasZaman(Date vardiyaTelorans1BasZaman) {
-		this.vardiyaTelorans1BasZaman = vardiyaTelorans1BasZaman;
+	public void setVardiyaTelorans1BasZaman(Date date) {
+		if (date != null && vardiyaDateStr.endsWith("0909"))
+			logger.debug(PdksUtil.convertToDateString(date, PdksUtil.getDateTimeFormat()));
+		this.vardiyaTelorans1BasZaman = date;
 	}
 
 	@Transient
@@ -1388,8 +1404,8 @@ public class Vardiya extends BaseObject {
 	public void setVardiyaTelorans2BitZaman(Date value) {
 		if (islemVardiyaGun != null) {
 			if (value != null) {
-				if (vardiyaDateStr != null && vardiyaDateStr.equals("2023092ss4x")) {
-					logger.info(islemAdet + " " + value);
+				if (vardiyaDateStr != null && vardiyaDateStr.endsWith("0908")) {
+					logger.debug(PdksUtil.convertToDateString(value, PdksUtil.getDateTimeFormat()));
 				}
 				// ++islemAdet;
 
@@ -1408,13 +1424,11 @@ public class Vardiya extends BaseObject {
 		return vardiyaFazlaMesaiBasZaman;
 	}
 
-	public void setVardiyaFazlaMesaiBasZaman(Date value) {
-		if (value != null) {
-			if (vardiyaDateStr != null && vardiyaDateStr.equals("20230927x")) {
-				logger.debug(vardiyaDateStr + " " + islemAdet + " " + value);
-			}
-			this.vardiyaFazlaMesaiBasZaman = value;
-		}
+	public void setVardiyaFazlaMesaiBasZaman(Date date) {
+		if (date != null && vardiyaDateStr.endsWith("0909"))
+			logger.debug(PdksUtil.convertToDateString(date, PdksUtil.getDateTimeFormat()));
+
+		this.vardiyaFazlaMesaiBasZaman = date;
 
 	}
 
@@ -1425,10 +1439,11 @@ public class Vardiya extends BaseObject {
 
 	public void setVardiyaFazlaMesaiBitZaman(Date value) {
 		if (value != null) {
-			if (vardiyaDateStr != null && vardiyaDateStr.equals("20230924")) {
+			if (vardiyaDateStr != null && vardiyaDateStr.endsWith("0907")) {
 				++islemAdet;
-
-				logger.debug(vardiyaDateStr + " " + islemAdet + " " + value);
+				String str = PdksUtil.convertToDateString(value, PdksUtil.getDateTimeFormat());
+				if (str.endsWith("8:50"))
+					logger.debug(str);
 			}
 			this.vardiyaFazlaMesaiBitZaman = value;
 		}
@@ -1457,7 +1472,7 @@ public class Vardiya extends BaseObject {
 			cal.setTime(tarih);
 			cal.set(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DATE), basSaat, basDakika, 0);
 			Date basZaman = cal.getTime();
-			if (basZaman.getTime() > bitZaman.getTime()) {
+			if (basZaman.getTime() >= bitZaman.getTime()) {
 				cal.setTime(basZaman);
 				cal.add(Calendar.DATE, -1);
 				basZaman = cal.getTime();

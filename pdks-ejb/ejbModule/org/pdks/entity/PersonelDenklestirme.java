@@ -1,6 +1,7 @@
 package org.pdks.entity;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -64,6 +65,8 @@ public class PersonelDenklestirme extends BaseObject {
 	private PersonelDenklestirme personelDenklestirmeGecenAy, personelDenklestirmeDB;
 
 	private VardiyaGun izinVardiyaGun;
+
+	private PersonelDonemselDurum sutIzniPersonelDonemselDurum;
 
 	private Double planlanSure = 0d, eksikCalismaSure = 0d, hesaplananSure = 0d, resmiTatilSure = 0d, haftaCalismaSuresi = 0d, fazlaMesaiSure = 0d, odenenSure = 0d;
 
@@ -472,19 +475,57 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	/**
+	 * @param cm
+	 * @param vardiyalar
+	 * @return
+	 */
+	private double getPlananSureHesapla(CalismaModeli cm, List<VardiyaGun> vardiyalar) {
+		double sure = 0.0d, gun = cm.getHaftaIci();
+		for (VardiyaGun vg : vardiyalar) {
+			Tatil tatil = vg.getTatil();
+			Vardiya vardiya = vg.getVardiya();
+			double gunPlanSure = gun;
+			if (vg.isSutIzniVar())
+				gunPlanSure = gunPlanSure <= 9.0d ? gunPlanSure / 1.2d : 7.5d;
+			if (vg.isAyinGunu() && vardiya != null && vardiya.getId() != null) {
+				boolean hesapla = !(vg.isIzinli() || vardiya.isHaftaTatil() || tatil != null);
+				if (!hesapla) {
+					gunPlanSure = 0;
+					if (tatil != null && tatil.isYarimGunMu()) {
+						gunPlanSure = cm.getArife();
+						hesapla = true;
+					}
+				}
+				if (hesapla) {
+					sure += gunPlanSure;
+					logger.debug(vg.getVardiyaDateStr() + " " + gunPlanSure + " " + sure);
+				}
+
+			}
+		}
+		return sure;
+	}
+
+	/**
 	 * @param izinSure
 	 * @return
 	 */
 	@Transient
-	public Double getMaksimumSure(double izinSure, double arifeToplamSure) {
+	public Double getMaksimumSure(double izinSure, double arifeToplamSure, List<VardiyaGun> vardiyalar) {
+		CalismaModeli cm = calismaModeliAy != null ? calismaModeliAy.getCalismaModeli() : personel.getCalismaModeli();
 		double aylikSure = calismaModeliAy != null ? calismaModeliAy.getSure() : denklestirmeAy.getSure();
 		double aylikSutSure = calismaModeliAy != null ? calismaModeliAy.getToplamIzinSure() : denklestirmeAy.getToplamIzinSure();
-		if (calismaModeliAy != null && calismaModeliAy.getCalismaModeli().getToplamGunGuncelle() && sutIzniSaatSayisi > 0) {
+		if (calismaModeliAy != null && cm.getToplamGunGuncelle() && sutIzniSaatSayisi > 0)
 			aylikSure = sutIzniSaatSayisi;
+		else if (cm.isHaftaTatilSabitDegil()) {
+			aylikSure = getPlananSureHesapla(cm, vardiyalar);
+			if (sutIzniPersonelDonemselDurum != null)
+				aylikSutSure = aylikSure;
 		}
 
-		if (izinSure > 0.0d)
+		else if (izinSure > 0.0d)
 			aylikSure -= izinSure;
+
 		Double gunlukCalismaSuresi = calismaModeliAy != null ? AylikPuantaj.getGunlukCalismaSuresi() : null;
 		if (isSuaDurumu()) {
 			aylikSure = aylikSureHesapla(aylikSure - arifeToplamSure, calismaSuaSaati, gunlukCalismaSuresi) + arifeToplamSure;
@@ -682,6 +723,15 @@ public class PersonelDenklestirme extends BaseObject {
 
 	public void setIzinVardiyaGun(VardiyaGun izinVardiyaGun) {
 		this.izinVardiyaGun = izinVardiyaGun;
+	}
+
+	@Transient
+	public PersonelDonemselDurum getSutIzniPersonelDonemselDurum() {
+		return sutIzniPersonelDonemselDurum;
+	}
+
+	public void setSutIzniPersonelDonemselDurum(PersonelDonemselDurum sutIzniPersonelDonemselDurum) {
+		this.sutIzniPersonelDonemselDurum = sutIzniPersonelDonemselDurum;
 	}
 
 }

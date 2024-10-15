@@ -77,8 +77,10 @@ function upload(file) {
 }
 
 var newwindow;
-function createPop(url) {    
-   newwindow=window.open(url,'projePowerByULL','width=800,height=600,toolbar=0,menubar=0,location=0');  
+function createPop(url,id) {    
+    var width = screen.width * 80 / 100;
+    var params='toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,top=100,width='+width;
+    newwindow=window.open(url,id,params );  
    if (window.focus) {
 	   newwindow.focus();
    }
@@ -135,8 +137,15 @@ if (typeof window.event == 'undefined'){
 	<table width="100%" border="0" cellspacing="0" cellpadding="0">
 		<tr style="background-color: #{startupAction.projeHeaderBackgroundColor};">
 			<td width="120" height="83"><ui:fragment rendered="#{startupAction.projeHeaderImage!=null}">
-					<s:graphicImage id="image" value="#{startupAction.projeHeaderImage}" width="#{startupAction.projeHeaderImageWidth}"
-						height="#{startupAction.projeHeaderImageHeight}" />
+					<ui:fragment rendered="#{startupAction.projeURL!=null}">
+						<a href="#" title="#{startupAction.projeURL}" id="imageURL" onclick="createPop('#{startupAction.projeURL}',this.id);return false;"> <s:graphicImage
+								value="#{startupAction.projeHeaderImage}" width="#{startupAction.projeHeaderImageWidth}" height="#{startupAction.projeHeaderImageHeight}" /></a>
+					</ui:fragment>
+					<ui:fragment rendered="#{startupAction.projeURL==null}">
+						<s:graphicImage value="#{startupAction.projeHeaderImage}" width="#{startupAction.projeHeaderImageWidth}"
+							height="#{startupAction.projeHeaderImageHeight}" />
+					</ui:fragment>
+
 
 				</ui:fragment></td>
 			<td style="font-weight: bold; font-size: 22px; font-family: sans-serif; color: #{startupAction.projeHeaderColor};" height="83" align="center">&nbsp;#{ortakIslemler.getParameterKey('fromName')}
@@ -149,19 +158,23 @@ if (typeof window.event == 'undefined'){
 	</div>
 
 	<div class="footer">
-		
+
 		<table width="100%" border="0" cellspacing="0" cellpadding="0">
 			<tr style="background-color: #{startupAction.projeFooterBackgroundColor};">
 				<td width="120" height="83"><ui:fragment rendered="#{startupAction.projeFooterImage!=null}">
-						<s:graphicImage id="imageFooterURL1" value="#{startupAction.projeFooterImage}" width="#{startupAction.projeFooterImageWidth}"
-							height="#{startupAction.projeFooterImageHeight}" />
+						<ui:fragment rendered="#{startupAction.projePowerURL!=null}">
+							<a href="#" id="imageFooterURL" title="#{startupAction.projePowerURL}" style="font-weight: bold;" onclick="createPop('#{startupAction.projePowerURL}',this.id);return false;"> <s:graphicImage
+									value="#{startupAction.projeFooterImage}" width="#{startupAction.projeFooterImageWidth}" height="#{startupAction.projeFooterImageHeight}" /></a>
+						</ui:fragment>
+						<ui:fragment rendered="#{startupAction.projePowerURL==null}">
+							<s:graphicImage value="#{startupAction.projeFooterImage}" width="#{startupAction.projeFooterImageWidth}"
+								height="#{startupAction.projeFooterImageHeight}" />
+						</ui:fragment>
+
+
 					</ui:fragment></td>
-				<td style="font-size: 12px; font-family: sans-serif;" height="83" align="center">&nbsp;Powered by <ui:fragment
-						rendered="#{startupAction.projePowerURL==null}">
-						<a style="font-weight: bold;">#{startupAction.projePowerBy}</a>
-					</ui:fragment> <ui:fragment rendered="#{startupAction.projePowerURL!=null}">
-						<a style="font-weight: bold;" onclick="createPop('#{startupAction.projePowerURL}');return false;"><u>#{startupAction.projePowerBy}</u></a>
-					</ui:fragment>
+				<td style="font-size: 12px; font-family: sans-serif;" height="83" align="center">&nbsp;Powered by <a style="font-weight: bold;">#{startupAction.projePowerBy}</a>
+
 				</td>
 				<td width="120" height="83"></td>
 			</tr>

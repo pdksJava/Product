@@ -57,7 +57,7 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	OrtakIslemler ortakIslemler;
 	@In(required = false)
 	FacesMessages facesMessages;
-	
+
 	public static String sayfaURL = "vardiyaTanimlama";
 	private List<String> saatList = new ArrayList<String>();
 	private List<String> dakikaList = new ArrayList<String>();
@@ -71,7 +71,8 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	private List<CalismaSekli> calismaSekliList;
 	private List<YemekIzin> yemekList;
 	private int saat = 13, dakika = 0;
-	private boolean manuelVardiyaIzinGir = false;
+
+	private boolean pasifGoster = Boolean.FALSE, manuelVardiyaIzinGir = false;
 	private Session session;
 
 	@Override
@@ -135,7 +136,6 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	public void fillCalismaModeliList(Vardiya pdksVardiya) {
 		if (pdksVardiya.getId() == null || pdksVardiya.isCalisma()) {
 			HashMap map = new HashMap();
-
 			map.put("durum", Boolean.TRUE);
 			map.put("genelVardiya", Boolean.FALSE);
 			if (session != null)
@@ -148,16 +148,9 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 					if (cm.getDepartman() != null && !cm.getDepartman().getId().equals(cmId))
 						iterator.remove();
 				}
-
 			}
-
 			if (pdksVardiya.getId() != null) {
-				HashMap parametreMap = new HashMap();
-				parametreMap.put(PdksEntityController.MAP_KEY_SELECT, "calismaModeli");
-				parametreMap.put("vardiya.id", pdksVardiya.getId());
-				if (session != null)
-					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-				calismaModeliKayitliList = pdksEntityController.getObjectByInnerObjectList(parametreMap, CalismaModeliVardiya.class);
+				calismaModeliKayitliList = ortakIslemler.fillCalismaModeliVardiyaList(pdksVardiya, session);
 				if (calismaModeliKayitliList.size() > 1)
 					calismaModeliKayitliList = PdksUtil.sortObjectStringAlanList(calismaModeliKayitliList, "getAciklama", null);
 			} else
@@ -170,7 +163,6 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 						iterator.remove();
 						break;
 					}
-
 				}
 			}
 			if (calismaModeliList.size() > 1)
@@ -182,7 +174,6 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	}
 
 	public void fillBagliOlduguDepartmanTanimList() {
-
 		List tanimList = null;
 		HashMap parametreMap = new HashMap();
 		parametreMap.put("durum", Boolean.TRUE);
@@ -282,7 +273,8 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 		if (pdksVardiya.getKisaAdi() != null)
 			pdksVardiyaYeni.setKisaAdi(pdksVardiya.getKisaAdi() + " kopya");
 		pdksVardiyaYeni.setAdi(pdksVardiya.getAdi() + " kopya");
-		vardiyaAlanlariDoldur(pdksVardiyaYeni);
+		vardiyaAlanlariDoldur(pdksVardiya);
+		setInstance(pdksVardiyaYeni);
 		return "";
 
 	}
@@ -302,6 +294,7 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 			pdksVardiya.setCikisGecikmeToleransDakika((short) 0);
 		}
 		vardiyaAlanlariDoldur(pdksVardiya);
+		setInstance(pdksVardiya);
 	}
 
 	/**
@@ -450,10 +443,16 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 
 		HashMap parametreMap = new HashMap();
 		try {
-			if (session != null)
-				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			manuelVardiyaIzinGir = ortakIslemler.getVardiyaIzinGir(session, authenticatedUser.getDepartman());
-			List<Vardiya> vardiyalar = pdksEntityController.getObjectByInnerObjectList(parametreMap, Vardiya.class);
+			// if (pasifGoster == false)
+			// parametreMap.put("durum", Boolean.TRUE);
+			// if (session != null)
+			// parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+			//
+			// List<Vardiya> vardiyalar = pdksEntityController.getObjectByInnerObjectList(parametreMap, Vardiya.class);
+
+			List<Vardiya> vardiyalar = ortakIslemler.getSQLParamByFieldList(Vardiya.TABLE_NAME, pasifGoster == false ? Vardiya.COLUMN_NAME_DURUM : null, Boolean.TRUE, Vardiya.class, session);
+
 			yemekList = ortakIslemler.getYemekList(new Date(), null, session);
 			HashMap<Long, Vardiya> vardiyaMap = new HashMap<Long, Vardiya>();
 			Calendar cal = Calendar.getInstance();
@@ -604,13 +603,11 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	public void fillCalismaSekilleri() {
 		HashMap parametreMap = new HashMap();
 		try {
-
 			parametreMap.put("durum", Boolean.TRUE);
 			if (session != null)
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<CalismaSekli> list = pdksEntityController.getObjectByInnerObjectList(parametreMap, CalismaSekli.class);
 			setCalismaSekliList(list);
-
 		} catch (Exception e) {
 			logger.error("PDKS hata in : \n");
 			e.printStackTrace();
@@ -629,7 +626,6 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<VardiyaSablonu> sablonList = pdksEntityController.getObjectByInnerObjectList(parametreMap, VardiyaSablonu.class);
 			setSablonList(sablonList);
-
 		} catch (Exception e) {
 			logger.error("PDKS hata in : \n");
 			e.printStackTrace();
@@ -660,6 +656,7 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		pasifGoster = false;
 		fillSaatler();
 		fillVardiyalar();
 		fillSablonlar();
@@ -846,5 +843,13 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 
 	public static void setSayfaURL(String sayfaURL) {
 		VardiyaHome.sayfaURL = sayfaURL;
+	}
+
+	public boolean isPasifGoster() {
+		return pasifGoster;
+	}
+
+	public void setPasifGoster(boolean pasifGoster) {
+		this.pasifGoster = pasifGoster;
 	}
 }

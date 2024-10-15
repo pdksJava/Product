@@ -53,6 +53,7 @@ import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGun;
+import org.pdks.quartz.KapiGirisGuncelleme;
 import org.pdks.security.entity.User;
 
 import com.pdks.webservice.MailFile;
@@ -93,7 +94,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 	private Date basTarih, bitTarih;
 	private Kapi kapi;
 	private boolean pdksKapi = Boolean.TRUE, pdksHaricKapi = Boolean.FALSE, yemekKapi = Boolean.FALSE, guncellenmis = Boolean.FALSE, kgsUpdateGoster = Boolean.FALSE;
-	private boolean ikRole = false, vardiyaOku = false;
+	private boolean ikRole = false, vardiyaOku = false, kapiGirisGuncelle = false;
 	private Boolean vardiyaOkuDurum = null;
 	private String sicilNo = "", adi = "", soyadi = "", bolumAciklama;
 	private byte[] zipVeri;
@@ -135,10 +136,26 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 		setDepartmanList(departmanListe);
 	}
 
+	@Transactional
+	public String kapiGirisGuncellemeBasla() throws Exception {
+		if (bitTarih.before(PdksUtil.tariheAyEkleCikar(basTarih, 2))) {
+			ortakIslemler.kapiGirisGuncelle(basTarih, PdksUtil.tariheGunEkleCikar(bitTarih, 1), session);
+			fillHareketList();
+		} else {
+			if (hareketList == null)
+				hareketList = new ArrayList<HareketKGS>();
+			else
+				hareketList.clear();
+			PdksUtil.addMessageAvailableWarn("2 aydan fazla aralık seçemezsiniz!");
+		}
+
+		return "";
+	}
+
 	public void sayfaGirisAction() {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
- 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
 		vardiyaOku = false;
 		if (vardiyaOkuDurum == null) {
 			if (authenticatedUser.isAdmin() || ortakIslemler.getParameterKeyHasStringValue("hareketVardiyaOku"))
@@ -192,6 +209,9 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 		if (!ayniSayfa)
 			authenticatedUser.setCalistigiSayfa("");
 		fillEkSahaTanim();
+		kapiGirisGuncelle = false;
+		if (authenticatedUser.isIK() || authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi())
+			kapiGirisGuncelle = ortakIslemler.isExisStoreProcedure(KapiGirisGuncelleme.SP_NAME, session);
 	}
 
 	private void sayfaGiris(Session session) {
@@ -428,7 +448,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 			if ((personelId == null || personelId.isEmpty()) && (sirketId != null || departmanId != null)) {
 				sb = new StringBuffer();
 				sb.append("SELECT  V.* FROM " + PdksPersonelView.TABLE_NAME + " V WITH(nolock) ");
-				sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P ON P." + Personel.COLUMN_NAME_ID + " = V." + PdksPersonelView.COLUMN_NAME_PERSONEL);
+				sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON P." + Personel.COLUMN_NAME_ID + " = V." + PdksPersonelView.COLUMN_NAME_PERSONEL);
 				if (!admin) {
 					sb.append(" AND  P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " :ys");
 					ArrayList<String> list = authenticatedUser.getYetkiTumPersonelNoList();
@@ -442,7 +462,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 						sb.append(" AND  P." + Personel.COLUMN_NAME_SIRKET + " = :sirketId");
 						parametreMap.put("sirketId", sirketId);
 					} else if (departmanId != null) {
-						sb.append(" INNER JOIN " + Sirket.TABLE_NAME + " S ON S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET);
+						sb.append(" INNER JOIN " + Sirket.TABLE_NAME + " S WITH(nolock) ON S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET);
 						sb.append(" AND  S." + Sirket.COLUMN_NAME_DEPARTMAN + " = :departmanId");
 						parametreMap.put("departmanId", departmanId);
 					}
@@ -645,7 +665,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 					parametreMap.clear();
 					sb = new StringBuffer();
 					sb.append("SELECT P.ISLEM_ID,HAREKET_ZAMANI from PDKS_LOG P WITH(nolock) ");
-					sb.append(" INNER JOIN PDKS_ISLEM I ON I.ID=P.ISLEM_ID AND I.ISLEM_TIPI='U' ");
+					sb.append(" INNER JOIN PDKS_ISLEM I WITH(nolock) ON I.ID=P.ISLEM_ID AND I.ISLEM_TIPI='U' ");
 
 					sb.append(" WHERE P.ISLEM_ID :" + fieldName + " AND P.DURUM=0 ");
 					parametreMap.put(fieldName, islemIdler);
@@ -1378,5 +1398,13 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 
 	public static void setSayfaURL(String sayfaURL) {
 		TumHareketlerHome.sayfaURL = sayfaURL;
+	}
+
+	public boolean isKapiGirisGuncelle() {
+		return kapiGirisGuncelle;
+	}
+
+	public void setKapiGirisGuncelle(boolean kapiGirisGuncelle) {
+		this.kapiGirisGuncelle = kapiGirisGuncelle;
 	}
 }
