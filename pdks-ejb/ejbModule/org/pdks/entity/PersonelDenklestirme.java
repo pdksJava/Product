@@ -1,6 +1,7 @@
 package org.pdks.entity;
 
 import java.math.BigDecimal;
+import java.util.Calendar;
 import java.util.List;
 
 import javax.persistence.CascadeType;
@@ -16,6 +17,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.pdks.security.entity.User;
+import org.pdks.session.PdksUtil;
 
 @Entity(name = PersonelDenklestirme.TABLE_NAME)
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = { PersonelDenklestirme.COLUMN_NAME_DONEM, PersonelDenklestirme.COLUMN_NAME_PERSONEL }) })
@@ -66,7 +68,7 @@ public class PersonelDenklestirme extends BaseObject {
 
 	private VardiyaGun izinVardiyaGun;
 
-	private PersonelDonemselDurum sutIzniPersonelDonemselDurum;
+	private PersonelDonemselDurum sutIzniPersonelDonemselDurum, gebePersonelDonemselDurum;
 
 	private Double planlanSure = 0d, eksikCalismaSure = 0d, hesaplananSure = 0d, resmiTatilSure = 0d, haftaCalismaSuresi = 0d, fazlaMesaiSure = 0d, odenenSure = 0d;
 
@@ -484,15 +486,19 @@ public class PersonelDenklestirme extends BaseObject {
 		for (VardiyaGun vg : vardiyalar) {
 			Tatil tatil = vg.getTatil();
 			Vardiya vardiya = vg.getVardiya();
-			double gunPlanSure = gun;
-			if (vg.isSutIzniVar())
-				gunPlanSure = gunPlanSure <= 9.0d ? gunPlanSure / 1.2d : 7.5d;
+			double gunPlanSure = gun, sutIzniSure = 0.0d;
+			if (vg.isSutIzniVar()) {
+				sutIzniSure = gunPlanSure <= 9.0d ? cm.getSutIzinSaat(PdksUtil.getDateField(vg.getVardiyaDate(), Calendar.DAY_OF_WEEK)) : 7.5d;
+				gunPlanSure = sutIzniSure;
+			}
 			if (vg.isAyinGunu() && vardiya != null && vardiya.getId() != null) {
 				boolean hesapla = !(vg.isIzinli() || vardiya.isHaftaTatil() || tatil != null);
 				if (!hesapla) {
 					gunPlanSure = 0;
-					if (tatil != null && tatil.isYarimGunMu()) {
+					if (vardiya.isHaftaTatil() == false && tatil != null && tatil.isYarimGunMu()) {
 						gunPlanSure = cm.getArife();
+						if (sutIzniSure > 0.0d && gunPlanSure > sutIzniSure)
+							gunPlanSure = sutIzniSure;
 						hesapla = true;
 					}
 				}
@@ -500,7 +506,6 @@ public class PersonelDenklestirme extends BaseObject {
 					sure += gunPlanSure;
 					logger.debug(vg.getVardiyaDateStr() + " " + gunPlanSure + " " + sure);
 				}
-
 			}
 		}
 		return sure;
@@ -517,7 +522,7 @@ public class PersonelDenklestirme extends BaseObject {
 		double aylikSutSure = calismaModeliAy != null ? calismaModeliAy.getToplamIzinSure() : denklestirmeAy.getToplamIzinSure();
 		if (calismaModeliAy != null && cm.getToplamGunGuncelle() && sutIzniSaatSayisi > 0)
 			aylikSure = sutIzniSaatSayisi;
-		else if (cm.isHaftaTatilSabitDegil()) {
+		else if (cm.isHaftaTatilSabitDegil() || sutIzniPersonelDonemselDurum != null) {
 			aylikSure = getPlananSureHesapla(cm, vardiyalar);
 			if (sutIzniPersonelDonemselDurum != null)
 				aylikSutSure = aylikSure;
@@ -732,6 +737,15 @@ public class PersonelDenklestirme extends BaseObject {
 
 	public void setSutIzniPersonelDonemselDurum(PersonelDonemselDurum sutIzniPersonelDonemselDurum) {
 		this.sutIzniPersonelDonemselDurum = sutIzniPersonelDonemselDurum;
+	}
+
+	@Transient
+	public PersonelDonemselDurum getGebePersonelDonemselDurum() {
+		return gebePersonelDonemselDurum;
+	}
+
+	public void setGebePersonelDonemselDurum(PersonelDonemselDurum gebePersonelDonemselDurum) {
+		this.gebePersonelDonemselDurum = gebePersonelDonemselDurum;
 	}
 
 }

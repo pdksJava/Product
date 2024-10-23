@@ -65,6 +65,9 @@ public class Personel extends BaseObject {
 	public static final String COLUMN_NAME_CALISMA_MODELI = "CALISMA_MODELI_ID";
 	public static final String COLUMN_NAME_ISKUR_SABLON = "ISKUR_SABLON_ID";
 	public static final String COLUMN_NAME_PERSONEL_TIPI = "PERSONEL_TIPI_ID";
+	public static final String COLUMN_NAME_GOREV_TIPI = "GOREV_TIPI_ID";
+	public static final String COLUMN_NAME_SABLON = "SABLON_ID";
+	public static final String COLUMN_NAME_IZIN_KARTI_VAR = "IZIN_KARTI_VAR";
 
 	public static final String COLUMN_NAME_MAIL_TAKIP = "MAIL_TAKIP";
 
@@ -90,7 +93,7 @@ public class Personel extends BaseObject {
 	private Tanim gorevTipi, ekSaha1, ekSaha2, ekSaha3, ekSaha4, tesis, masrafYeri, ekSaha, cinsiyet, bordroAltAlan, personelTipi;
 	private Boolean pdks = Boolean.FALSE, mailTakip = Boolean.FALSE, icapciOlabilir = Boolean.FALSE, ustYonetici = Boolean.FALSE, sutIzni = Boolean.FALSE;
 	private Boolean suaOlabilir = Boolean.FALSE, fazlaMesaiIzinKullan = Boolean.FALSE, sanalPersonel = Boolean.FALSE, onaysizIzinKullanilir = Boolean.FALSE, egitimDonemi = Boolean.FALSE;
-	private Boolean partTime = Boolean.FALSE, ikinciYoneticiIzinOnayla = Boolean.FALSE, fazlaMesaiOde = Boolean.FALSE, gebeMi = Boolean.FALSE, mudurAltSeviye;
+	private Boolean partTime = Boolean.FALSE, ikinciYoneticiIzinOnayla = Boolean.FALSE, fazlaMesaiOde = Boolean.FALSE, izinKartiVar = Boolean.FALSE, gebeMi = Boolean.FALSE, mudurAltSeviye;
 	private Personel yoneticisi, asilYonetici1, asilYonetici2, pdksYonetici;
 	private Date izinHakEdisTarihi, iseBaslamaTarihi, grubaGirisTarihi, istenAyrilisTarihi = PdksUtil.getSonSistemTarih(), sskCikisTarihi, dogumTarihi;
 	private VardiyaSablonu workSablon;
@@ -203,7 +206,7 @@ public class Personel extends BaseObject {
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
-	@JoinColumn(name = "GOREV_TIPI_ID")
+	@JoinColumn(name = COLUMN_NAME_GOREV_TIPI)
 	@Fetch(FetchMode.JOIN)
 	public Tanim getGorevTipi() {
 		return gorevTipi;
@@ -340,7 +343,7 @@ public class Personel extends BaseObject {
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
-	@JoinColumn(name = "SABLON_ID")
+	@JoinColumn(name = COLUMN_NAME_SABLON)
 	@Fetch(FetchMode.JOIN)
 	public VardiyaSablonu getSablon() {
 		return sablon;
@@ -575,6 +578,15 @@ public class Personel extends BaseObject {
 
 	public void setFazlaMesaiOde(Boolean fazlaMesaiOde) {
 		this.fazlaMesaiOde = fazlaMesaiOde;
+	}
+
+	@Column(name = COLUMN_NAME_IZIN_KARTI_VAR)
+	public Boolean getIzinKartiVar() {
+		return izinKartiVar;
+	}
+
+	public void setIzinKartiVar(Boolean izinKartiVar) {
+		this.izinKartiVar = izinKartiVar;
 	}
 
 	@OneToOne(cascade = CascadeType.REFRESH)
@@ -1091,6 +1103,11 @@ public class Personel extends BaseObject {
 		return mudurAltSeviye;
 	}
 
+	@Transient
+	public boolean isIzinKartiVardir() {
+		return sirket.isIzinGirer() || izinKartiVar != null && izinKartiVar;
+	}
+
 	public void setMudurAltSeviye(Boolean mudurAltSeviye) {
 		this.mudurAltSeviye = mudurAltSeviye;
 	}
@@ -1099,4 +1116,5 @@ public class Personel extends BaseObject {
 		// TODO entityRefresh
 
 	}
+
 }
