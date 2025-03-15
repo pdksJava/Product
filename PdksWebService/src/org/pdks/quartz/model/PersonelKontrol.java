@@ -123,11 +123,11 @@ public final class PersonelKontrol extends QuartzJobBean {
 		HashMap fields = new HashMap();
 		StringBuffer sql = new StringBuffer();
 		sql.append(" select P.* from " + Personel.TABLE_NAME + " P ");
-		sql.append(" INNER JOIN " + Sirket.TABLE_NAME + " S WITH(nolock) ON S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET + " AND S." + Sirket.COLUMN_NAME_DURUM + " = 1 AND S." + Sirket.COLUMN_NAME_ERP_DURUM + " = 1 ");
-		sql.append(" INNER JOIN " + Personel.TABLE_NAME + " Y WITH(nolock) ON Y." + Personel.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_YONETICI + " AND Y." + Personel.COLUMN_NAME_ISTEN_AYRILIS_TARIHI + "<GETDATE() ");
-		sql.append(" WHERE P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE()) AND P." + Personel.COLUMN_NAME_DURUM + " = 1 ");
-		sql.append(" AND P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " >= GETDATE() ");
-		sql.append(" ORDER BY Y." + Personel.COLUMN_NAME_AD + ",Y." + Personel.COLUMN_NAME_SOYAD + ",Y." + Personel.COLUMN_NAME_ID);
+		sql.append(" inner join " + Sirket.TABLE_NAME + " S " + PdksVeriOrtakAktar.getJoinLOCK() + " on S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET + " and S." + Sirket.COLUMN_NAME_DURUM + " = 1 and S." + Sirket.COLUMN_NAME_ERP_DURUM + " = 1 ");
+		sql.append(" inner join " + Personel.TABLE_NAME + " Y " + PdksVeriOrtakAktar.getJoinLOCK() + " on Y." + Personel.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_YONETICI + " and Y." + Personel.COLUMN_NAME_ISTEN_AYRILIS_TARIHI + "<GETDATE() ");
+		sql.append(" where P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE()) and P." + Personel.COLUMN_NAME_DURUM + " = 1 ");
+		sql.append(" and P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " >= GETDATE() ");
+		sql.append(" order by Y." + Personel.COLUMN_NAME_AD + ",Y." + Personel.COLUMN_NAME_SOYAD + ",Y." + Personel.COLUMN_NAME_ID);
 		List<Personel> hataliPersonelList = pdksDAO.getNativeSQLList(fields, sql, Personel.class);
 		if (!hataliPersonelList.isEmpty()) {
 
@@ -165,7 +165,7 @@ public final class PersonelKontrol extends QuartzJobBean {
 			try {
 				PdksVeriOrtakAktar ortakAktar = new PdksVeriOrtakAktar();
 				// mailMap.put("ikMailIptal", "");
-				ortakAktar.kullaniciIKYukle(mailMap, pdksDAO);
+				ortakAktar.kullaniciIKYukle(null, mailMap, pdksDAO);
 				MailManager.ePostaGonder(mailMap);
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -185,8 +185,8 @@ public final class PersonelKontrol extends QuartzJobBean {
 			logger.info("Personel Kontrol start " + PdksUtil.getCurrentTimeStampStr());
 			fields.clear();
 			StringBuffer sb = new StringBuffer();
-			sb.append("SELECT D.* FROM " + HataliPersonel.VIEW_NAME + " D WITH(nolock)");
-			sb.append(" ORDER BY D." + HataliPersonel.COLUMN_NAME_TIP + ",D." + HataliPersonel.COLUMN_NAME_PERSONEL_NO + ", D." + HataliPersonel.COLUMN_NAME_ID);
+			sb.append("select D.* from " + HataliPersonel.VIEW_NAME + " D " + PdksVeriOrtakAktar.getSelectLOCK() + " ");
+			sb.append(" order by D." + HataliPersonel.COLUMN_NAME_TIP + ",D." + HataliPersonel.COLUMN_NAME_PERSONEL_NO + ", D." + HataliPersonel.COLUMN_NAME_ID);
 			List<HataliPersonel> hataliPersonelList = pdksDAO.getNativeSQLList(fields, sb, HataliPersonel.class);
 			if (hataliPersonelList != null && !hataliPersonelList.isEmpty()) {
 				fields.clear();
@@ -223,7 +223,7 @@ public final class PersonelKontrol extends QuartzJobBean {
 				// mailMap.put("bccTestMailAdres", "hasansayar58@gmail.com");
 				try {
 					PdksVeriOrtakAktar ortakAktar = new PdksVeriOrtakAktar();
-					ortakAktar.kullaniciIKYukle(mailMap, pdksDAO);
+					ortakAktar.kullaniciIKYukle(null, mailMap, pdksDAO);
 					MailManager.ePostaGonder(mailMap);
 				} catch (Exception e) {
 

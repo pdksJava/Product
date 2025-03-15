@@ -13,22 +13,27 @@ import javax.persistence.Transient;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-
 import org.pdks.genel.model.PdksUtil;
 
-@Entity(name = "VARDIYASABLONU")
+@Entity(name = VardiyaSablonu.TABLE_NAME)
 public class VardiyaSablonu extends BaseObject {
-
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 4226475989248347517L;
-	public static final String COLUMN_NAME_ISKUR = "ISKUR";
+	private static final long serialVersionUID = 3465834359641056337L;
+
+	public static final String TABLE_NAME = "VARDIYASABLONU";
+
 	public static final String COLUMN_NAME_BEYAZ_YAKA = "BEYAZ_YAKA";
+	public static final String COLUMN_NAME_SIRKET = "SIRKET_ID";
+	public static final String COLUMN_NAME_DEPARTMAN = "DEPARTMAN_ID";
 
 	private String adi;
+	private Sirket sirket;
 	private Vardiya vardiya1, vardiya2, vardiya3, vardiya4, vardiya5, vardiya6, vardiya7;
 	private CalismaModeli calismaModeli;
+	private double toplamSaat = 0;
+	private int calismaGunSayisi = 0;
 	private Personel personel;
 	private String kayitDurum = VardiyaGun.STYLE_CLASS_EVEN;
 	private HashMap tatilMap;
@@ -36,7 +41,7 @@ public class VardiyaSablonu extends BaseObject {
 	private PersonelIzin izin1, izin2, izin3, izin4, izin5, izin6, izin7;
 	private Departman departman;
 	private Integer version = 0;
-	private Boolean beyazYakaDefault = Boolean.FALSE, isKur = Boolean.FALSE;
+	private Boolean beyazYakaDefault = Boolean.FALSE;
 
 	@Column(name = "VERSION")
 	public Integer getVersion() {
@@ -46,6 +51,8 @@ public class VardiyaSablonu extends BaseObject {
 	public void setVersion(Integer version) {
 		this.version = version;
 	}
+
+	private ArrayList<Vardiya> vardiyaList = new ArrayList<Vardiya>();
 
 	@Column(name = "ADI", nullable = false)
 	public String getAdi() {
@@ -58,7 +65,7 @@ public class VardiyaSablonu extends BaseObject {
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH)
-	@JoinColumn(name = "DEPARTMAN_ID")
+	@JoinColumn(name = COLUMN_NAME_DEPARTMAN)
 	@Fetch(FetchMode.JOIN)
 	public Departman getDepartman() {
 		return departman;
@@ -66,6 +73,17 @@ public class VardiyaSablonu extends BaseObject {
 
 	public void setDepartman(Departman departman) {
 		this.departman = departman;
+	}
+
+	@ManyToOne(cascade = CascadeType.REFRESH)
+	@JoinColumn(name = COLUMN_NAME_SIRKET)
+	@Fetch(FetchMode.JOIN)
+	public Sirket getSirket() {
+		return sirket;
+	}
+
+	public void setSirket(Sirket sirket) {
+		this.sirket = sirket;
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH)
@@ -165,13 +183,34 @@ public class VardiyaSablonu extends BaseObject {
 		this.beyazYakaDefault = beyazYakaDefault;
 	}
 
-	@Column(name = COLUMN_NAME_ISKUR)
-	public Boolean getIsKur() {
-		return isKur;
+	@Transient
+	public double getToplamSaat() {
+
+		return toplamSaat;
 	}
 
-	public void setIsKur(Boolean isKur) {
-		this.isKur = isKur;
+	public void setToplamSaat(double toplamSaat) {
+		this.toplamSaat = toplamSaat;
+	}
+
+	@Transient
+	public int getCalismaGunSayisi() {
+
+		return calismaGunSayisi;
+	}
+
+	public void setCalismaGunSayisi(int calismaGunSayisi) {
+		this.calismaGunSayisi = calismaGunSayisi;
+	}
+
+	@Transient
+	public ArrayList<Vardiya> getVardiyaList() {
+
+		return vardiyaList;
+	}
+
+	public void setVardiyaList(ArrayList<Vardiya> vardiyaList) {
+		this.vardiyaList = vardiyaList;
 	}
 
 	@Transient
@@ -278,11 +317,8 @@ public class VardiyaSablonu extends BaseObject {
 		this.izin7 = izin7;
 	}
 
-	@Transient
-	public boolean isIsKurMu() {
-		boolean isKurDurum = false;
-		if (departman != null && departman.isAdminMi())
-			isKurDurum = isKur != null && isKur;
-		return isKurDurum;
+	public void entityRefresh() {
+		
+
 	}
 }

@@ -12,7 +12,9 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
+import javax.servlet.http.HttpSession;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
@@ -29,8 +31,11 @@ public class UserMenuItemTime extends BasePDKSObject implements Serializable {
 	private static final long serialVersionUID = 8339875569540893616L;
 
 	public static final String TABLE_NAME = "USER_MENUITEM_TIME";
-	public static final String COLUMN_NAME_USER = "USER_ID";
+	public static final String VIEW_NAME = "USER_MENUITEM_TIME_VIEW";
+ 	public static final String COLUMN_NAME_USER = "USER_ID";
 	public static final String COLUMN_NAME_MENU = "MENU_ID";
+	public static final String COLUMN_NAME_SESSION = "SESSION_ID";
+	public static final String COLUMN_NAME_MENU_ADI = "MENU_ADI";
 	public static final String COLUMN_NAME_LAST_PARAMETRE = "LAST_PARAMETRE";
 
 	private User user;
@@ -43,6 +48,8 @@ public class UserMenuItemTime extends BasePDKSObject implements Serializable {
 
 	private BigDecimal useCount = new BigDecimal(0L);
 
+	private HttpSession mySession;
+
 	public UserMenuItemTime() {
 		super();
 
@@ -50,11 +57,14 @@ public class UserMenuItemTime extends BasePDKSObject implements Serializable {
 
 	public UserMenuItemTime(User user, MenuItem menu) {
 		super();
+		Date bugun = new Date();
 		this.user = user;
 		this.menu = menu;
 		this.sessionId = "";
-		this.useCount = new BigDecimal(0L);
-		this.lastTime = new Date();
+		this.useCount = new BigDecimal(1L);
+		this.firstTime = bugun;
+		this.lastTime = bugun;
+		this.parametreJSON = null;
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH)
@@ -89,7 +99,7 @@ public class UserMenuItemTime extends BasePDKSObject implements Serializable {
 		this.firstTime = firstTime;
 	}
 
-	@Column(name = "SESSION_ID")
+	@Column(name = COLUMN_NAME_SESSION)
 	public String getSessionId() {
 		return sessionId;
 	}
@@ -126,9 +136,16 @@ public class UserMenuItemTime extends BasePDKSObject implements Serializable {
 		this.useCount = useCount;
 	}
 
-	public void entityRefresh() {
-		// TODO entityRefresh
-		
+	@Transient
+	public HttpSession getMySession() {
+		return mySession;
 	}
 
+	public void setMySession(HttpSession mySession) {
+		this.mySession = mySession;
+	}
+
+	public void entityRefresh() {
+
+	}
 }

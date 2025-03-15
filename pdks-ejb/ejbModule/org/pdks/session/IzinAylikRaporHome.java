@@ -65,8 +65,8 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 	private int yil, maxYil, gunSayisi;
 	private String izinAciklama, style, ay;
 
-	private List<SelectItem> ayList = new ArrayList<SelectItem>();
-	private List<SelectItem> dataList = new ArrayList<SelectItem>();
+	private List<SelectItem> ayList;
+	private List<SelectItem> dataList;
 	private List<Integer> gunList = new ArrayList<Integer>();
 	private HashMap<String, IzinTipi> izinTipiMap = new HashMap<String, IzinTipi>();
 	private List<Personel> pdksPersonelList = new ArrayList<Personel>();
@@ -122,14 +122,29 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 
 	public void fillSirketList() {
 		HashMap map = new HashMap();
-		map.put("durum", Boolean.TRUE);
-		map.put("fazlaMesai", Boolean.TRUE);
-		if (!authenticatedUser.isAdmin())
-			map.put("departman", authenticatedUser.getDepartman());
+		StringBuffer sb = new StringBuffer();
+		sb.append("select distinct S.* from " + Sirket.TABLE_NAME + " S " + PdksEntityController.getSelectLOCK() + " ");
+		List<Long> tesisIdList = null;
+		if (authenticatedUser.getYetkiliTesisler() != null && authenticatedUser.getYetkiliTesisler().isEmpty() == false) {
+			tesisIdList = new ArrayList<Long>();
+			for (Tanim tesis : authenticatedUser.getYetkiliTesisler())
+				tesisIdList.add(tesis.getId());
+			sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksEntityController.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_SIRKET + " = S." + Sirket.COLUMN_NAME_ID);
+			sb.append(" and P." + Personel.COLUMN_NAME_TESIS + " :t ");
+			map.put("t", tesisIdList);
+		}
+		sb.append(" where S." + Sirket.COLUMN_NAME_DURUM + " = 1 and S." + Sirket.COLUMN_NAME_FAZLA_MESAI + " = 1");
+		if (!authenticatedUser.isAdmin()) {
+			sb.append(" and S." + Sirket.COLUMN_NAME_DEPARTMAN + " = :d");
+			map.put("d", authenticatedUser.getDepartman().getId());
+			if (tesisIdList == null && (authenticatedUser.isIKSirket() || authenticatedUser.isIK_Tesis()))
+				sb.append(" and S." + Sirket.COLUMN_NAME_ID + " = " + authenticatedUser.getPdksPersonel().getSirket().getId());
+		}
 
-		map.put(PdksEntityController.MAP_KEY_SESSION, session);
+		if (session != null)
+			map.put(PdksEntityController.MAP_KEY_SESSION, session);
+		List<Sirket> list = pdksEntityController.getObjectBySQLList(sb, map, Sirket.class);
 
-		List<Sirket> list = pdksEntityController.getObjectByInnerObjectList(map, Sirket.class);
 		if (list.size() > 1)
 			list = PdksUtil.sortObjectStringAlanList(list, "getAd", null);
 		setSirketList(list);
@@ -141,7 +156,7 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 		setMaxYil(cal.get(Calendar.YEAR) + 1);
 
 		setAy(String.valueOf(cal.get(Calendar.MONTH)));
-		List<SelectItem> list = PdksUtil.getAyListesi(Boolean.FALSE);
+		List<SelectItem> list = ortakIslemler.getAyListesi(Boolean.FALSE);
 		setAyList(list);
 	}
 
@@ -151,7 +166,7 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 	 */
 	public List<SelectItem> getData(Personel personel) {
 
-		dataList.clear();
+		dataList = ortakIslemler.getSelectItemList("data", authenticatedUser);
 		for (Iterator iterator = gunList.iterator(); iterator.hasNext();) {
 			Integer gun = (Integer) iterator.next();
 			dataList.add(getSelectItem(gun, personel));
@@ -332,7 +347,7 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 		cal.setTime(basDate);
 		Date tarih = PdksUtil.getDate((Date) cal.getTime().clone());
 		Integer gunSayisi = 0;
-		gunList = new ArrayList<Integer>();
+		gunList = ortakIslemler.getSelectItemList("gun", authenticatedUser);
 		while (tarih.getTime() < bitDate.getTime()) {
 			gunler.put(++gunSayisi, PdksUtil.convertToDateString(tarih, "yyyyMMdd"));
 			gunList.add(gunSayisi);
@@ -345,7 +360,7 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 		durum.add(PersonelIzin.IZIN_DURUMU_IKINCI_YONETICI_ONAYINDA);
 		durum.add(PersonelIzin.IZIN_DURUMU_IK_ONAYINDA);
 		durum.add(PersonelIzin.IZIN_DURUMU_ONAYLANDI);
-		durum.add(PersonelIzin.IZIN_DURUMU_SAP_GONDERILDI);
+		durum.add(PersonelIzin.IZIN_DURUMU_ERP_GONDERILDI);
 
 		hesapTipi.add(PersonelIzin.HESAP_TIPI_GUN);
 		hesapTipi.add(PersonelIzin.HESAP_TIPI_SAAT_GUN_SECILDI);

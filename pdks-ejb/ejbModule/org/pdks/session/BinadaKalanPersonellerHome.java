@@ -177,7 +177,7 @@ public class BinadaKalanPersonellerHome extends EntityHome<VardiyaGun> implement
 		if (tesisDurum)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.tesisAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(bolum != null ? bolum.getAciklama() : ortakIslemler.bolumAciklama());
-		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Vardiya");
+		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.vardiyaAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İlk Giriş");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Son Çıkış");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Son Giriş");
@@ -307,6 +307,7 @@ public class BinadaKalanPersonellerHome extends EntityHome<VardiyaGun> implement
 				vardiyaGun.setHareketler(null);
 				vardiyaGun.setGirisHareketleri(null);
 				vardiyaGun.setCikisHareketleri(null);
+				vardiyaGun.setGecersizHareketler(null);
 				Vardiya islemVardiya = vardiyaGun.getIslemVardiya();
 
 				for (Iterator iterator1 = kgsList.iterator(); iterator1.hasNext();) {

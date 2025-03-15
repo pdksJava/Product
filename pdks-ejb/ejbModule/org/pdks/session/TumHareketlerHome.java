@@ -89,16 +89,15 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 	private HashMap<String, List<Tanim>> ekSahaListMap;
 	private TreeMap<String, Tanim> ekSahaTanimMap;
 	private Departman departman;
-	private Long departmanId, sirketId;
-	private List<SelectItem> sirketList;
+	private Long departmanId, sirketId, kapiId;
 	private Date basTarih, bitTarih;
 	private Kapi kapi;
-	private boolean pdksKapi = Boolean.TRUE, pdksHaricKapi = Boolean.FALSE, yemekKapi = Boolean.FALSE, guncellenmis = Boolean.FALSE, kgsUpdateGoster = Boolean.FALSE;
+	private boolean pdksKapi = Boolean.TRUE, pdksHaricKapi = Boolean.FALSE, pdksHaricKapiVar = Boolean.FALSE, yemekKapi = Boolean.FALSE, yemekKapiVar = Boolean.FALSE, guncellenmis = Boolean.FALSE, kgsUpdateGoster = Boolean.FALSE;
 	private boolean ikRole = false, vardiyaOku = false, kapiGirisGuncelle = false;
 	private Boolean vardiyaOkuDurum = null;
 	private String sicilNo = "", adi = "", soyadi = "", bolumAciklama;
 	private byte[] zipVeri;
-	private List<SelectItem> departmanList;
+	private List<SelectItem> departmanList, sirketList, kapiPDKSHaricList;
 
 	private Session session;
 
@@ -119,7 +118,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 
 	@Transactional
 	public void filDepartmanList() {
-		List<SelectItem> departmanListe = new ArrayList<SelectItem>();
+		List<SelectItem> departmanListe = ortakIslemler.getSelectItemList("departman", authenticatedUser);
 		List<Departman> list = ortakIslemler.fillDepartmanTanimList(session);
 		if (list.size() == 1) {
 			departman = list.get(0);
@@ -129,7 +128,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 		}
 
 		for (Departman pdksDepartman : list)
-			departmanListe.add(new SelectItem(pdksDepartman.getId(), pdksDepartman.getDepartmanTanim().getAciklama()));
+			departmanListe.add(new SelectItem(pdksDepartman.getId(), pdksDepartman.getAciklama()));
 		if (list.size() == 1)
 			list.clear();
 
@@ -164,7 +163,9 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 		boolean ayniSayfa = authenticatedUser.getCalistigiSayfa() != null && authenticatedUser.getCalistigiSayfa().equals("tumHareketler");
 		if (!ayniSayfa)
 			authenticatedUser.setCalistigiSayfa("tumHareketler");
+
 		sayfaGiris(session);
+
 		ikRole = ortakIslemler.getIKRolSayfa(authenticatedUser) || authenticatedUser.isRaporKullanici();
 		setHareketList(new ArrayList<HareketKGS>());
 		HareketKGS hareket = new HareketKGS();
@@ -182,17 +183,23 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 			setPdksKapi(Boolean.TRUE);
 		setKapiList(new ArrayList<Kapi>());
 		departmanId = null;
+		pdksKapi = true;
+		yemekKapiVar = false;
+		pdksHaricKapiVar = false;
 		if (authenticatedUser.isAdmin() || ikRole) {
 			filDepartmanList();
 			if (departmanList.size() == 1) {
 				departmanId = (Long) departmanList.get(0).getValue();
-				HashMap fields = new HashMap();
-				fields.put("id", departmanId);
-				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				departman = (Departman) pdksEntityController.getObjectByInnerObject(fields, Departman.class);
-
+				departman = (Departman) pdksEntityController.getSQLParamByFieldObject(Departman.TABLE_NAME, Departman.COLUMN_NAME_ID, departmanId, Departman.class, session);
 			}
-
+			List<Kapi> kapiList = pdksEntityController.getSQLParamByFieldList(Kapi.TABLE_NAME, Kapi.COLUMN_NAME_DURUM, Boolean.TRUE, Kapi.class, session);
+			for (Kapi kapi : kapiList) {
+				if (!pdksHaricKapiVar)
+					pdksHaricKapiVar = kapi.getPdks() != null && kapi.getPdks().booleanValue() == false;
+				if (!yemekKapiVar)
+					yemekKapiVar = kapi.isYemekHaneKapi();
+			}
+			kapiList = null;
 		}
 
 		if (!authenticatedUser.isAdmin()) {
@@ -226,11 +233,9 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 		List<Sirket> list = new ArrayList<Sirket>();
 
 		if (departmanId != null && (authenticatedUser.isAdmin() || ikRole)) {
-			HashMap parametreMap = new HashMap();
-			parametreMap.put("id", departmanId);
-			if (session != null)
-				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			departman = (Departman) pdksEntityController.getObjectByInnerObject(parametreMap, Departman.class);
+
+			departman = (Departman) pdksEntityController.getSQLParamByFieldObject(Departman.TABLE_NAME, Departman.COLUMN_NAME_ID, departmanId, Departman.class, session);
+
 			HashMap map = new HashMap();
 			map.put(PdksEntityController.MAP_KEY_MAP, "getId");
 			map.put(PdksEntityController.MAP_KEY_SELECT, "sirket");
@@ -251,7 +256,9 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 					if (!sirket.getPdks())
 						iterator.remove();
 				}
-				setDepartman(list.get(0).getDepartman());
+
+				if (!list.isEmpty())
+					setDepartman(list.get(0).getDepartman());
 			}
 
 			if (list.size() > 1)
@@ -265,7 +272,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 
 			}
 		}
-		List<SelectItem> sirketListe = new ArrayList<SelectItem>();
+		List<SelectItem> sirketListe = ortakIslemler.getSelectItemList("sirket", authenticatedUser);
 		for (Sirket sirket : list)
 			sirketListe.add(new SelectItem(sirket.getId(), sirket.getAd()));
 		list.clear();
@@ -319,8 +326,13 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 				List<Long> list = new ArrayList<Long>(kapiMap.keySet());
 				for (Long key : list) {
 					Kapi kapi = kapiMap.get(key).getKapi();
-					if (kapi != null && kapi.getPdks())
-						kapiMap.remove(key);
+					if (kapi != null) {
+						if (kapi.getPdks())
+							kapiMap.remove(key);
+						else if (kapi.isYemekHaneKapi() && yemekKapi == false)
+							kapiMap.remove(key);
+					}
+
 				}
 				list = null;
 			}
@@ -447,23 +459,23 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 			StringBuffer sb = null;
 			if ((personelId == null || personelId.isEmpty()) && (sirketId != null || departmanId != null)) {
 				sb = new StringBuffer();
-				sb.append("SELECT  V.* FROM " + PdksPersonelView.TABLE_NAME + " V WITH(nolock) ");
-				sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON P." + Personel.COLUMN_NAME_ID + " = V." + PdksPersonelView.COLUMN_NAME_PERSONEL);
+				sb.append("select V.* from " + PdksPersonelView.TABLE_NAME + " V " + PdksEntityController.getSelectLOCK() + " ");
+				sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksEntityController.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_ID + " = V." + PdksPersonelView.COLUMN_NAME_PERSONEL);
 				if (!admin) {
-					sb.append(" AND  P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " :ys");
+					sb.append(" and P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " :ys");
 					ArrayList<String> list = authenticatedUser.getYetkiTumPersonelNoList();
 					parametreMap.put("ys", list);
 				}
 				if (PdksUtil.hasStringValue(sicilNo)) {
-					sb.append(" AND  P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " = :sicilNo");
+					sb.append(" and P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " = :sicilNo");
 					parametreMap.put("sicilNo", sicilNo);
 				} else if (admin) {
 					if (sirketId != null) {
-						sb.append(" AND  P." + Personel.COLUMN_NAME_SIRKET + " = :sirketId");
+						sb.append(" and P." + Personel.COLUMN_NAME_SIRKET + " = :sirketId");
 						parametreMap.put("sirketId", sirketId);
 					} else if (departmanId != null) {
-						sb.append(" INNER JOIN " + Sirket.TABLE_NAME + " S WITH(nolock) ON S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET);
-						sb.append(" AND  S." + Sirket.COLUMN_NAME_DEPARTMAN + " = :departmanId");
+						sb.append(" inner join " + Sirket.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET);
+						sb.append(" and S." + Sirket.COLUMN_NAME_DEPARTMAN + " = :departmanId");
 						parametreMap.put("departmanId", departmanId);
 					}
 				}
@@ -484,13 +496,13 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 
 			parametreMap.clear();
 			sb = new StringBuffer();
-			sb.append("SELECT  V." + HareketKGS.COLUMN_NAME_ID + " FROM " + HareketKGS.TABLE_NAME + " V WITH(nolock) ");
+			sb.append("select V." + HareketKGS.COLUMN_NAME_ID + " from " + HareketKGS.TABLE_NAME + " V " + PdksEntityController.getSelectLOCK() + " ");
 
-			sb.append(" WHERE V." + HareketKGS.COLUMN_NAME_ZAMAN + " >=:vardiyaBas");
-			sb.append(" AND V." + HareketKGS.COLUMN_NAME_ZAMAN + " <:vardiyaBit");
+			sb.append(" where V." + HareketKGS.COLUMN_NAME_ZAMAN + " >= :vardiyaBas");
+			sb.append(" and V." + HareketKGS.COLUMN_NAME_ZAMAN + " <:vardiyaBit");
 
 			if (kapiMap != null && !kapiMap.isEmpty()) {
-				sb.append(" AND  V." + HareketKGS.COLUMN_NAME_KAPI + (kapiMap.size() > 1 ? " IN  ( " : "="));
+				sb.append(" and V." + HareketKGS.COLUMN_NAME_KAPI + (kapiMap.size() > 1 ? " IN  ( " : "="));
 				for (Iterator iterator = kapiMap.keySet().iterator(); iterator.hasNext();) {
 					Long kapiId = (Long) iterator.next();
 					sb.append(kapiId + (iterator.hasNext() ? "," : ""));
@@ -498,12 +510,12 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 				if (kapiMap.size() > 1)
 					sb.append(" )");
 			} else
-				sb.append(" AND 1=2");
+				sb.append(" and 1=2");
 
 			if ((sirketId != null || departmanId != null) && personelId.isEmpty())
-				sb.append(" AND 1=2");
+				sb.append(" and 1=2");
 			else if (!admin && personelId != null && !personelId.isEmpty() && (kapiMap.size() + personelId.size() < 1900)) {
-				sb.append(" AND V." + HareketKGS.COLUMN_NAME_PERSONEL + ":p");
+				sb.append(" and V." + HareketKGS.COLUMN_NAME_PERSONEL + ":p");
 				parametreMap.put("p", (ArrayList) personelId.clone());
 			}
 
@@ -556,7 +568,6 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 					parametreMap.put(fieldName, idList);
 					if (session != null)
 						parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-					// List<KapiKGS> list1 = pdksEntityController.getObjectByInnerObjectList(parametreMap, KapiKGS.class);
 					List<KapiKGS> list1 = ortakIslemler.getParamList(false, idList, fieldName, parametreMap, KapiKGS.class, session);
 
 					for (KapiKGS kapiKGS : list1)
@@ -572,7 +583,6 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 					parametreMap.put(fieldName, idList);
 					if (session != null)
 						parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-					// List<PersonelKGS> list = pdksEntityController.getObjectByInnerObjectList(parametreMap, PersonelKGS.class);
 					List<PersonelKGS> list = ortakIslemler.getParamList(false, idList, fieldName, parametreMap, PersonelKGS.class, session);
 
 					perMap.clear();
@@ -637,6 +647,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 						vg.setHareketler(null);
 						vg.setGirisHareketleri(null);
 						vg.setCikisHareketleri(null);
+						vg.setGecersizHareketler(null);
 						Long key = vg.getPdksPersonel().getId();
 						if (hareketMap.containsKey(key)) {
 							List<HareketKGS> list2 = hareketMap.get(key);
@@ -664,16 +675,16 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 					String fieldName = "s";
 					parametreMap.clear();
 					sb = new StringBuffer();
-					sb.append("SELECT P.ISLEM_ID,HAREKET_ZAMANI from PDKS_LOG P WITH(nolock) ");
-					sb.append(" INNER JOIN PDKS_ISLEM I WITH(nolock) ON I.ID=P.ISLEM_ID AND I.ISLEM_TIPI='U' ");
+					sb.append("select P.ISLEM_ID,HAREKET_ZAMANI from PDKS_LOG P " + PdksEntityController.getSelectLOCK() + " ");
+					sb.append(" inner join PDKS_ISLEM I " + PdksEntityController.getJoinLOCK() + " on I.ID=P.ISLEM_ID and I.ISLEM_TIPI='U' ");
 
-					sb.append(" WHERE P.ISLEM_ID :" + fieldName + " AND P.DURUM=0 ");
+					sb.append(" where P.ISLEM_ID :" + fieldName + " and P.DURUM=0 ");
 					parametreMap.put(fieldName, islemIdler);
 					if (session != null)
 						parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 					TreeMap<Long, Date> islemTarihMap = new TreeMap<Long, Date>();
 					// List<Object[]> islemList = pdksEntityController.getObjectBySQLList(sb, parametreMap, null);
-					List<Object[]> islemList = ortakIslemler.getSQLParamList(islemIdler, sb, fieldName, parametreMap, null, session);
+					List<Object[]> islemList = pdksEntityController.getSQLParamList(islemIdler, sb, fieldName, parametreMap, null, session);
 
 					for (Object[] objects : islemList) {
 						Long key = ((BigInteger) objects[0]).longValue();
@@ -1015,10 +1026,10 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Kapi");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Kapi Tipi");
 		if (vardiyaOku) {
-			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Vardiya Tarihi");
-			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Vardiya Adı");
-			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Vardiya Başlama Zamanı");
-			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Vardiya Bitiş Zamanı");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.vardiyaAciklama() + " Tarihi");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.vardiyaAciklama() + " Adı");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.vardiyaAciklama() + " Başlama Zamanı");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.vardiyaAciklama() + " Bitiş Zamanı");
 		}
 		if (yonetici)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("KGS Şirket");
@@ -1406,5 +1417,37 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 
 	public void setKapiGirisGuncelle(boolean kapiGirisGuncelle) {
 		this.kapiGirisGuncelle = kapiGirisGuncelle;
+	}
+
+	public List<SelectItem> getKapiPDKSHaricList() {
+		return kapiPDKSHaricList;
+	}
+
+	public void setKapiPDKSHaricList(List<SelectItem> kapiPDKSHaricList) {
+		this.kapiPDKSHaricList = kapiPDKSHaricList;
+	}
+
+	public Long getKapiId() {
+		return kapiId;
+	}
+
+	public void setKapiId(Long kapiId) {
+		this.kapiId = kapiId;
+	}
+
+	public boolean isPdksHaricKapiVar() {
+		return pdksHaricKapiVar;
+	}
+
+	public void setPdksHaricKapiVar(boolean pdksHaricKapiVar) {
+		this.pdksHaricKapiVar = pdksHaricKapiVar;
+	}
+
+	public boolean isYemekKapiVar() {
+		return yemekKapiVar;
+	}
+
+	public void setYemekKapiVar(boolean yemekKapiVar) {
+		this.yemekKapiVar = yemekKapiVar;
 	}
 }

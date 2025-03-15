@@ -17,13 +17,16 @@ import javax.persistence.OneToMany;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
-import org.pdks.security.entity.User;
-import org.pdks.session.PdksUtil;
-import org.pdks.session.OrtakIslemler;
 import org.hibernate.Session;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.pdks.security.entity.User;
+import org.pdks.session.OrtakIslemler;
+import org.pdks.session.PdksUtil;
+
+import com.pdks.webservice.IzinERP;
 
 @Entity(name = PersonelIzin.TABLE_NAME)
 public class PersonelIzin extends BaseObject {
@@ -51,7 +54,7 @@ public class PersonelIzin extends BaseObject {
 	public static final int IZIN_DURUMU_IKINCI_YONETICI_ONAYINDA = 2;
 	public static final int IZIN_DURUMU_IK_ONAYINDA = 3;
 	public static final int IZIN_DURUMU_ONAYLANDI = 4;
-	public static final int IZIN_DURUMU_SAP_GONDERILDI = 5;
+	public static final int IZIN_DURUMU_ERP_GONDERILDI = 5;
 	public static final int IZIN_DURUMU_SISTEM_IPTAL = 8;
 	public static final int IZIN_DURUMU_REDEDILDI = 9;
 	public static final int HESAP_TIPI_GUN = 1;
@@ -59,17 +62,19 @@ public class PersonelIzin extends BaseObject {
 	public static final int HESAP_TIPI_GUN_SAAT_SECILDI = 3;
 	public static final int HESAP_TIPI_SAAT_GUN_SECILDI = 4;
 	public static final int ACIKLAMA_UZUNLUK = 256;
-
+	public static final String IZIN_MANUEL_EK = "NWP";
 	public static final String IZIN_DURUMU_ACIKLAMA_BIRINCI_YONETICI_ONAYINDA = "Birinci Yönetici Onayında";
 	public static final String IZIN_DURUMU_ACIKLAMA_IKINCI_YONETICI_ONAYINDA = "İkinci Yönetici Onayında";
 	public static final String IZIN_DURUMU_ACIKLAMA_GENEL_MUDUR_ONAYINDA = "Genel Müdür Onayında";
 	public static final String IZIN_DURUMU_ACIKLAMA_IK_ONAYINDA = "IK Onayında";
 	public static final String IZIN_DURUMU_ACIKLAMA_ONAYLANDI = "Onaylandı";
-	public static final String IZIN_DURUMU_ACIKLAMA_SAP_GONDERILDI = "SAP Gönderildi";
+	public static final String IZIN_DURUMU_ACIKLAMA_ERP_GONDERILDI = "ERP Gönderildi";
 	public static final String IZIN_DURUMU_ACIKLAMA_REDEDILDI = "Reddedildi";
 	public static final String IZIN_DURUMU_ACIKLAMA_IPTAL_EDILDI = "İptal Edildi";
 	public static final String IZIN_DURUMU_ACIKLAMA_SISTEM_IPTAL = "Sistem Güncelleme İptali";
+	public static final String pattern = "yyyy-MM-dd HH:mm";
 	private static int yillikIzinMaxBakiye, fazlaMesaiSure, suaIzinMaxBakiye;
+
 	// private static int mazeretIzniToplamSaat, icEgitimToplamGun,
 	// disEgitimToplamGun, yurtIciKongre, yurtDisiKongre;
 
@@ -79,7 +84,7 @@ public class PersonelIzin extends BaseObject {
 
 	private Double izinSuresi = 0D, kullanilanIzinSuresi = 0D, bakiyeSuresi;
 
-	private int izinDurumu = IZIN_DURUMU_BIRINCI_YONETICI_ONAYINDA;
+	private int izinDurumu = IZIN_DURUMU_BIRINCI_YONETICI_ONAYINDA, gunAdet;
 
 	private String aciklama, mesaj, personelNo, referansERP;
 
@@ -241,8 +246,8 @@ public class PersonelIzin extends BaseObject {
 			aciklama = IZIN_DURUMU_ACIKLAMA_IKINCI_YONETICI_ONAYINDA;
 		else if (izinDurumu == IZIN_DURUMU_ONAYLANDI)
 			aciklama = IZIN_DURUMU_ACIKLAMA_ONAYLANDI;
-		else if (izinDurumu == IZIN_DURUMU_SAP_GONDERILDI)
-			aciklama = IZIN_DURUMU_ACIKLAMA_SAP_GONDERILDI;
+		else if (izinDurumu == IZIN_DURUMU_ERP_GONDERILDI)
+			aciklama = IZIN_DURUMU_ACIKLAMA_ERP_GONDERILDI;
 		else if (izinDurumu == IZIN_DURUMU_SISTEM_IPTAL)
 			aciklama = IZIN_DURUMU_ACIKLAMA_SISTEM_IPTAL;
 		else if (izinDurumu == IZIN_DURUMU_REDEDILDI) {
@@ -449,7 +454,7 @@ public class PersonelIzin extends BaseObject {
 
 	@Transient
 	public boolean isPdfMi() {
-		return izinTipi.getDokumAlmaDurum() && (izinDurumu == IZIN_DURUMU_IK_ONAYINDA || izinDurumu == IZIN_DURUMU_ONAYLANDI || izinDurumu == IZIN_DURUMU_SAP_GONDERILDI);
+		return izinTipi.getDokumAlmaDurum() && (izinDurumu == IZIN_DURUMU_IK_ONAYINDA || izinDurumu == IZIN_DURUMU_ONAYLANDI || izinDurumu == IZIN_DURUMU_ERP_GONDERILDI);
 	}
 
 	@Transient
@@ -663,11 +668,10 @@ public class PersonelIzin extends BaseObject {
 					harcananIzinler.add((PersonelIzinDetay) personelIzinDetay.clone());
 
 				}
-				if (harcananIzinler != null && harcananIzinler.size() > 1)
-					harcananIzinler = PdksUtil.sortListByAlanAdi(harcananIzinler, "id", Boolean.FALSE);
 
 			}
-
+			if (harcananIzinler != null && harcananIzinler.size() > 1)
+				harcananIzinler = PdksUtil.sortListByAlanAdi(harcananIzinler, "id", Boolean.FALSE);
 		}
 		return harcananIzinler;
 	}
@@ -825,14 +829,19 @@ public class PersonelIzin extends BaseObject {
 	}
 
 	@Transient
+	public boolean isManuelReferansERP() {
+		boolean manuelReferansERP = referansERP != null && referansERP.startsWith(IZIN_MANUEL_EK);
+		return manuelReferansERP;
+	}
+
+	@Transient
 	public Boolean getDevirIzin() {
-		if (devirIzin == null)  
+		if (devirIzin == null)
 			try {
 				devirIzin = baslangicZamani.getTime() == PdksUtil.getBakiyeYil().getTime();
 			} catch (Exception e) {
- 			}
-			
-		 
+			}
+
 		return devirIzin;
 	}
 
@@ -844,8 +853,56 @@ public class PersonelIzin extends BaseObject {
 		this.devirIzin = devirIzin;
 	}
 
+	@Transient
+	public IzinERP getIzinERP() {
+
+		IzinERP izinERP = new IzinERP();
+
+		izinERP.setPersonelNo(this.getIzinSahibi().getPdksSicilNo());
+
+		izinERP.setIzinSuresi(this.getIzinSuresi());
+
+		izinERP.setBasZaman(PdksUtil.convertToDateString(this.getBaslangicZamani(), pattern));
+
+		izinERP.setBitZaman(PdksUtil.convertToDateString(this.getBitisZamani(), pattern));
+
+		izinERP.setAciklama(this.getAciklamaByReferans());
+
+		String referansNoERP = PdksUtil.hasStringValue(referansERP) ? referansERP : PersonelIzin.IZIN_MANUEL_EK + "_" + izinERP.getPersonelNo() + PdksUtil.replaceAll(izinERP.getBasZaman().substring(0, 10), "-", "");
+
+		izinERP.setReferansNoERP(referansNoERP);
+
+		izinERP.setIzinTipi(this.getIzinTipi().getIzinTipiTanim().getErpKodu());
+
+		izinERP.setIzinTipiAciklama(this.getIzinTipi().getIzinTipiTanim().getAciklama());
+
+		izinERP.setDurum(Boolean.TRUE);
+
+		if (this.getIzinTipi() != null && this.getIzinTipi().getHesapTipi() != null)
+			izinERP.setSureBirimi(String.valueOf(this.getIzinTipi().getHesapTipi()));
+
+		return izinERP;
+	}
+
+	@Transient
+	public String getAciklamaByReferans() {
+		String referans = PdksUtil.hasStringValue(this.getReferansERP()) ? this.getReferansERP() : "";
+		String aciklamaStr = PdksUtil.hasStringValue(this.getAciklama()) ? this.getAciklama() : "";
+		if (aciklamaStr.indexOf(referans) > 0 && aciklamaStr.indexOf("(") >= 0)
+			aciklamaStr = aciklamaStr.substring(0, aciklamaStr.indexOf("("));
+		return aciklamaStr;
+	}
+
+	@Transient
+	public int getGunAdet() {
+		return gunAdet;
+	}
+
+	public void setGunAdet(int gunAdet) {
+		this.gunAdet = gunAdet;
+	}
+
 	public void entityRefresh() {
-		// TODO entityRefresh
-		
+
 	}
 }

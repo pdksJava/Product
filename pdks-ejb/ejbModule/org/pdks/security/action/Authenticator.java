@@ -1,6 +1,7 @@
 package org.pdks.security.action;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +23,7 @@ import org.jboss.seam.security.Credentials;
 import org.jboss.seam.security.Identity;
 import org.jboss.seam.security.management.IdentityManager;
 import org.jboss.seam.security.permission.PermissionManager;
+import org.pdks.entity.Liste;
 import org.pdks.entity.Personel;
 import org.pdks.erp.action.SapRfcManager;
 import org.pdks.erp.entity.SAPSunucu;
@@ -60,6 +62,9 @@ public class Authenticator implements IAuthenticator, Serializable {
 	@In(required = false, create = true)
 	HashMap<String, String> parameterMap;
 
+	@Out(scope = ScopeType.SESSION, required = false)
+	List<Liste> mesajList;
+
 	/*
 	 * @In LDAPUserManager ldapUserManager;
 	 */
@@ -74,25 +79,45 @@ public class Authenticator implements IAuthenticator, Serializable {
 	private String adres;
 	private Session session;
 
+	/**
+	 * @param str
+	 */
+	private void addMessageAvailableWarn(String str) {
+		PdksUtil.addMessageAvailableWarn(mesajList, str);
+	}
+
+	/**
+	 * @param str
+	 */
+	private void addMessageAvailableError(String str) {
+		PdksUtil.addMessageAvailableError(mesajList, str);
+	}
+
 	@Transactional
 	public boolean authenticate() {
 		session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		session.clear();
+		if (mesajList == null)
+			mesajList = new ArrayList<Liste>();
+		else
+			mesajList.clear();
+		authenticatedUser = null;
 		String username = credentials.getUsername();
 		String userName = username.trim();
+		boolean sonuc = Boolean.FALSE;
+		User loginUser = null;
+
 		String password = credentials.getPassword();
 		Map<String, String> map = null;
 		try {
-
 			map = FacesContext.getCurrentInstance().getExternalContext().getRequestHeaderMap();
-
 		} catch (Exception e) {
 			logger.error("PDKS hata in : \n");
 			e.printStackTrace();
 			logger.error("PDKS hata out : " + e.getMessage());
-			authenticatedUser = new User();
-			authenticatedUser.setUsername(userName);
-			authenticatedUser.setPasswordHash(password);
+			loginUser = new User();
+			loginUser.setUsername(userName);
+			loginUser.setPasswordHash(password);
 			return false;
 		}
 		User ldapUser = null;
@@ -116,79 +141,71 @@ public class Authenticator implements IAuthenticator, Serializable {
 			userName = ldapUser.getUsername();
 		}
 
-		boolean sonuc = Boolean.FALSE;
-
 		try {
-			authenticatedUser = getKullanici(userName, User.COLUMN_NAME_USERNAME);
+			loginUser = getKullanici(userName, User.COLUMN_NAME_USERNAME);
 			List<String> adminIPList = PdksUtil.getListByString(ortakIslemler.getParameterKey("adminIP"), null);
 			String remoteAddr = PdksUtil.getRemoteAddr();
 			if (!test)
 				test = adminIPList.contains(remoteAddr);
-			if (authenticatedUser == null) {
+			if (loginUser == null) {
 				if (ldapUser != null) {
-					authenticatedUser = getKullanici(ldapUser.getShortUsername(), User.COLUMN_NAME_SHORT_USER_NAME);
-					if (authenticatedUser != null) {
-						authenticatedUser.setUsername(ldapUser.getUsername());
+					loginUser = getKullanici(ldapUser.getShortUsername(), User.COLUMN_NAME_SHORT_USER_NAME);
+					if (loginUser != null) {
+						loginUser.setUsername(ldapUser.getUsername());
 						if (!parameterMap.containsKey("emailBozuk"))
-							authenticatedUser.setEmail(ldapUser.getEmail());
-						pdksEntityController.saveOrUpdate(session, entityManager, authenticatedUser);
+							loginUser.setEmail(ldapUser.getEmail());
+						pdksEntityController.saveOrUpdate(session, entityManager, loginUser);
 						session.flush();
-						// authenticatedUser = entityManager.merge(authenticatedUser);
-						// entityManager.flush();
 						userName = ldapUser.getUsername();
 					}
 				}
-			} else if (ldapUser != null && authenticatedUser != null) {
-				if (authenticatedUser.getShortUsername() == null || !authenticatedUser.getShortUsername().equals(ldapUser.getShortUsername())) {
-					authenticatedUser.setShortUsername(ldapUser.getShortUsername());
-
-					pdksEntityController.saveOrUpdate(session, entityManager, authenticatedUser);
+			} else if (ldapUser != null && loginUser != null) {
+				if (loginUser.getShortUsername() == null || !loginUser.getShortUsername().equals(ldapUser.getShortUsername())) {
+					loginUser.setShortUsername(ldapUser.getShortUsername());
+					pdksEntityController.saveOrUpdate(session, entityManager, loginUser);
 					session.flush();
 				}
 			}
 
-			if (authenticatedUser == null && ldapUser != null) {
+			if (loginUser == null && ldapUser != null) {
 				String sicilNo = "900" + ldapUser.getStaffId().substring(3).trim();
 				HashMap parametreMap = new HashMap();
 				StringBuffer sb = new StringBuffer();
-				sb.append("SELECT U.* FROM " + Personel.TABLE_NAME + " P WITH(nolock)");
-				sb.append("INNER JOIN " + User.TABLE_NAME + " U WITH(nolock) ON P." + Personel.COLUMN_NAME_ID + " = U." + User.COLUMN_NAME_PERSONEL + " AND U." + User.COLUMN_NAME_DURUM + " = 1 AND U." + User.COLUMN_NAME_DEPARTMAN + " IS NOT NULL ");
-				sb.append(" WHERE P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " = :sicilNo AND P." + Personel.COLUMN_NAME_DURUM + " = 1  ");
-				sb.append(" AND  P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " <= convert(date,GETDATE()) AND P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
-				sb.append(" AND  P." + Personel.COLUMN_NAME_DURUM + " = 1 ");
+				sb.append("select U.* from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK());
+				sb.append("inner join " + User.TABLE_NAME + " U " + PdksEntityController.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_ID + " = U." + User.COLUMN_NAME_PERSONEL + " and U." + User.COLUMN_NAME_DURUM + " = 1 and U." + User.COLUMN_NAME_DEPARTMAN + " is not null ");
+				sb.append(" where P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " = :sicilNo and P." + Personel.COLUMN_NAME_DURUM + " = 1  ");
+				sb.append(" and P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " <= convert(date,GETDATE()) and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
+				sb.append(" and P." + Personel.COLUMN_NAME_DURUM + " = 1 ");
 				parametreMap.put("sicilNo", sicilNo);
 				if (session != null)
 					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-				authenticatedUser = (User) pdksEntityController.getObjectBySQL(sb, parametreMap, User.class);
-
-				if (authenticatedUser != null) {
-					logger.info(authenticatedUser.getUsername() + " kullanıcı bilgisi okundu.");
-					authenticatedUser.setUsername(ldapUser.getUsername());
+				loginUser = (User) pdksEntityController.getObjectBySQL(sb, parametreMap, User.class);
+				if (loginUser != null) {
+					logger.info(loginUser.getUsername() + " kullanıcı bilgisi okundu.");
+					loginUser.setUsername(ldapUser.getUsername());
 					if (!parametreMap.containsKey("emailBozuk"))
-						authenticatedUser.setEmail(ldapUser.getEmail());
-
-					pdksEntityController.saveOrUpdate(session, entityManager, authenticatedUser);
+						loginUser.setEmail(ldapUser.getEmail());
+					pdksEntityController.saveOrUpdate(session, entityManager, loginUser);
 					session.flush();
 				}
-
 			}
 			if (!test && parameterMap != null && parameterMap.containsKey("sifreKontrol"))
 				test = !parameterMap.get("sifreKontrol").equals("1");
-			sonuc = authenticatedUser != null && test;
+			sonuc = loginUser != null && test;
 			String encodePassword = PdksUtil.encodePassword(password);
-			if (authenticatedUser != null) {
-				authenticatedUser.setLogin(Boolean.FALSE);
-				userName = authenticatedUser.getUsername();
+			if (loginUser != null) {
+				loginUser.setLogin(Boolean.FALSE);
+				userName = loginUser.getUsername();
 				if (!PdksUtil.hasStringValue(kisaKullaniciAdi))
-					kisaKullaniciAdi = authenticatedUser.getUsername();
+					kisaKullaniciAdi = loginUser.getUsername();
 				else
-					kisaKullaniciAdi = kisaKullaniciAdi + " <---> " + authenticatedUser.getUsername();
+					kisaKullaniciAdi = kisaKullaniciAdi + " <---> " + loginUser.getUsername();
 
-				authenticatedUser.setDurum(authenticatedUser.getPdksPersonel().isCalisiyor());
-				if (!authenticatedUser.isDurum())
-					PdksUtil.addMessageAvailableWarn(authenticatedUser.getAdSoyad() + " ait işe giriş çıkış tarihinde uyumsuz");
+				loginUser.setDurum(loginUser.getPdksPersonel().isCalisiyor());
+				if (!loginUser.isDurum())
+					addMessageAvailableWarn(loginUser.getAdSoyad() + " ait işe giriş çıkış tarihinde uyumsuz");
 				else {
-					if (authenticatedUser.isLdapUse() || sonuc) {
+					if (loginUser.isLdapUse() || sonuc) {
 						// ldap kullanıyorsa
 						try {
 							if (!sonuc)
@@ -198,7 +215,6 @@ public class Authenticator implements IAuthenticator, Serializable {
 								if (ldapUser != null)
 									kisaKullaniciAdi = ldapUser.getStaffId();
 							}
-
 						} catch (Exception e) {
 							logger.error("PDKS hata in : \n");
 							e.printStackTrace();
@@ -208,79 +224,69 @@ public class Authenticator implements IAuthenticator, Serializable {
 								if (ldapHataDonusKodu != null) {
 									String mesaj = PdksUtil.getMessageBundleMessage(LDAPUserManager.LDAP_HATA_KODU_KEY_ON_EK + ldapHataDonusKodu);
 									logger.info(mesaj + " ( " + userName + " )");
+									addMessageAvailableError(mesaj + " ( " + userName + " )");
 								}
-
 							} catch (Exception e2) {
 								logger.error(e2.getLocalizedMessage());
 							}
 						}
-
 					} else {
-
-						sonuc = (authenticatedUser.getPasswordHash().equals(encodePassword));
+						sonuc = (loginUser.getPasswordHash().equals(encodePassword));
+						if (sonuc == false)
+							addMessageAvailableError(credentials.getUsername().trim() + " kullanıcısının şifre hatalıdır!");
 					}
 					if (sonuc) {
-						username = authenticatedUser.getUsername();
+						username = loginUser.getUsername();
 						FacesContext context = FacesContext.getCurrentInstance();
 						try {
-							if (authenticatedUser.getPdksPersonel().getSirket() != null && authenticatedUser.getPdksPersonel().getSirket().isLdap()) {
+							if (loginUser.getPdksPersonel().getSirket() != null && loginUser.getPdksPersonel().getSirket().isLdap()) {
 								String email = PdksUtil.getMailAdres(userName);
-								if (email != null && (authenticatedUser.getEmail() == null || !email.equals(authenticatedUser.getEmail()))) {
+								if (email != null && (loginUser.getEmail() == null || !email.equals(loginUser.getEmail()))) {
 									if (!parameterMap.containsKey("emailBozuk"))
-										authenticatedUser.setEmail(email);
-									pdksEntityController.saveOrUpdate(session, entityManager, authenticatedUser);
+										loginUser.setEmail(email);
+									pdksEntityController.saveOrUpdate(session, entityManager, loginUser);
 									session.flush();
 								}
-
 							}
-
 						} catch (Exception e) {
 							logger.error("PDKS hata in : \n");
 							e.printStackTrace();
 							logger.error("PDKS hata out : " + e.getMessage());
-
 						}
 						credentials.setUsername(userName);
 						boolean browserIE = PdksUtil.isInternetExplorer((HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest());
-						ortakIslemler.setUserRoller(authenticatedUser, session);
-						ortakIslemler.setUserTesisler(authenticatedUser, session);
-						authenticatedUser.setBrowserIE(browserIE);
-						if (authenticatedUser.getYetkiliRollerim() != null) {
-							for (Role role : authenticatedUser.getYetkiliRollerim())
+						authenticatedUser = loginUser;
+						ortakIslemler.setUserRoller(loginUser, session);
+						ortakIslemler.setUserTesisler(loginUser, session);
+						ortakIslemler.setUserBolumler(loginUser, session);
+						loginUser.setBrowserIE(browserIE);
+						if (loginUser.getYetkiliRollerim() != null) {
+							for (Role role : loginUser.getYetkiliRollerim())
 								identity.addRole(role.getRolename());
 						}
 						try {
-							HashMap map1 = new HashMap();
-							map1.put("durum", SAPSunucu.DURUM_AKTIF);
-							if (session != null)
-								map1.put(PdksEntityController.MAP_KEY_SESSION, session);
-							List<SAPSunucu> sapSunucular = pdksEntityController.getObjectByInnerObjectList(map1, SAPSunucu.class);
+							List<SAPSunucu> sapSunucular = pdksEntityController.getSQLParamByFieldList(SAPSunucu.TABLE_NAME, SAPSunucu.COLUMN_NAME_DURUM, SAPSunucu.DURUM_AKTIF, SAPSunucu.class, session);
 							if (!sapSunucular.isEmpty())
-								logger.info("SAP sunucuları okundu.");
-
+								logger.info("ERP sunucuları okundu.");
 							SapRfcManager.setSapSunucular(sapSunucular);
-
-							if (authenticatedUser.getYetkiliRollerim().isEmpty())
-								authenticatedUser = ortakIslemler.personelPdksRolAta(authenticatedUser, Boolean.TRUE, session);
+							if (loginUser.getYetkiliRollerim().isEmpty())
+								loginUser = ortakIslemler.personelPdksRolAta(loginUser, Boolean.TRUE, session);
 							if (PdksUtil.getBundleName() == null) {
-
 								try {
 									PdksUtil.setBundleName(context.getApplication().getMessageBundle());
-
 								} catch (Exception e) {
 									logger.error("PDKS hata in : \n");
 									e.printStackTrace();
 									logger.error("PDKS hata out : " + e.getMessage());
 									PdksUtil.setBundleName(null);
-
 								}
 							}
-							authenticatedUser.setTestLogin(test);
-							authenticatedUser.setCalistigiSayfa("anasayfa");
-							ortakIslemler.sistemeGirisIslemleri(authenticatedUser, Boolean.TRUE, null, null, session);
-							logger.info(authenticatedUser.getUsername() + " " + authenticatedUser.getAdSoyad() + " " + (authenticatedUser.getEmail() != null && !authenticatedUser.getEmail().equals(authenticatedUser.getUsername()) ? authenticatedUser.getEmail() + " E-postali" : "")
-									+ " kullanıcısı PDKS sistemine login oldu. " + PdksUtil.getCurrentTimeStampStr());
-							authenticatedUser.setSessionSQL(session);
+							loginUser.setTestLogin(test);
+							loginUser.setCalistigiSayfa("anasayfa");
+							ortakIslemler.sistemeGirisIslemleri(loginUser, Boolean.TRUE, null, null, session);
+							logger.info(loginUser.getUsername() + " " + loginUser.getAdSoyad() + " " + (loginUser.getEmail() != null && !loginUser.getEmail().equals(loginUser.getUsername()) ? loginUser.getEmail() + " E-postali" : "") + " kullanıcısı PDKS sistemine login oldu. "
+									+ PdksUtil.getCurrentTimeStampStr());
+							loginUser.setSessionSQL(session);
 						} catch (Exception e) {
 							logger.error("PDKS hata in : \n");
 							e.printStackTrace();
@@ -289,33 +295,27 @@ public class Authenticator implements IAuthenticator, Serializable {
 						}
 						if (!test || adres.startsWith("surum")) {
 							try {
-								authenticatedUser.setLastLogin(new Date());
-								pdksEntityController.saveOrUpdate(session, entityManager, authenticatedUser);
+								loginUser.setLastLogin(new Date());
+								pdksEntityController.saveOrUpdate(session, entityManager, loginUser);
 								session.flush();
 							} catch (Exception e) {
 							}
 						}
-						authenticatedUser.setLogin(Boolean.TRUE);
+						loginUser.setLogin(Boolean.TRUE);
 					}
 				}
-			} else
-				PdksUtil.addMessageAvailableError(credentials.getUsername().trim() + " kullanıcı adı Zaman Yönetimi-PDKS Sistemi'nde kayıtlı değildir!");
-
+			} else if (mesajList.isEmpty())
+				addMessageAvailableError(credentials.getUsername().trim() + " kullanıcı adı sistemde kayıtlı değildir!");
+			sonuc = getSonDurum(sonuc, loginUser);
 			return sonuc;
 		} catch (Exception ex) {
 			logger.debug("Hata : " + ex.getMessage());
-			HashMap parametreMap = new HashMap();
-			try {
-				parametreMap.clear();
-				parametreMap.put("id", 1);
-				if (session != null)
-					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-				List perList = pdksEntityController.getObjectByInnerObjectList(parametreMap, Personel.class);
-				logger.info(authenticatedUser.getUsername() + " kullanıcı bilgisi okundu.");
 
+			try {
+				List perList = pdksEntityController.getSQLParamByFieldList(Personel.TABLE_NAME, Personel.COLUMN_NAME_ID, 1L, Personel.class, session);
+				logger.info(loginUser.getUsername() + " kullanıcı bilgisi okundu.");
 				if (!perList.isEmpty())
 					logger.error(perList.size() + " " + PdksUtil.getCurrentTimeStampStr());
-
 			} catch (Exception e) {
 				logger.error("PDKS hata in : \n");
 				e.printStackTrace();
@@ -323,8 +323,23 @@ public class Authenticator implements IAuthenticator, Serializable {
 				logger.debug("Hata : " + e.getMessage());
 			}
 			logger.debug("authenticating " + username);
-			return sonuc;
+
 		}
+		sonuc = getSonDurum(sonuc, loginUser);
+		return sonuc;
+
+	}
+
+	/**
+	 * @param sonuc
+	 * @param loginUser
+	 * @return
+	 */
+	private boolean getSonDurum(boolean sonuc, User loginUser) {
+		if (loginUser == null || loginUser.getId() == null)
+			sonuc = false;
+		authenticatedUser = sonuc ? loginUser : null;
+		return sonuc;
 	}
 
 	/**
@@ -333,26 +348,34 @@ public class Authenticator implements IAuthenticator, Serializable {
 	 * @return
 	 */
 	private User getKullanici(String userName, String fieldName) {
-		StringBuffer sb = new StringBuffer();
-		sb.append("SELECT S.* FROM " + User.TABLE_NAME + " S  WITH(nolock) ");
-		sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON  P." + Personel.COLUMN_NAME_ID + " = S." + User.COLUMN_NAME_PERSONEL);
-		sb.append(" AND  P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " <= convert(date,GETDATE()) AND P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
-		if (userName.indexOf("%") > 0)
-			sb.append(" WHERE S." + fieldName + " LIKE :userName");
-		else
-			sb.append(" WHERE S." + fieldName + " = :userName");
-		HashMap fields = new HashMap();
-		fields.put("userName", userName);
-		if (session != null)
-			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		User authenticated = (User) pdksEntityController.getObjectBySQL(sb, fields, User.class);
-		fields = null;
-		if (authenticated != null) {
-			if (authenticated.isDurum() == false || authenticated.getDepartman() == null || authenticated.getPdksPersonel().getDurum().equals(Boolean.FALSE))
-				authenticated = null;
+		User user = null;
+		if (userName.indexOf("%") > 0) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("select S.* from " + User.TABLE_NAME + " S " + PdksEntityController.getSelectLOCK());
+			sb.append(" where S." + fieldName + " like :userName");
+			HashMap fields = new HashMap();
+			fields.put("userName", userName);
+			if (session != null)
+				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+			user = (User) pdksEntityController.getObjectBySQL(sb, fields, User.class);
+		} else
+			user = (User) pdksEntityController.getSQLParamByFieldObject(User.TABLE_NAME, fieldName, userName, User.class, session);
 
+		if (user != null) {
+			Personel personel = user.getPdksPersonel();
+			if (user.isDurum() == false || user.getDepartman() == null || personel == null || personel.getDurum().equals(Boolean.FALSE) || personel.isCalisiyor() == false) {
+				if (personel.isCalisiyor() == false)
+					addMessageAvailableError(personel.getAdSoyad() + " personel işten ayrılmıştır!");
+				else if (personel.getDurum().booleanValue() == false)
+					addMessageAvailableWarn(personel.getAdSoyad() + " personel aktif değildir!");
+				else if (user.isDurum() == false) {
+					addMessageAvailableError((personel != null ? personel.getAdSoyad() + " personelin " : "") + user.getUsername() + " kullanıcısı aktif değildir!");
+				} else if (user.getDepartman() == null)
+					addMessageAvailableWarn((personel != null ? personel.getAdSoyad() + " personelin " : "") + user.getUsername() + " kullanıcısı departmanı tanımlı değildir!");
+				user = null;
+			}
 		}
-		return authenticated;
+		return user;
 	}
 
 	public String logout() {
@@ -374,5 +397,10 @@ public class Authenticator implements IAuthenticator, Serializable {
 
 	public void setSession(Session session) {
 		this.session = session;
+	}
+
+	public String getAciklamaIslem() {
+		String str = "Sisteme Giriş";
+		return str;
 	}
 }

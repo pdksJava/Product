@@ -10,7 +10,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 
-import javax.faces.model.SelectItem;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
@@ -38,7 +37,6 @@ import org.pdks.entity.PersonelHareketIslem;
 import org.pdks.entity.PersonelIzin;
 import org.pdks.entity.PersonelView;
 import org.pdks.entity.Sirket;
-import org.pdks.entity.Tanim;
 import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGun;
 import org.pdks.security.entity.User;
@@ -113,48 +111,12 @@ public class GirisCikisKontrolHome extends EntityHome<VardiyaGun> implements Ser
 			aramaSecenekleri.setDepartmanId(authenticatedUser.getDepartman().getId());
 		}
 		tesisDurum = false;
-
-		fillSirketList();
+ 		fillSirketList();
 	}
 
 	public String fillSirketList() {
 		Date bugun = PdksUtil.getDate(date);
-		List<Sirket> list = new ArrayList<Sirket>();
-		HashMap map = new HashMap();
-		map.put(PdksEntityController.MAP_KEY_MAP, "getId");
-		map.put(PdksEntityController.MAP_KEY_SELECT, "sirket");
-		map.put("pdks=", Boolean.TRUE);
-		map.put("durum=", Boolean.TRUE);
-		map.put("sskCikisTarihi>=", bugun);
-		map.put("iseBaslamaTarihi<=", bugun);
-		if (aramaSecenekleri.getDepartmanId() != null && (authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIKAdmin() || !authenticatedUser.isYoneticiKontratli()))
-			map.put("sirket.departman.id=", aramaSecenekleri.getDepartmanId());
-		if (session != null)
-			map.put(PdksEntityController.MAP_KEY_SESSION, session);
-		TreeMap sirketMap = pdksEntityController.getObjectByInnerObjectMapInLogic(map, Personel.class, Boolean.FALSE);
-
-		aramaSecenekleri.setSirketId(null);
-		if (aramaSecenekleri.getSirketIdList() != null)
-			aramaSecenekleri.getSirketIdList().clear();
-		else
-			aramaSecenekleri.setSirketIdList(new ArrayList<SelectItem>());
-		if (!sirketMap.isEmpty()) {
-			Long sirketId = null;
-			list = PdksUtil.sortObjectStringAlanList(new ArrayList<Sirket>(sirketMap.values()), "getAd", null);
-			for (Sirket sirket : list) {
-				if (sirket.getDurum() && sirket.getFazlaMesai())
-					aramaSecenekleri.getSirketIdList().add(new SelectItem(sirket.getId(), sirket.getAd()));
-			}
-			if (aramaSecenekleri.getSirketIdList().size() == 1)
-				sirketId = (Long) aramaSecenekleri.getSirketIdList().get(0).getValue();
-			aramaSecenekleri.setSirketId(sirketId);
-			fillTesisList();
-		} else {
-			if (aramaSecenekleri.getTesisList() != null)
-				aramaSecenekleri.getTesisList().clear();
-			else
-				aramaSecenekleri.setTesisList(new ArrayList<SelectItem>());
-		}
+		ortakIslemler.setAramaSecenekSirketVeTesisData(aramaSecenekleri, bugun, bugun, false, session);
 		clearVardiyaList();
 		return "";
 	}
@@ -166,53 +128,9 @@ public class GirisCikisKontrolHome extends EntityHome<VardiyaGun> implements Ser
 	}
 
 	public String fillTesisList() {
-		if (aramaSecenekleri.getTesisList() != null)
-			aramaSecenekleri.getTesisList().clear();
-		else
-			aramaSecenekleri.setTesisList(new ArrayList<SelectItem>());
 		clearVardiyaList();
-		Long tesisId = null;
-		if (aramaSecenekleri.getSirketId() != null) {
-			Date bugun = PdksUtil.getDate(date);
-			List<Tanim> list = new ArrayList<Tanim>();
-			HashMap map = new HashMap();
-			map.put("id ", aramaSecenekleri.getSirketId());
-			if (session != null)
-				map.put(PdksEntityController.MAP_KEY_SESSION, session);
-			Sirket sirket = (Sirket) pdksEntityController.getObjectByInnerObject(map, Sirket.class);
-			if (aramaSecenekleri.getTesisList() != null)
-				aramaSecenekleri.getTesisList().clear();
-			else
-				aramaSecenekleri.setTesisList(new ArrayList<SelectItem>());
-			if (sirket.isTesisDurumu()) {
-				map.clear();
-				map.put(PdksEntityController.MAP_KEY_MAP, "getId");
-				map.put(PdksEntityController.MAP_KEY_SELECT, "tesis");
-				map.put("pdks=", Boolean.TRUE);
-				map.put("durum=", Boolean.TRUE);
-				map.put("sirket.id=", aramaSecenekleri.getSirketId());
-				map.put("sskCikisTarihi>=", bugun);
-				map.put("iseBaslamaTarihi<=", bugun);
-				if (session != null)
-					map.put(PdksEntityController.MAP_KEY_SESSION, session);
-				TreeMap tesisMap = pdksEntityController.getObjectByInnerObjectMapInLogic(map, Personel.class, Boolean.FALSE);
-				if (!tesisMap.isEmpty()) {
-					list = PdksUtil.sortObjectStringAlanList(new ArrayList(tesisMap.values()), "getAciklama", null);
-					for (Tanim tesis : list) {
-						if (tesisId == null)
-							tesisId = tesis.getId();
-						aramaSecenekleri.getTesisList().add(new SelectItem(tesis.getId(), tesis.getAciklama()));
-					}
-					aramaSecenekleri.setTesisId(tesisId);
-
-				}
-			} else {
-				tesisId = null;
-
-			}
-		}
-		aramaSecenekleri.setTesisId(tesisId);
-
+		Date bugun = PdksUtil.getDate(date);
+		ortakIslemler.setAramaSecenekTesisData(aramaSecenekleri, bugun, bugun, false, session);
 		return "";
 	}
 
@@ -468,7 +386,7 @@ public class GirisCikisKontrolHome extends EntityHome<VardiyaGun> implements Ser
 			if (tesisDurum)
 				ExcelUtil.getCell(sheet, rowHareket, colHareket++, header).setCellValue(ortakIslemler.tesisAciklama());
 			ExcelUtil.getCell(sheet, rowHareket, colHareket++, header).setCellValue(bolumAciklama);
-			ExcelUtil.getCell(sheet, rowHareket, colHareket++, header).setCellValue("Vardiya");
+			ExcelUtil.getCell(sheet, rowHareket, colHareket++, header).setCellValue(ortakIslemler.vardiyaAciklama());
 			ExcelUtil.getCell(sheet, rowHareket, colHareket++, header).setCellValue("Giriş");
 			ExcelUtil.getCell(sheet, rowHareket, colHareket++, header).setCellValue("Çıkış");
 			boolean renk = true;

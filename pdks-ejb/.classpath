@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="ejbModule"/>
+	<classpathentry kind="con" path="org.eclipse.jst.server.core.container/com.sun.enterprise.jst.server.runtimeTarget/GlassFish 2.1 Java EE 5">
+		<attributes>
+			<attribute name="owner.project.facets" value="jst.ejb"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
 	<classpathentry kind="lib" path="/pdks-ear/EarContent/antlr-runtime.jar"/>
 	<classpathentry kind="lib" path="/pdks-ear/EarContent/commons-logging.jar"/>
@@ -21,7 +26,6 @@
 			<attribute name="owner.project.facets" value="java"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container/pdks-web"/>
 	<classpathentry kind="lib" path="/pdks-ear/EarContent/jboss-seam.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/commons-io-2.6.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/gson-2.3.1.jar"/>
@@ -31,9 +35,8 @@
 	<classpathentry kind="lib" path="C:/opt/lib/gl/json-20140107.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/ojdbc14.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/ostermillerutils_1_04_03_for_kaffe.jar"/>
-	<classpathentry kind="lib" path="C:/opt/lib/gl/poi-2.5.1-final-20040804.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/quartz-1.6.0.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/spring-2.5.6.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jst.server.core.container/com.sun.enterprise.jst.server.runtimeTarget/GlassFish 2.1 Java EE 5"/>
+	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container/pdks-web"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>

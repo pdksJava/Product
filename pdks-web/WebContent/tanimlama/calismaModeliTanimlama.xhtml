@@ -9,229 +9,250 @@
 	<ui:define name="body">
 
 		<h:form>
-			<a4j:region  >
+			<a4j:region>
 
 				<rich:panel header="#{ortakIslemler.getMenuUserAdi(calismaModeliHome.session,'calismaModeliTanimlama')}">
-				<a4j:outputPanel id="anaForm">
-					<h:panelGrid columns="1">
+					<a4j:outputPanel id="anaForm">
+						<h:panelGrid columns="1">
+							<c:if test="#{authenticatedUser.admin}">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{ calismaModeliHome.pdksSirketList.size() gt 0}">
+									<ui:define name="label">#{ortakIslemler.sirketAciklama()}</ui:define>
+									<h:selectOneMenu value="#{calismaModeliHome.seciliSirket}">
+										<s:selectItems var="comp" value="#{calismaModeliHome.pdksSirketList}" label="#{comp.ad}" noSelectionLabel="Lütfen seçiniz" />
+										<s:convertEntity />
+										<a4j:support event="onchange" reRender="anaForm" status="ajaxStatus" ajaxSingle="true" action="#{calismaModeliHome.fillCalismaModeliList()}" />
+									</h:selectOneMenu>
+								</s:decorate>
+								<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin and calismaModeliHome.pasifGoster != null}">
+									<ui:define name="label">Pasif Göster</ui:define>
+									<h:selectBooleanCheckbox value="#{calismaModeliHome.pasifGoster}">
+										<a4j:support event="onclick" status="ajaxStatus" ajaxSingle="true" reRender="anaForm" action="#{calismaModeliHome.fillCalismaModeliList()}" />
+									</h:selectBooleanCheckbox>
 
-						<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin and calismaModeliHome.pasifGoster!=null}">
-							<ui:define name="label">Pasif Göster</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.pasifGoster}">
-								<a4j:support event="onclick" status="ajaxStatus" ajaxSingle="true" reRender="anaForm" action="#{calismaModeliHome.fillCalismaModeliList()}" />
-							</h:selectBooleanCheckbox>
 
-
-						</s:decorate>
-						<rich:dataTable rowClasses="acik,koyu" value="#{calismaModeliHome.calismaModeliList}" var="calismaModeli" rows="40" rowKeyVar="row"
-							id="sablonTable">
-							<f:facet name="header">
-								<h:outputText value="Çalışma Modelleri" />
-							</f:facet>
-							<rich:column style="text-align: center;">
+								</s:decorate>
+							</c:if>
+							<rich:dataTable rowClasses="acik,koyu" value="#{calismaModeliHome.calismaModeliList}" var="calismaModeli" rows="40" rowKeyVar="row"
+								id="sablonTable">
 								<f:facet name="header">
+									<h:outputText value="Çalışma Modelleri" />
+								</f:facet>
+								<rich:column style="text-align: center;">
+									<f:facet name="header">
                        		 İşlemler
                			 </f:facet>
-								<a4j:commandLink status="ajaxStatus" ajaxSingle="true" id="editlink" action="#{calismaModeliHome.calismaModeliEkle(calismaModeli)}"
-									oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel">
-									<h:graphicImage value="/img/edit.gif" style="border:0" />
+									<a4j:commandLink status="ajaxStatus" ajaxSingle="true" id="editlink" action="#{calismaModeliHome.calismaModeliEkle(calismaModeli)}"
+										oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel">
+										<h:graphicImage value="/img/edit.gif" style="border:0" />
 
-								</a4j:commandLink>
-								<rich:toolTip for="editlink" value="Güncelle" />
-								<a4j:commandLink status="ajaxStatus" ajaxSingle="true" id="copylink" action="#{calismaModeliHome.calismaModeliKopyala(calismaModeli)}"
-									oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel" rendered="#{authenticatedUser.admin}">
-									<h:graphicImage value="/img/onetomany.gif" style="border:0" />
-								</a4j:commandLink>
-								<rich:toolTip for="copylink" value="Kopyala" />
-							</rich:column>
-							<rich:column rendered="#{authenticatedUser.admin}">
-								<f:facet name="header">
-									<h:outputText value="Id" />
-								</f:facet>
-								<h:outputText value="#{calismaModeli.id}" />
-							</rich:column>
-							<rich:column filterBy="#{calismaModeli.aciklama}" filterEvent="onkeyup">
-								<f:facet name="header">
-									<h:outputText value="Adı" />
-								</f:facet>
-								<h:outputText value="#{calismaModeli.aciklama}" />
-							</rich:column>
-
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="Hafta İçi (Saat)" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.haftaIci)}" rendered="#{calismaModeli.haftaIci!=0}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="#{ortakIslemler.getGunAdi(6,null)} (Saat)" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.cumartesiSaat)}" rendered="#{calismaModeli.cumartesiSaat!=0}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="#{ortakIslemler.getGunAdi(7,null)} (Saat)" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.pazarSaat)}" rendered="#{calismaModeli.pazarSaat!=0}" />
-							</rich:column>
-							<c:if test="#{calismaModeliHome.izinGoster}">
-
-								<rich:column>
+									</a4j:commandLink>
+									<rich:toolTip for="editlink" value="Güncelle" />
+									<a4j:commandLink status="ajaxStatus" ajaxSingle="true" id="copylink" action="#{calismaModeliHome.calismaModeliKopyala(calismaModeli)}"
+										oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel" rendered="#{authenticatedUser.admin}">
+										<h:graphicImage value="/img/onetomany.gif" style="border:0" />
+									</a4j:commandLink>
+									<rich:toolTip for="copylink" value="Kopyala" />
+								</rich:column>
+								<rich:column rendered="#{authenticatedUser.admin}">
 									<f:facet name="header">
-										<h:outputText value="İzin (Saat)" />
+										<h:outputText value="Id" />
 									</f:facet>
-									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.izin)}" rendered="#{calismaModeli.izin!=0}" />
+									<h:outputText value="#{calismaModeli.id}" />
+								</rich:column>
+								<rich:column filterBy="#{calismaModeli.aciklama}" filterEvent="onkeyup">
+									<f:facet name="header">
+										<h:outputText value="Adı" />
+									</f:facet>
+									<h:outputText value="#{calismaModeli.aciklama}" />
 								</rich:column>
 								<rich:column>
 									<f:facet name="header">
-										<h:outputText value="İzin #{ortakIslemler.getGunAdi(6,null)} (Saat)" />
+										<h:outputText value="#{ortakIslemler.sirketAciklama()}" />
 									</f:facet>
-									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.cumartesiIzinSaat)}"
-										rendered="#{calismaModeli.cumartesiIzinSaat!=0}" />
+									<h:outputText value="#{calismaModeli.sirket.ad}" />
+								</rich:column>
+
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Hafta İçi (Saat)" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.haftaIci)}" rendered="#{calismaModeli.haftaIci != 0}" />
 								</rich:column>
 								<rich:column>
 									<f:facet name="header">
-										<h:outputText value="İzin #{ortakIslemler.getGunAdi(7,null)} (Saat)" />
+										<h:outputText value="#{ortakIslemler.getGunAdi(6,null)} (Saat)" />
 									</f:facet>
-									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.pazarIzinSaat)}" rendered="#{calismaModeli.pazarIzinSaat!=0}" />
+									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.cumartesiSaat)}" rendered="#{calismaModeli.cumartesiSaat != 0}" />
 								</rich:column>
-							</c:if>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="Arife (Saat)" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.arife)}" rendered="#{calismaModeli.arife!=0}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="Hafta Tatil" />
-								</f:facet>
-								<h:outputText value="#{calismaModeli.haftaTatil}" rendered="#{calismaModeli.haftaTatilGun!=null}" />
-							</rich:column>
-							<rich:column rendered="#{authenticatedUser.admin}">
-								<f:facet name="header">
-									<h:outputText value="Negatif Bakiye Max (Saat)" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.negatifBakiyeDenkSaat)}"
-									rendered="#{calismaModeli.negatifBakiyeDenkSaat!=0}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="Bağlı Vardiya Şablonu" />
-								</f:facet>
-								<h:outputText value="#{calismaModeli.bagliVardiyaSablonu.adi}" />
-							</rich:column>
-							<rich:column rendered="#{calismaModeliHome.saatlikCalismaVar}">
-								<f:facet name="header">
-									<h:outputText value="Maaş Ödeme Tipi" />
-								</f:facet>
-								<h:outputText value="#{calismaModeli.maasOdemeTipiAciklama}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="İdari Model" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.idariModel)}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="İlk Plan Onaylı" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.ilkPlanOnayliDurum)}" />
-							</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.getGunAdi(7,null)} (Saat)" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.pazarSaat)}" rendered="#{calismaModeli.pazarSaat != 0}" />
+								</rich:column>
+								<c:if test="#{calismaModeliHome.izinGoster}">
 
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="Fazla Mesai Var" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.fazlaMesaiVar)}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="ÇGS Güncellenir" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.updateCGS)}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="#{ortakIslemler.getMenuAdi('pdksVardiyaTanimlama')} Görüntülensin" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.genelModel)}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="Vardiya Kontrol Edilmez" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.ortakVardiya)}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="Tüm Vardiyalar" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.genelVardiya and calismaModeli.ortakVardiya==false)}" />
-							</rich:column>
-							<rich:column
-								rendered="#{ortakIslemler.getParameterKey('aksamBordroBasZamani')!='' and ortakIslemler.getParameterKey('aksamBordroBitZamani')!=''}">
-								<f:facet name="header">
-									<h:outputText value="Gece Çalışması Ode" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.geceCalismaOdemeVar)}" />
-							</rich:column>
+									<rich:column>
+										<f:facet name="header">
+											<h:outputText value="İzin (Saat)" />
+										</f:facet>
+										<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.izin)}" rendered="#{calismaModeli.izin != 0}" />
+									</rich:column>
+									<rich:column>
+										<f:facet name="header">
+											<h:outputText value="İzin #{ortakIslemler.getGunAdi(6,null)} (Saat)" />
+										</f:facet>
+										<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.cumartesiIzinSaat)}"
+											rendered="#{calismaModeli.cumartesiIzinSaat != 0}" />
+									</rich:column>
+									<rich:column>
+										<f:facet name="header">
+											<h:outputText value="İzin #{ortakIslemler.getGunAdi(7,null)} (Saat)" />
+										</f:facet>
+										<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.pazarIzinSaat)}" rendered="#{calismaModeli.pazarIzinSaat != 0}" />
+									</rich:column>
+								</c:if>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Arife (Saat)" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.arife)}" rendered="#{calismaModeli.arife != 0}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Hafta Tatil" />
+									</f:facet>
+									<h:outputText value="#{calismaModeli.haftaTatil}" rendered="#{calismaModeli.haftaTatilGun != null}" />
+								</rich:column>
+								<rich:column rendered="#{authenticatedUser.admin}">
+									<f:facet name="header">
+										<h:outputText value="Negatif Bakiye Max (Saat)" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(calismaModeli.negatifBakiyeDenkSaat)}"
+										rendered="#{calismaModeli.negatifBakiyeDenkSaat != 0}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Bağlı #{ortakIslemler.vardiyaAciklama()} Şablonu" />
+									</f:facet>
+									<h:outputText value="#{calismaModeli.bagliVardiyaSablonu.adi}" />
+								</rich:column>
+								<rich:column rendered="#{calismaModeliHome.saatlikCalismaVar}">
+									<f:facet name="header">
+										<h:outputText value="Maaş Ödeme Tipi" />
+									</f:facet>
+									<h:outputText value="#{calismaModeli.maasOdemeTipiAciklama}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="İdari Model" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.idariModel)}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="İlk Plan Onaylı" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.ilkPlanOnayliDurum)}" />
+								</rich:column>
 
-							<rich:column rendered="#{calismaModeliHome.hareketKaydiVardiyaBul}">
-								<f:facet name="header">
-									<h:outputText value="Hareket Kayıtlarından Vardiya Bul" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.hareketKaydiVardiyaBul)}" />
-							</rich:column>
-							<rich:column rendered="#{calismaModeliHome.otomatikFazlaCalismaOnaylansinVar}">
-								<f:facet name="header">
-									<h:outputText value="Fazla Çalışma Otomatik Onaylansın" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.otomatikFazlaCalismaOnaylansin)}" />
-							</rich:column>
-							<rich:column rendered="#{ortakIslemler.getParameterKey('haftaTatilDurum')=='1'}">
-								<f:facet name="header">
-									<h:outputText value="Hafta Sonu Fazla Mesai Ode" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.haftaTatilMesaiOde)}" />
-							</rich:column>
-							<rich:column rendered="#{ortakIslemler.getParameterKey('haftaTatilDurum')=='1'}">
-								<f:facet name="header">
-									<h:outputText value="Gece Vardiya Hafta Sonu Fazla Mesai Parçala" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.geceHaftaTatilMesaiParcala)}" />
-							</rich:column>
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="Aktif" />
-								</f:facet>
-								<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.durum)}" id="durum" />
-							</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Fazla Mesai Var" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.fazlaMesaiVar)}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="ÇGS Güncellenir" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.updateCGS)}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.getMenuAdi('pdksVardiyaTanimlama')} Görüntülensin" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.genelModel)}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.vardiyaAciklama()} Kontrol Edilmez" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.ortakVardiya)}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Tüm #{ortakIslemler.vardiyaAciklama()}lar" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.genelVardiya and calismaModeli.ortakVardiya == false)}" />
+								</rich:column>
+								<rich:column
+									rendered="#{ortakIslemler.getParameterKey('aksamBordroBasZamani') != '' and ortakIslemler.getParameterKey('aksamBordroBitZamani') != ''}">
+									<f:facet name="header">
+										<h:outputText value="Gece Çalışması Ode" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.geceCalismaOdemeVar)}" />
+								</rich:column>
 
-							<rich:column>
-								<f:facet name="header">
-									<h:outputText value="Son İşlem Yapan" />
-								</f:facet>
-								<h:outputText value="#{calismaModeli.sonIslemYapan.adSoyad}" />
-							</rich:column>
+								<rich:column rendered="#{calismaModeliHome.hareketKaydiVardiyaBul}">
+									<f:facet name="header">
+										<h:outputText value="Hareket Kayıtlarından #{ortakIslemler.vardiyaAciklama()} Bul" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.hareketKaydiVardiyaBul)}" />
+								</rich:column>
+								<rich:column rendered="#{calismaModeliHome.otomatikFazlaCalismaOnaylansinVar}">
+									<f:facet name="header">
+										<h:outputText value="Fazla Çalışma Otomatik Onaylansın" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.otomatikFazlaCalismaOnaylansin)}" />
+								</rich:column>
+								<rich:column rendered="#{ortakIslemler.getParameterKey('haftaTatilDurum') == '1'}">
+									<f:facet name="header">
+										<h:outputText value="Hafta Sonu Fazla Mesai Ode" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.haftaTatilMesaiOde)}" />
+								</rich:column>
+								<rich:column rendered="#{ortakIslemler.getParameterKey('haftaTatilDurum') == '1'}">
+									<f:facet name="header">
+										<h:outputText value="Gece #{ortakIslemler.vardiyaAciklama()} Hafta Sonu Fazla Mesai Parçala" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.geceHaftaTatilMesaiParcala)}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Şua" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.suaDurum)}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Aktif" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(calismaModeli.durum)}" id="durum" />
+								</rich:column>
 
-							<rich:column style="text-align: center;">
-								<f:facet name="header">
-									<h:outputText value="Son İşlem Tarihi" />
-								</f:facet>
-								<h:outputText value="#{calismaModeli.sonIslemTarihiStr}" />
-							</rich:column>
-							<f:facet name="footer">
-								<rich:datascroller renderIfSinglePage="false" maxPages="5" />
-							</f:facet>
-						</rich:dataTable>
-						<a4j:commandButton status="ajaxStatus" value="Ekle" action="#{calismaModeliHome.calismaModeliEkle(null)}" rendered="#{authenticatedUser.admin}"
-							oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel" />
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Son İşlem Yapan" />
+									</f:facet>
+									<h:outputText value="#{calismaModeli.sonIslemYapan.adSoyad}" />
+								</rich:column>
 
-					</h:panelGrid>
-</a4j:outputPanel>
+								<rich:column style="text-align: center;">
+									<f:facet name="header">
+										<h:outputText value="Son İşlem Tarihi" />
+									</f:facet>
+									<h:outputText value="#{calismaModeli.sonIslemTarihiStr}" />
+								</rich:column>
+								<f:facet name="footer">
+									<rich:datascroller renderIfSinglePage="false" maxPages="5" />
+								</f:facet>
+							</rich:dataTable>
+							<a4j:commandButton status="ajaxStatus" value="Ekle" action="#{calismaModeliHome.calismaModeliEkle(null)}" rendered="#{authenticatedUser.admin}"
+								oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel" />
+
+						</h:panelGrid>
+					</a4j:outputPanel>
 				</rich:panel>
 			</a4j:region>
 		</h:form>
@@ -245,7 +266,7 @@
 					<h:form>
 						<h:graphicImage value="/img/close.png" id="hidelink" styleClass="hidelink">
 							<a4j:support event="onclick" action="#{calismaModeliHome.instanceRefresh}" reRender="sablonTable"
-								oncomplete="if (#{facesContext.maximumSeverity==null}) #{rich:component('editPanel')}.hide();" ajaxSingle="true" />
+								oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" ajaxSingle="true" />
 						</h:graphicImage>
 					</h:form>
 				</h:panelGroup>
@@ -258,12 +279,12 @@
 					<h:panelGrid columns="3" id="calismaModeliGiris">
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">#{ortakIslemler.calismaModeliAciklama()} Adı</ui:define>
-							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.aciklama}" disabled="#{authenticatedUser.admin==false}" size="35"
+							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.aciklama}" disabled="#{authenticatedUser.admin == false}" size="35"
 								requiredMessage="Şablon Adı giriniz" />
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin and calismaModeliHome.departmanList.size()>1}">
-							<ui:define name="label">PDKS Departman</ui:define>
-							<h:selectOneMenu value="#{calismaModeliHome.calismaModeli.departman}" disabled="#{authenticatedUser.admin==false}">
+							<ui:define name="label">#{ortakIslemler.firmaKaynagiAciklama()}</ui:define>
+							<h:selectOneMenu value="#{calismaModeliHome.calismaModeli.departman}" disabled="#{authenticatedUser.admin == false}">
 								<s:selectItems var="comp" value="#{calismaModeliHome.departmanList}" label="#{comp.departmanTanim.aciklama}" noSelectionLabel="Lütfen seçiniz" />
 								<a4j:support event="onchange" action="#{calismaModeliHome.fillVardiyalar()}" reRender="calismaModeliGiris,vardiyalar" status="ajaxStatus"
 									ajaxSingle="true" />
@@ -271,8 +292,8 @@
 							</h:selectOneMenu>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml" cellpadding="0" cellspacing="0" style="text-align : left">
-							<ui:define name="label">Bağlı Vardiya Şablonu</ui:define>
-							<h:selectOneMenu value="#{calismaModeliHome.calismaModeli.bagliVardiyaSablonu}" disabled="#{authenticatedUser.admin==false}"
+							<ui:define name="label">Bağlı #{ortakIslemler.vardiyaAciklama()} Şablonu</ui:define>
+							<h:selectOneMenu value="#{calismaModeliHome.calismaModeli.bagliVardiyaSablonu}" disabled="#{authenticatedUser.admin == false}"
 								style="text-align : left">
 								<s:selectItems var="sablon" value="#{calismaModeliHome.sablonList}" label="#{sablon.adi}" noSelectionLabel="Lütfen seçiniz" />
 								<s:convertEntity />
@@ -281,14 +302,14 @@
 						<s:decorate template="/layout/edit.xhtml" rendered="#{calismaModeliHome.saatlikCalismaVar}">
 							<ui:define name="label">Aylık Maaş Mı</ui:define>
 
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.aylikMaas}" disabled="#{authenticatedUser.admin==false}">
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.aylikMaas}" disabled="#{authenticatedUser.admin == false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">Hafta Tatil</ui:define>
-							<h:selectOneMenu value="#{calismaModeliHome.calismaModeli.haftaTatilGun}" disabled="#{authenticatedUser.admin==false}">
+							<h:selectOneMenu value="#{calismaModeliHome.calismaModeli.haftaTatilGun}" disabled="#{authenticatedUser.admin == false}">
 								<f:selectItems value="#{calismaModeliHome.haftaTatilGunleri}" />
 								<a4j:support event="onchange" status="ajaxStatus" ajaxSingle="true" />
 							</h:selectOneMenu>
@@ -300,7 +321,7 @@
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">Hafta İçi (Saati)</ui:define>
 							<ui:fragment>
-								<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.haftaIci}" disabled="#{authenticatedUser.admin==false}" size="6"
+								<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.haftaIci}" disabled="#{authenticatedUser.admin == false}" size="6"
 									validatorMessage="Hafta İçi saati giriniz">
 									<f:validateDoubleRange minimum="0" maximum="12" />
 								</h:inputText>
@@ -315,14 +336,14 @@
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">#{ortakIslemler.getGunAdi(6,null)} (Saati)</ui:define>
-							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.cumartesiSaat}" disabled="#{authenticatedUser.admin==false}" size="6"
+							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.cumartesiSaat}" disabled="#{authenticatedUser.admin == false}" size="6"
 								validatorMessage="#{ortakIslemler.getGunAdi(6,null)} saati giriniz">
 								<f:validateDoubleRange minimum="0" maximum="12" />
 							</h:inputText>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">#{ortakIslemler.getGunAdi(7,null)} (Saati)</ui:define>
-							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.pazarSaat}" disabled="#{authenticatedUser.admin==false}" size="6"
+							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.pazarSaat}" disabled="#{authenticatedUser.admin == false}" size="6"
 								validatorMessage="#{ortakIslemler.getGunAdi(7,null)} saati giriniz">
 								<f:validateDoubleRange minimum="0" maximum="12" />
 							</h:inputText>
@@ -330,21 +351,21 @@
 						<c:if test="#{calismaModeliHome.izinGoster}">
 							<s:decorate template="/layout/edit.xhtml">
 								<ui:define name="label">İzin (Saati)</ui:define>
-								<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.izin}" disabled="#{authenticatedUser.admin==false}" size="6"
+								<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.izin}" disabled="#{authenticatedUser.admin == false}" size="6"
 									validatorMessage="İzin günü saati giriniz">
 									<f:validateDoubleRange minimum="0" maximum="12" />
 								</h:inputText>
 							</s:decorate>
 							<s:decorate template="/layout/edit.xhtml">
 								<ui:define name="label">İzin #{ortakIslemler.getGunAdi(6,null)} (Saati)</ui:define>
-								<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.cumartesiIzinSaat}" disabled="#{authenticatedUser.admin==false}"
+								<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.cumartesiIzinSaat}" disabled="#{authenticatedUser.admin == false}"
 									size="6" validatorMessage="#{ortakIslemler.getGunAdi(6,null)} izin günü saati giriniz">
 									<f:validateDoubleRange minimum="0" maximum="12" />
 								</h:inputText>
 							</s:decorate>
 							<s:decorate template="/layout/edit.xhtml">
 								<ui:define name="label">İzin #{ortakIslemler.getGunAdi(7,null)} (Saati)</ui:define>
-								<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.pazarIzinSaat}" disabled="#{authenticatedUser.admin==false}" size="6"
+								<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.pazarIzinSaat}" disabled="#{authenticatedUser.admin == false}" size="6"
 									validatorMessage="#{ortakIslemler.getGunAdi(7,null)} izin günü saati giriniz">
 									<f:validateDoubleRange minimum="0" maximum="12" />
 								</h:inputText>
@@ -353,7 +374,7 @@
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">Süt İzin (Saati)</ui:define>
 							<ui:fragment>
-								<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.haftaIciSutIzniSure}" disabled="#{authenticatedUser.admin==false}"
+								<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.haftaIciSutIzniSure}" disabled="#{authenticatedUser.admin == false}"
 									size="6" validatorMessage="İzin günü saati giriniz">
 									<f:validateDoubleRange minimum="0" maximum="12" />
 
@@ -368,28 +389,33 @@
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">Süt İzin #{ortakIslemler.getGunAdi(6,null)} (Saati)</ui:define>
-							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.cumartesiSutIzniSure}" disabled="#{authenticatedUser.admin==false}"
+							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.cumartesiSutIzniSure}" disabled="#{authenticatedUser.admin == false}"
 								size="6" validatorMessage="İzin günü saati giriniz">
 								<f:validateDoubleRange minimum="0" maximum="12" />
 							</h:inputText>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">Süt İzin #{ortakIslemler.getGunAdi(7,null)} (Saati)</ui:define>
-							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.pazarSutIzniSure}" disabled="#{authenticatedUser.admin==false}" size="6"
-								validatorMessage="İzin günü saati giriniz">
+							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.pazarSutIzniSure}" disabled="#{authenticatedUser.admin == false}"
+								size="6" validatorMessage="İzin günü saati giriniz">
 								<f:validateDoubleRange minimum="0" maximum="12" />
 							</h:inputText>
 						</s:decorate>
 
+						<s:decorate template="/layout/edit.xhtml">
+							<ui:define name="label">Süt İzin Sabit (Saati)</ui:define>
+							<h:inputText value="#{calismaModeliHome.calismaModeli.sutIzniSabitSaat}" disabled="#{authenticatedUser.admin == false}" size="6" />
 
+
+						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">Arife Günü (Saati)</ui:define>
-							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.arife}" disabled="#{authenticatedUser.admin==false}" size="6"
+							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.arife}" disabled="#{authenticatedUser.admin == false}" size="6"
 								validatorMessage="Arife günü saati giriniz">
 								<f:validateDoubleRange minimum="0" maximum="12" />
 							</h:inputText>
 						</s:decorate>
-						<s:decorate template="/layout/edit.xhtml" disabled="#{authenticatedUser.admin==false}">
+						<s:decorate template="/layout/edit.xhtml" disabled="#{authenticatedUser.admin == false}">
 							<ui:define name="label">Negatif Bakiye Max (Saati)</ui:define>
 							<h:inputText required="true" value="#{calismaModeliHome.calismaModeli.negatifBakiyeDenkSaat}" size="6"
 								validatorMessage="Negatif bakiye saati giriniz">
@@ -398,94 +424,117 @@
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">İdari Model</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.idariModel}" disabled="#{authenticatedUser.admin==false}">
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.idariModel}" disabled="#{authenticatedUser.admin == false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">İlk Plan Onaylı</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.ilkPlanOnayliDurum}" disabled="#{authenticatedUser.admin==false}">
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.ilkPlanOnayliDurum}" disabled="#{authenticatedUser.admin == false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">Fazla Mesai Var</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.fazlaMesaiVar}" disabled="#{authenticatedUser.admin==false}">
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.fazlaMesaiVar}" disabled="#{authenticatedUser.admin == false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">#{ortakIslemler.getMenuAdi('pdksVardiyaTanimlama')} Görüntülensin</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.genelModel}" disabled="#{authenticatedUser.admin==false}">
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.genelModel}" disabled="#{authenticatedUser.admin == false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">ÇGS Güncellenir</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.toplamGunGuncelle}" disabled="#{authenticatedUser.admin==false}">
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.toplamGunGuncelle}" disabled="#{authenticatedUser.admin == false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
-							<ui:define name="label">Vardiya Kontrol Edilmez</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.ortakVardiya}" disabled="#{authenticatedUser.admin==false}">
+							<ui:define name="label">#{ortakIslemler.vardiyaAciklama()} Kontrol Edilmez</ui:define>
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.ortakVardiya}" disabled="#{authenticatedUser.admin == false}">
 								<a4j:support event="onclick" reRender="vardiyalar" status="ajaxStatus" ajaxSingle="true" />
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml"
-							rendered="#{ortakIslemler.getParameterKey('aksamBordroBasZamani')!='' and ortakIslemler.getParameterKey('aksamBordroBitZamani')!=''}">
+							rendered="#{ortakIslemler.getParameterKey('aksamBordroBasZamani') != '' and ortakIslemler.getParameterKey('aksamBordroBitZamani') != ''}">
 							<ui:define name="label">Gece Çalışması Öde</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.geceCalismaOdemeVar}" disabled="#{authenticatedUser.admin==false}">
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.geceCalismaOdemeVar}" disabled="#{authenticatedUser.admin == false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml"
 							rendered="#{calismaModeliHome.otomatikFazlaCalismaOnaylansinVar or calismaModeliHome.calismaModeli.otomatikFazlaCalismaOnaylansin}">
-							<ui:define name="label">Hareket Kayıtlarından Vardiya Bul</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.hareketKaydiVardiyaBul}" disabled="#{authenticatedUser.admin==false}">
+							<ui:define name="label">Hareket Kayıtlarından #{ortakIslemler.vardiyaAciklama()} Bul</ui:define>
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.hareketKaydiVardiyaBul}" disabled="#{authenticatedUser.admin == false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml"
 							rendered="#{calismaModeliHome.otomatikFazlaCalismaOnaylansinVar or calismaModeliHome.calismaModeli.otomatikFazlaCalismaOnaylansin}">
 							<ui:define name="label">Fazla Çalışma Otomatik Onaylansın</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.otomatikFazlaCalismaOnaylansin}" disabled="#{authenticatedUser.admin==false}">
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.otomatikFazlaCalismaOnaylansin}"
+								disabled="#{authenticatedUser.admin == false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>
-						<s:decorate template="/layout/edit.xhtml" rendered="#{ortakIslemler.getParameterKey('haftaTatilDurum')=='1'}">
+						<s:decorate template="/layout/edit.xhtml" rendered="#{ortakIslemler.getParameterKey('haftaTatilDurum') == '1'}">
 							<ui:define name="label">Hafta Sonu Fazla Mesai Öde</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.haftaTatilMesaiOde}" disabled="#{authenticatedUser.admin==false}">
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.haftaTatilMesaiOde}" disabled="#{authenticatedUser.admin == false}">
 								<a4j:support event="onclick" reRender="geceHaftaTatilMesaiParcala" status="ajaxStatus" ajaxSingle="true" />
 							</h:selectBooleanCheckbox>
 						</s:decorate>
-						<s:decorate id="geceHaftaTatilMesaiParcala" template="/layout/edit.xhtml" rendered="#{ortakIslemler.getParameterKey('haftaTatilDurum')=='1'}">
-							<ui:define name="label">Gece Vardiya Hafta Sonu Fazla Mesai Parçala</ui:define>
+						<s:decorate id="geceHaftaTatilMesaiParcala" template="/layout/edit.xhtml" rendered="#{ortakIslemler.getParameterKey('haftaTatilDurum') == '1'}">
+							<ui:define name="label">Gece #{ortakIslemler.vardiyaAciklama()} Hafta Sonu Fazla Mesai Parçala</ui:define>
 							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.geceHaftaTatilMesaiParcala}"
-								disabled="#{calismaModeliHome.calismaModeli.haftaTatilMesaiOde==false or authenticatedUser.admin==false}">
+								disabled="#{calismaModeliHome.calismaModeli.haftaTatilMesaiOde == false or authenticatedUser.admin == false}">
+
+							</h:selectBooleanCheckbox>
+						</s:decorate>
+						<s:decorate template="/layout/edit.xhtml" rendered="#{calismaModeliHome.calismaModeli.departman.suaOlabilir}">
+							<ui:define name="label">Şua</ui:define>
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.suaDurum}" disabled="#{authenticatedUser.admin == false}">
 
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml">
-							<ui:define name="label">Genel Vardiya</ui:define>
-							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.genelVardiya}" disabled="#{authenticatedUser.admin==false}">
+							<ui:define name="label">Genel #{ortakIslemler.vardiyaAciklama()}</ui:define>
+							<h:selectBooleanCheckbox value="#{calismaModeliHome.calismaModeli.genelVardiya}" disabled="#{authenticatedUser.admin == false}">
 								<a4j:support event="onclick" reRender="vardiyalar" status="ajaxStatus" ajaxSingle="true" />
 							</h:selectBooleanCheckbox>
 						</s:decorate>
 					</h:panelGrid>
+					<s:decorate template="/layout/edit.xhtml" rendered="#{calismaModeliHome.sirketList != null}">
+						<ui:define name="label">#{ortakIslemler.sirketAciklama()}</ui:define>
+						<h:selectOneMenu value="#{calismaModeliHome.calismaModeli.sirket}">
+							<s:selectItems var="comp" value="#{calismaModeliHome.sirketList}" label="#{comp.ad}" noSelectionLabel="Lütfen seçiniz" />
+							<a4j:support event="onchange" action="#{calismaModeliHome.fillVardiyalar(calismaModeliHome.calismaModeli)}" reRender="vardiyalar"
+								status="ajaxStatus" ajaxSingle="true" />
+							<s:convertEntity />
+						</h:selectOneMenu>
+
+					</s:decorate>
 					<a4j:outputPanel id="vardiyalar">
 
 						<rich:simpleTogglePanel
-							rendered="#{calismaModeliHome.calismaModeli.genelVardiya==false and calismaModeliHome.calismaModeli.ortakVardiya==false}" switchType="client"
-							label="Vardiyalar" height="110" opened="true">
+							rendered="#{calismaModeliHome.calismaModeli.genelVardiya == false and calismaModeliHome.calismaModeli.ortakVardiya == false}"
+							switchType="client" label="#{ortakIslemler.vardiyaAciklama()}" height="110" opened="true">
 							<s:decorate>
-								<rich:listShuttle id="shuttle" sourceValue="#{calismaModeliHome.vardiyaList}" fastOrderControlsVisible="false" orderControlsVisible="false"
-									targetValue="#{calismaModeliHome.kayitliVardiyaList}" var="vardiya" copyControlLabel="#{messages['listShuttle.etiket.copyControlLabel']}"
+								<rich:listShuttle style="width:550px; white-space:normal!important" id="shuttle" sourceValue="#{calismaModeliHome.vardiyaList}"
+									fastOrderControlsVisible="false" orderControlsVisible="false" targetValue="#{calismaModeliHome.kayitliVardiyaList}" var="vardiya"
+									copyControlLabel="#{messages['listShuttle.etiket.copyControlLabel']}"
 									removeControlLabel="#{messages['listShuttle.etiket.removeControlLabel']}"
 									copyAllControlLabel="#{messages['listShuttle.etiket.copyAllControlLabel']}"
-									removeAllControlLabel="#{messages['listShuttle.etiket.removeAllControlLabel']}" required="true" requiredMessage="Vardiya seçiniz">
+									removeAllControlLabel="#{messages['listShuttle.etiket.removeAllControlLabel']}" required="true"
+									requiredMessage="#{ortakIslemler.vardiyaAciklama()} seçiniz">
 									<h:column>
-										<h:outputText value="#{vardiya.vardiyaAdi}" />
+
+										<div style="overflow: hidden; width: 200px; word-wrap: break-word;">
+											<h:outputText value="#{vardiya.ozelAdi}" />
+
+										</div>
 									</h:column>
 									<s:convertEntity />
 								</rich:listShuttle>
@@ -495,7 +544,7 @@
 
 					</a4j:outputPanel>
 					<a4j:outputPanel id="haftaIciGunler">
-						<rich:simpleTogglePanel rendered="#{calismaModeliHome.cmGunList!=null and not empty calismaModeliHome.cmGunList}" switchType="client"
+						<rich:simpleTogglePanel rendered="#{calismaModeliHome.cmGunList != null and not empty calismaModeliHome.cmGunList}" switchType="client"
 							label="#{calismaModeliHome.cmgPage.aciklama}" height="110" opened="true">
 							<a4j:repeat value="#{calismaModeliHome.cmGunList}" var="cmg">
 								<s:decorate template="/layout/edit.xhtml">
@@ -517,7 +566,7 @@
 					<!--  -->
 
 					<a4j:commandButton status="ajaxStatus" value="Kaydet" action="#{calismaModeliHome.kaydet()}" reRender="sablonTable"
-						rendered="#{authenticatedUser.admin}" oncomplete="if (#{facesContext.maximumSeverity==null}) #{rich:component('editPanel')}.hide();" />
+						rendered="#{authenticatedUser.admin}" oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" />
 
 
 

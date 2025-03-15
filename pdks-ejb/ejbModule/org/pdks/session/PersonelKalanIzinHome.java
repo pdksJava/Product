@@ -14,6 +14,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.TreeMap;
@@ -42,6 +43,7 @@ import org.jboss.seam.faces.FacesMessages;
 import org.jboss.seam.framework.EntityHome;
 import org.pdks.entity.AramaSecenekleri;
 import org.pdks.entity.Dosya;
+import org.pdks.entity.IzinReferansERP;
 import org.pdks.entity.IzinTipi;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelIzin;
@@ -69,6 +71,8 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.Table;
 import com.lowagie.text.pdf.BaseFont;
 import com.lowagie.text.pdf.PdfWriter;
+import com.pdks.webservice.IzinERP;
+import com.pdks.webservice.PdksSoapVeriAktar;
 
 @Name("personelKalanIzinHome")
 public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements Serializable {
@@ -105,12 +109,12 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 	private List<IzinTipi> izinTipiList;
 	private TempIzin updateTempIzin;
-	private PersonelIzin updateIzin;
+	private PersonelIzin updateIzin, manuelIzin;
 	private List<PersonelIzin> personelizinList = new ArrayList<PersonelIzin>();
 	private List<TempIzin> pdksPersonelList = new ArrayList<TempIzin>(), personelBakiyeIzinList = new ArrayList<TempIzin>();
 
 	private String kidemYili, bolumAciklama;
-	private boolean gecmisYil, bakiyeIzinGoster, gelecekIzinGoster, geciciBakiye, bolumKlasorEkle, suaVar, istenAyrilanEkle = Boolean.FALSE, iptalIzinleriGetir = Boolean.FALSE;
+	private boolean gecmisYil, bakiyeIzinGoster, manuelIzinGuncelle, gelecekIzinGoster, geciciBakiye, bolumKlasorEkle, suaVar, istenAyrilanEkle = Boolean.FALSE, iptalIzinleriGetir = Boolean.FALSE;
 
 	private Date donemSonu, hakedisTarihi;
 	private Double izinSuresi, bakiyeSuresi, bakiyeleriTemizle;
@@ -136,8 +140,127 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		super.create();
 	}
 
+	/**
+	 * @param izin
+	 * @return
+	 */
+	public List<PersonelIzin> getIzinList(TempIzin izin) {
+		StringBuffer sb = new StringBuffer();
+		List dataIdList = izin.getIzinler();
+		String fieldName = "s";
+		sb.append("select * from " + PersonelIzin.TABLE_NAME + " " + PdksEntityController.getSelectLOCK());
+		sb.append(" where " + PersonelIzin.COLUMN_NAME_ID + " :" + fieldName);
+		HashMap fields = new HashMap();
+		fields.put(fieldName, dataIdList);
+		if (izin.getPersonel().getSirket().getDepartman().isAdminMi()) {
+			if (bakiyeIzinGoster)
+				sb.append(" and " + PersonelIzin.COLUMN_NAME_BASLANGIC_ZAMANI + " >= :b ");
+			else
+				sb.append(" and " + PersonelIzin.COLUMN_NAME_BASLANGIC_ZAMANI + " > :b ");
+			fields.put("b", PdksUtil.getBakiyeYil());
+		}
+
+		if (session != null)
+			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+		List<PersonelIzin> list = pdksEntityController.getSQLParamList(dataIdList, sb, fieldName, fields, PersonelIzin.class, session);
+		dataIdList = null;
+		fields = null;
+		return list;
+	}
+
+	/**
+	 * @param izin
+	 * @return
+	 */
+	public String secManuelIzin(PersonelIzin izin) {
+		if (izin != null) {
+			manuelIzin = izin;
+			manuelIzin.setGunAdet(izin.getIzinSuresi().intValue());
+		} else {
+			if (manuelIzin != null)
+				manuelIzin.setGunAdet(manuelIzin.getIzinSuresi().intValue());
+			manuelIzin = izin;
+		}
+
+		return "";
+	}
+
+	@Transactional
+	public String manuelIzinKaydet(boolean kaydet) {
+		if (kaydet) {
+			if (manuelIzin.isRedmi() == false)
+				manuelIzin.setIzinSuresi((double) manuelIzin.getGunAdet());
+			else
+				manuelIzin.setIzinDurumu(PersonelIzin.IZIN_DURUMU_ONAYLANDI);
+
+		} else {
+			manuelIzin.setIzinDurumu(PersonelIzin.IZIN_DURUMU_SISTEM_IPTAL);
+		}
+		try {
+			if (authenticatedUser.isAdmin() == false) {
+				manuelIzin.setGuncellemeTarihi(new Date());
+				manuelIzin.setGuncelleyenUser(authenticatedUser);
+			}
+			pdksEntityController.saveOrUpdate(session, entityManager, manuelIzin);
+			session.flush();
+			fillTarihIzinList();
+		} catch (Exception e) {
+
+		}
+
+		return "";
+	}
+
+	/**
+	 * @param izin
+	 * @return
+	 */
+	public String getHarcananIzinler(PersonelIzin izin) {
+		manuelIzinGuncelle = false;
+		updateIzin = izin;
+		manuelIzin = null;
+		if (authenticatedUser.isAdmin()) {
+			harcananIzinler = new ArrayList<PersonelIzinDetay>();
+			HashMap<Long, PersonelIzin> map = new HashMap<Long, PersonelIzin>();
+			for (PersonelIzinDetay personelIzinDetay : izin.getHakEdisIzinler()) {
+				if (harcananIzinler == null)
+					harcananIzinler = new ArrayList<PersonelIzinDetay>();
+				harcananIzinler.add((PersonelIzinDetay) personelIzinDetay.clone());
+				PersonelIzin personelIzin = personelIzinDetay.getPersonelIzin();
+				if (personelIzin.getIzinTipi().getPersonelGirisTipi().equals(IzinTipi.GIRIS_TIPI_YOK))
+					map.put(personelIzin.getId(), personelIzin);
+			}
+			if (harcananIzinler != null && harcananIzinler.size() > 1)
+				harcananIzinler = PdksUtil.sortListByAlanAdi(harcananIzinler, "id", Boolean.FALSE);
+
+			if (!map.isEmpty()) {
+				List<IzinReferansERP> list = pdksEntityController.getSQLParamByAktifFieldList(IzinReferansERP.TABLE_NAME, IzinReferansERP.COLUMN_NAME_IZIN_ID, new ArrayList(map.values()), IzinReferansERP.class, session);
+				for (IzinReferansERP izinReferansERP : list) {
+					PersonelIzin personelIzin = map.get(izinReferansERP.getIzin().getId());
+					personelIzin.setReferansERP(izinReferansERP.getId());
+					if (!manuelIzinGuncelle)
+						manuelIzinGuncelle = personelIzin.isManuelReferansERP();
+				}
+
+				for (Iterator iterator = harcananIzinler.iterator(); iterator.hasNext();) {
+					PersonelIzinDetay detay = (PersonelIzinDetay) iterator.next();
+					PersonelIzin personelIzin = detay.getPersonelIzin();
+					if (personelIzin.isRedmi() && personelIzin.isManuelReferansERP() == false)
+						iterator.remove();
+
+				}
+				list = null;
+			}
+			map = null;
+		} else
+			harcananIzinler = izin.getHarcananIzinler();
+
+		return "";
+	}
+
 	public String izinKarti(TempIzin izin) {
 		List<Long> idList = new ArrayList<Long>();
+
 		if (gelecekIzinGoster == false) {
 			for (PersonelIzin bakiye : izin.getYillikIzinler()) {
 				if (bakiye.getDevirIzin() && bakiye.getIzinSuresi().doubleValue() == 0.0d)
@@ -147,18 +270,11 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		}
 		updateTempIzin = izin;
 		suaVar = Boolean.FALSE;
-		HashMap fields = new HashMap();
-		fields.put("id", izin.getIzinler().clone());
-		if (izin.getPersonel().getSirket().getDepartman().isAdminMi()) {
-			if (bakiyeIzinGoster)
-				fields.put("baslangicZamani>=", PdksUtil.getBakiyeYil());
-			else
-				fields.put("baslangicZamani>", PdksUtil.getBakiyeYil());
-		}
+
 		List<PersonelIzin> bakiyeIzinler = new ArrayList<PersonelIzin>();
-		if (session != null)
-			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<PersonelIzin> list = pdksEntityController.getObjectByInnerObjectListInLogic(fields, PersonelIzin.class);
+
+		List<PersonelIzin> list = getIzinList(izin);
+
 		for (PersonelIzin personelIzin : list) {
 			if (idList.contains(personelIzin.getId())) {
 				PersonelIzin personelIzin2 = (PersonelIzin) personelIzin.clone();
@@ -168,7 +284,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 				bakiyeIzinler.add(personelIzin);
 
 		}
-		fields = null;
+
 		if (gelecekIzinGoster)
 			bakiyeIzinler = borcluIzinleriSifirla(bakiyeIzinler);
 		for (PersonelIzin personelIzin : bakiyeIzinler) {
@@ -196,18 +312,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 			}
 		}
 		List<PersonelIzin> bakiyeIzinler = new ArrayList<PersonelIzin>();
-		HashMap fields = new HashMap();
-		fields.put("id", izin.getIzinler().clone());
-		if (izin.getPersonel().getSirket().getDepartman().isAdminMi()) {
-			if (bakiyeIzinGoster)
-				fields.put("baslangicZamani>=", PdksUtil.getBakiyeYil());
-			else
-				fields.put("baslangicZamani>", PdksUtil.getBakiyeYil());
-		}
-
-		if (session != null)
-			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<PersonelIzin> list = pdksEntityController.getObjectByInnerObjectListInLogic(fields, PersonelIzin.class);
+		List<PersonelIzin> list = getIzinList(izin);
 		for (PersonelIzin personelIzin : list) {
 			if (idList.contains(personelIzin.getId())) {
 				PersonelIzin personelIzin2 = (PersonelIzin) personelIzin.clone();
@@ -509,11 +614,8 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 				String ek = "";
 				if (pdksPersonelList.size() > 1) {
 					if (aramaSecenekleri.getEkSaha1Id() != null) {
-						HashMap fields = new HashMap();
-						fields.put("id", aramaSecenekleri.getEkSaha1Id());
-						if (session != null)
-							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-						Tanim departmanTanim = (Tanim) pdksEntityController.getObjectByInnerObject(fields, Tanim.class);
+
+						Tanim departmanTanim = (Tanim) pdksEntityController.getSQLParamByFieldObject(Tanim.TABLE_NAME, Tanim.COLUMN_NAME_ID, aramaSecenekleri.getEkSaha1Id(), Tanim.class, session);
 						if (departmanTanim != null)
 							ek = "_" + PdksUtil.replaceAll(PdksUtil.setTurkishStr(departmanTanim.getAciklama()), " ", "_");
 					} else if (aramaSecenekleri.getSirketId() != null) {
@@ -521,7 +623,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 						fields.put("id", aramaSecenekleri.getSirketId());
 						if (session != null)
 							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-						Sirket sirket = (Sirket) pdksEntityController.getObjectByInnerObject(fields, Sirket.class);
+						Sirket sirket = (Sirket) pdksEntityController.getSQLParamByFieldObject(Sirket.TABLE_NAME, Sirket.COLUMN_NAME_ID, aramaSecenekleri.getSirketId(), Sirket.class, session);
 						if (sirket != null)
 							ek = "_" + PdksUtil.replaceAll(PdksUtil.setTurkishStr(sirket.getAd()), " ", "_");
 					}
@@ -588,12 +690,13 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		if (PdksUtil.hasStringValue(sicilNo) == false && aramaSecenekleri.getSirketId() == null && (authenticatedUser.isIK() || authenticatedUser.isAdmin()))
 			PdksUtil.addMessageError("" + ortakIslemler.sirketAciklama() + " seçiniz!");
 		else {
+			aramaSecenekleri.setAyrilanlariGetir(istenAyrilanEkle);
 			ArrayList<String> siciller = ortakIslemler.getAramaPersonelSicilNo(aramaSecenekleri, Boolean.TRUE, session);
 			if (!siciller.isEmpty()) {
 				String hata = null;
 				try {
 
-					izinBakiyeGuncelleme.izinleriBakiyeleriniHesapla(session, siciller, aramaSecenekleri.getSirket(), null, Boolean.FALSE, Boolean.TRUE);
+					izinBakiyeGuncelleme.izinleriBakiyeleriniHesapla(session, siciller, aramaSecenekleri.getSirket(), null, Boolean.FALSE, Boolean.TRUE, Boolean.FALSE, istenAyrilanEkle == false);
 				} catch (Exception e) {
 					logger.error("Pdks hata in : \n");
 					e.printStackTrace();
@@ -670,10 +773,9 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		String durum = "persist";
 		try {
 			boolean sureGuncelleme = authenticatedUser.isIK();
-			HashMap fields = new HashMap();
-			fields.put("id", updateIzin.getId());
-			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-			updateIzin = (PersonelIzin) pdksEntityController.getObjectByInnerObject(fields, PersonelIzin.class);
+
+			updateIzin = (PersonelIzin) pdksEntityController.getSQLParamByFieldObject(PersonelIzin.TABLE_NAME, PersonelIzin.COLUMN_NAME_ID, updateIzin.getId(), PersonelIzin.class, session);
+
 			updateIzin.setIzinKagidiGeldi(null);
 			updateIzin.setAciklama(kidemYili);
 			updateIzin.setBitisZamani(hakedisTarihi);
@@ -702,6 +804,18 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 	}
 
+	public String fillTesisList() {
+		Date bugun = PdksUtil.getDate(new Date());
+		ortakIslemler.setAramaSecenekTesisData(aramaSecenekleri, bugun, bugun, true, session);
+		return "";
+	}
+
+	public String fillEkSahaList() {
+		Date bugun = PdksUtil.getDate(new Date());
+		ortakIslemler.setAramaSecenekEkDataDoldur(aramaSecenekleri, bugun, bugun, session);
+		return "";
+	}
+
 	private void fillEkSahaTanim() {
 
 		ortakIslemler.fillEkSahaTanimAramaSecenekAta(session, Boolean.FALSE, null, aramaSecenekleri);
@@ -710,9 +824,15 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		if (aramaSecenekleri.getSirketList() != null) {
 			List<SelectItem> sirketIdList = ortakIslemler.getIzinSirketItemList(aramaSecenekleri.getSirketList());
 			aramaSecenekleri.setSirketIdList(sirketIdList);
-			if (aramaSecenekleri.getSirketIdList().size() == 1)
+			if (aramaSecenekleri.getSirketIdList().size() == 1) {
 				aramaSecenekleri.setSirketId((Long) aramaSecenekleri.getSirketIdList().get(0).getValue());
+				// ortakIslemler.getTesisList(aramaSecenekleri.getTesisList(), null, aramaSecenekleri.getSirketId(), true, session);
+				// if (aramaSecenekleri.getTesisList() != null && aramaSecenekleri.getTesisList().size() == 1)
+				// aramaSecenekleri.setTesisId((Long) aramaSecenekleri.getTesisList().get(0).getValue());
+			}
+
 		}
+		fillTesisList();
 
 	}
 
@@ -741,6 +861,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+
 		aramaSecenekleri = null;
 		if (authenticatedUser.isAdmin() == false || aramaSecenekleri == null)
 			aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
@@ -755,6 +876,8 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		}
 		if (personelBakiyeIzinList != null)
 			personelBakiyeIzinList.clear();
+		if (authenticatedUser.isIK() || authenticatedUser.isAdmin())
+			gelecekIzinGoster = ortakIslemler.getParameterKey("borcluIzinleriGetir").equals("1");
 		return pos;
 
 	}
@@ -799,11 +922,19 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		else
 			tipler = Arrays.asList(new String[] { IzinTipi.YILLIK_UCRETLI_IZIN });
 		HashMap fields = new HashMap();
-		fields.put("durum=", Boolean.TRUE);
-		fields.put("bakiyeIzinTipi.izinTipiTanim.kodu", tipler);
+		StringBuffer sb = new StringBuffer();
+		String fieldName = "k";
+		sb.append("select I.* from " + IzinTipi.TABLE_NAME + " I " + PdksEntityController.getSelectLOCK());
+		sb.append(" inner join " + IzinTipi.TABLE_NAME + " B " + PdksEntityController.getJoinLOCK() + " on B." + IzinTipi.COLUMN_NAME_ID + " = I." + IzinTipi.COLUMN_NAME_BAKIYE_IZIN_TIPI);
+		sb.append(" and B." + IzinTipi.COLUMN_NAME_DURUM + " = 1");
+		sb.append(" inner join " + Tanim.TABLE_NAME + " T " + PdksEntityController.getJoinLOCK() + " on T." + Tanim.COLUMN_NAME_ID + " = B." + IzinTipi.COLUMN_NAME_IZIN_TIPI);
+		sb.append(" and T." + Tanim.COLUMN_NAME_KODU + " :" + fieldName);
+		sb.append(" where I." + IzinTipi.COLUMN_NAME_DURUM + " = 1");
+		fields.put(fieldName, tipler);
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<IzinTipi> list = pdksEntityController.getObjectByInnerObjectListInLogic(fields, IzinTipi.class);
+		List<IzinTipi> list = pdksEntityController.getSQLParamList(tipler, sb, fieldName, fields, IzinTipi.class, session);
+
 		return list;
 	}
 
@@ -848,6 +979,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 			}
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<Personel> personelList = pdksEntityController.getObjectByInnerObjectListInLogic(fields, Personel.class);
+
 			if (personelList.size() == 1) {
 				Personel personel = personelList.get(0);
 				if (personel.isCalisiyor() == false) {
@@ -871,14 +1003,10 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 			ArrayList<String> sicilNoList = ortakIslemler.getAramaPersonelSicilNo(aramaSecenekleri, Boolean.TRUE, istenAyrilanEkle, session);
 			// ArrayList<String> sicilNoList = ortakIslemler.getPersonelSicilNo(ad, soyad, sicilNo, sirket, seciliEkSaha1, seciliEkSaha2, seciliEkSaha3, seciliEkSaha4, Boolean.TRUE, istenAyrilanEkle, session);
 			if (sicilNoList != null) {
-				HashMap fields = new HashMap();
-				fields.put("id", aramaSecenekleri.getSirketId());
-				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				Sirket sirket = (Sirket) pdksEntityController.getObjectByInnerObject(fields, Sirket.class);
+				Sirket sirket = (Sirket) pdksEntityController.getSQLParamByFieldObject(Sirket.TABLE_NAME, Sirket.COLUMN_NAME_ID, aramaSecenekleri.getSirketId(), Sirket.class, session);
 				izinMap = ortakIslemler.senelikIzinListesiOlustur(sicilNoList, gecerlilikTarih, sirket, harcananIzinlerHepsi, Boolean.TRUE, iptalIzinleriGetir, session);
 
 			}
-
 		}
 		personelBakiyeIzinList.clear();
 		List<TempIzin> izinList = new ArrayList<TempIzin>(izinMap.values());
@@ -928,6 +1056,11 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 			}
 		}
 		izinMap = null;
+		for (Iterator iterator = izinList.iterator(); iterator.hasNext();) {
+			TempIzin kalanIzinler = (TempIzin) iterator.next();
+			if (kalanIzinler.getToplamBakiyeIzin() == 0.0d && kalanIzinler.getToplamKalanIzin() == 0.0d)
+				iterator.remove();
+		}
 		setPdksPersonelList(izinList);
 	}
 
@@ -1054,7 +1187,32 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İZİN BAŞL. TARİHİ");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İZİN BİTİŞ TARİHİ");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İZİN AÇIKLAMA");
+		boolean referansVar = false;
+		for (TempIzin tempIzin : pdksPersonelList) {
+			if (tempIzin.getYillikIzinler() == null)
+				continue;
+			for (PersonelIzin personelIzin : tempIzin.getYillikIzinler()) {
+				if (personelIzin.getHarcananIzinler() == null)
+					continue;
+				for (PersonelIzinDetay personelDetay : personelIzin.getHarcananIzinler()) {
+					if (PdksUtil.hasStringValue(personelDetay.getPersonelIzin().getReferansERP())) {
+						referansVar = true;
+						break;
+					}
+
+				}
+				if (referansVar)
+					break;
+
+			}
+			if (referansVar)
+				break;
+		}
+		if (referansVar)
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("REFERANS");
 		boolean renk = true;
+		LinkedHashMap<Long, List<PersonelIzin>> izinMap = new LinkedHashMap<Long, List<PersonelIzin>>();
+
 		for (TempIzin tempIzin : pdksPersonelList) {
 
 			boolean durum = tempIzin.getPersonel().getSirket().getDepartman().isAdminMi();
@@ -1083,9 +1241,9 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 					List<PersonelIzin> harcananlar = null;
 					if (personelIzin.getHarcananIzinler() != null && !personelIzin.getHarcananIzinler().isEmpty()) {
 						harcananlar = new ArrayList<PersonelIzin>();
-						for (PersonelIzinDetay personelIDetay : personelIzin.getHarcananIzinler()) {
-							if (personelIDetay.getPersonelIzin().getIzinDurumu() != PersonelIzin.IZIN_DURUMU_REDEDILDI && personelIDetay.getPersonelIzin().getIzinDurumu() != PersonelIzin.IZIN_DURUMU_SISTEM_IPTAL)
-								harcananlar.add(personelIDetay.getPersonelIzin());
+						for (PersonelIzinDetay personelDetay : personelIzin.getHarcananIzinler()) {
+							if (personelDetay.getPersonelIzin().getIzinDurumu() != PersonelIzin.IZIN_DURUMU_REDEDILDI && personelDetay.getPersonelIzin().getIzinDurumu() != PersonelIzin.IZIN_DURUMU_SISTEM_IPTAL)
+								harcananlar.add(personelDetay.getPersonelIzin());
 						}
 						if (!harcananlar.isEmpty()) {
 							if (harcananlar.size() > 1)
@@ -1097,12 +1255,16 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 					if (harcananlar != null) {
 						for (PersonelIzin personelIzinHarcanan : harcananlar) {
+							if (PdksUtil.hasStringValue(personelIzinHarcanan.getReferansERP()) && !izinMap.containsKey(personelIzin.getId()))
+								izinMap.put(personelIzin.getId(), harcananlar);
 							row++;
 							col = izinExcelBakiye(sheet, style, styleCenter, styleDate, row, oncekiHakedisTarihi, personelIzin);
 							ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(personelIzinHarcanan.getIzinSuresi());
 							ExcelUtil.getCell(sheet, row, col++, styleDateTime).setCellValue(PdksUtil.getDate(personelIzinHarcanan.getBaslangicZamani()));
 							ExcelUtil.getCell(sheet, row, col++, styleDateTime).setCellValue(PdksUtil.getDate(personelIzinHarcanan.getBitisZamani()));
-							ExcelUtil.getCell(sheet, row, col++, style).setCellValue(personelIzinHarcanan.getAciklama());
+							ExcelUtil.getCell(sheet, row, col++, style).setCellValue(personelIzinHarcanan.getAciklamaByReferans());
+							if (referansVar)
+								ExcelUtil.getCell(sheet, row, col++, style).setCellValue(PdksUtil.hasStringValue(personelIzinHarcanan.getReferansERP()) ? personelIzinHarcanan.getReferansERP() : "");
 							col = 0;
 						}
 
@@ -1113,6 +1275,8 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 						ExcelUtil.getCell(sheet, row, col++, styleCenter);
 						ExcelUtil.getCell(sheet, row, col++, styleCenter);
 						ExcelUtil.getCell(sheet, row, col++, styleCenter);
+						if (referansVar)
+							ExcelUtil.getCell(sheet, row, col++, styleCenter);
 
 					}
 					oncekiHakedisTarihi = (Date) personelIzin.getBitisZamani().clone();
@@ -1125,6 +1289,53 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		int[] dizi = new int[] { 1000, 2500, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 2500 };
 		for (int i = 0; i < dizi.length; i++)
 			sheet.setColumnWidth(i, (short) (dizi[i] * katsayi));
+		if (!izinMap.isEmpty()) {
+			Sheet sheetListe = ExcelUtil.createSheet(wb, "Izin Listesi", Boolean.TRUE);
+			row = 0;
+			col = 0;
+			ExcelUtil.getCell(sheetListe, row, col++, header).setCellValue(ortakIslemler.personelNoAciklama());
+			ExcelUtil.getCell(sheetListe, row, col++, header).setCellValue("ADI SOYADI");
+			ExcelUtil.getCell(sheetListe, row, col++, header).setCellValue("SÜRE");
+			ExcelUtil.getCell(sheetListe, row, col++, header).setCellValue("BAŞL. TARİHİ");
+			ExcelUtil.getCell(sheetListe, row, col++, header).setCellValue("BİTİŞ TARİHİ");
+			ExcelUtil.getCell(sheetListe, row, col++, header).setCellValue("AÇIKLAMA");
+			ExcelUtil.getCell(sheetListe, row, col++, header).setCellValue("REFERANS NO");
+			renk = true;
+			for (Long key : izinMap.keySet()) {
+				List<PersonelIzin> izinList = izinMap.get(key);
+				for (PersonelIzin personelIzin : izinList) {
+					++row;
+					col = 0;
+					CellStyle style = null, styleCenter = null, styleDate = null;
+					if (renk) {
+						styleDate = styleOddDate;
+						style = styleOdd;
+						styleCenter = styleOddCenter;
+					} else {
+						styleDate = styleEvenDate;
+						style = styleEven;
+						styleCenter = styleEvenCenter;
+					}
+					renk = !renk;
+
+					Personel personel = personelIzin.getIzinSahibi();
+					ExcelUtil.getCell(sheetListe, row, col++, styleCenter).setCellValue(personel.getPdksSicilNo().trim());
+					ExcelUtil.getCell(sheetListe, row, col++, style).setCellValue(personel.getAdSoyad());
+					ExcelUtil.getCell(sheetListe, row, col++, styleCenter).setCellValue(personelIzin.getIzinSuresi());
+					ExcelUtil.getCell(sheetListe, row, col++, styleDate).setCellValue(personelIzin.getBaslangicZamani());
+					ExcelUtil.getCell(sheetListe, row, col++, styleDate).setCellValue(personelIzin.getBitisZamani());
+					String referansERP = PdksUtil.hasStringValue(personelIzin.getReferansERP()) ? personelIzin.getReferansERP() : "";
+					String aciklama = referansERP != "" ? personelIzin.getAciklamaByReferans() : personelIzin.getAciklama();
+					ExcelUtil.getCell(sheetListe, row, col++, style).setCellValue(aciklama);
+					ExcelUtil.getCell(sheetListe, row, col++, style).setCellValue(referansERP);
+
+				}
+			}
+			for (int i = 0; i < col; i++) {
+				sheetListe.autoSizeColumn(i);
+			}
+		}
+		izinMap = null;
 		try {
 			baos = new ByteArrayOutputStream();
 			wb.write(baos);
@@ -1259,6 +1470,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 				int COL_IZIN_BAS_TARIH = 13;
 				int COL_IZIN_BIT_TARIH = 14;
 				int COL_IZIN_ACIKLAMA = 15;
+				int COL_IZIN_REFERANS = 16;
 				boolean listeEkle = false;
 				String perSicilNo = null;
 				TreeMap<String, HashMap<Integer, org.apache.poi.ss.usermodel.Cell>> hucreMap = new TreeMap<String, HashMap<Integer, org.apache.poi.ss.usermodel.Cell>>();
@@ -1311,13 +1523,12 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 							personel.setGrubaGirisTarihi(grubaGirisTarihi);
 							personel.setIseBaslamaTarihi(iseBaslamaTarihi);
 							personel.setDogumTarihi(dogumTarihi);
-
 							personel.setIzinHakEdisTarihi(izinHakEdisTarihi);
 							bosPersonelMap.put(perSicilNo, personel);
 							continue;
 						}
 						HashMap<Integer, org.apache.poi.ss.usermodel.Cell> veriMap = new HashMap<Integer, org.apache.poi.ss.usermodel.Cell>();
-						for (Integer col = 0; col <= COL_IZIN_ACIKLAMA; col++) {
+						for (Integer col = 0; col <= COL_IZIN_REFERANS; col++) {
 							org.apache.poi.ss.usermodel.Cell cell = ExcelUtil.getCell(sheet, row, col);
 							veriMap.put(col, cell);
 						}
@@ -1343,13 +1554,9 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 						String key = (String) iterator.next();
 						Personel personel = null;
 						if (!hucreMap.containsKey(key)) {
-							HashMap parametreMap = new HashMap();
 
-							parametreMap.put("pdksSicilNo", key);
-							if (session != null)
-								parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+							personel = (Personel) pdksEntityController.getSQLParamByFieldObject(Personel.TABLE_NAME, Personel.COLUMN_NAME_PDKS_SICIL_NO, key, Personel.class, session);
 
-							personel = (Personel) pdksEntityController.getObjectByInnerObject(parametreMap, Personel.class);
 							if (personel != null) {
 								Personel personelExcel = bosPersonelMap.get(key);
 								personel.setIzinHakEdisTarihi(personelExcel.getIzinHakEdisTarihi());
@@ -1415,12 +1622,8 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 								sicilNo = perSicilNo;
 								izinMap.clear();
 								personelIzinMap.clear();
-								HashMap parametreMap = new HashMap();
 
-								parametreMap.put("pdksSicilNo", perSicilNo);
-								if (session != null)
-									parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-								personel = (Personel) pdksEntityController.getObjectByInnerObject(parametreMap, Personel.class);
+								personel = (Personel) pdksEntityController.getSQLParamByFieldObject(Personel.TABLE_NAME, Personel.COLUMN_NAME_PDKS_SICIL_NO, perSicilNo, Personel.class, session);
 								fields.clear();
 								fields.put("izinSahibi.id", personel.getId());
 								fields.put("izinTipi", izinTipleri);
@@ -1630,6 +1833,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 								} catch (Exception e) {
 									aciklama = "";
 								}
+
 								if (baslangicZamani != null && bitisZamani != null) {
 									PersonelIzin personelKullanilanIzin = new PersonelIzin();
 									personelKullanilanIzin.setBaslangicZamani(baslangicZamani);
@@ -1640,6 +1844,19 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 									personelKullanilanIzin.setOlusturanUser(sistemAdminUser);
 									personelKullanilanIzin.setIzinSuresi(kullanilanIzinSuresi);
 									personelKullanilanIzin.setAciklama(aciklama);
+									String referansERP = "";
+									try {
+										if (izinTipiKullanilan.getPersonelGirisTipi().equals(IzinTipi.GIRIS_TIPI_YOK)) {
+											referansERP = ExcelUtil.getSheetStringValue((org.apache.poi.ss.usermodel.Cell) veriMap.get(COL_IZIN_REFERANS));
+											if (PdksUtil.hasStringValue(referansERP) == false)
+												referansERP = PersonelIzin.IZIN_MANUEL_EK + "_" + personelKullanilanIzin.getIzinSahibi().getPdksSicilNo() + PdksUtil.replaceAll(PdksUtil.convertToDateString(baslangicZamani, PersonelIzin.pattern).substring(0, 10), "-", "");
+											else
+												referansERP = referansERP + "_" + PersonelIzin.IZIN_MANUEL_EK;
+										}
+									} catch (Exception e) {
+										referansERP = "";
+									}
+									personelKullanilanIzin.setReferansERP(referansERP);
 									harcananDigerIzinler.add(personelKullanilanIzin);
 								}
 
@@ -1698,12 +1915,13 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 		List<IzinTipi> izinTipleri = pdksEntityController.getObjectByInnerObjectListInLogic(fields, IzinTipi.class);
-		List bakiyeIzinTipleri = new ArrayList<IzinTipi>();
+		List<Long> bakiyeIzinTipIdList = new ArrayList<Long>(), izinTipIdList = new ArrayList<Long>();
 
 		for (Iterator iterator = izinTipleri.iterator(); iterator.hasNext();) {
 			IzinTipi izinTipi = (IzinTipi) iterator.next();
 			if (izinTipi.getBakiyeIzinTipi() != null) {
-				bakiyeIzinTipleri.add(izinTipi);
+				bakiyeIzinTipIdList.add(izinTipi.getId());
+				izinTipIdList.add(izinTipi.getBakiyeIzinTipi().getId());
 				iterator.remove();
 			}
 
@@ -1724,7 +1942,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 			bakiyeIzinMap.clear();
 			izinMap.clear();
 			fields.put("izinSahibi.id", personelId);
-			fields.put("izinTipi", bakiyeIzinTipleri);
+			fields.put("izinTipi.id", bakiyeIzinTipIdList);
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<PersonelIzin> bakiyeIzinler = pdksEntityController.getObjectByInnerObjectList(fields, PersonelIzin.class);
@@ -1745,7 +1963,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 			fields.clear();
 			fields.put("izinSahibi.id=", personelId);
-			fields.put("izinTipi", izinTipleri);
+			fields.put("izinTipi.id", izinTipIdList);
 			fields.put("izinDurumu not ", izinDurumlari);
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -1760,7 +1978,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 					}
 					pdksEntityController.saveOrUpdate(session, entityManager, personelIzin);
 				}
-
+				List<IzinERP> izinERPList = new ArrayList<IzinERP>();
 				for (PersonelIzin hakEdisIzin : tempIzin.getYillikIzinler()) {
 					hakEdisIzin.setDevirIzin(hakEdisIzin.getBaslangicZamani().getTime() == PdksUtil.getBakiyeYil().getTime());
 					int bakiyeYil = PdksUtil.getDateField(hakEdisIzin.getBaslangicZamani(), Calendar.YEAR);
@@ -1786,24 +2004,42 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 					hakEdisIzin.setHesapTipi(PersonelIzin.HESAP_TIPI_GUN);
 					pdksEntityController.saveOrUpdate(session, entityManager, hakEdisIzin);
 					for (PersonelIzin personelIzin : hakEdisIzin.getHarcananDigerIzinler()) {
-						personelIzin.setHesapTipi(PersonelIzin.HESAP_TIPI_GUN);
-						personelIzin.setOlusturanUser(guncelleyenUser);
-						cal.setTime(personelIzin.getBaslangicZamani());
-						if (!PdksUtil.hasStringValue(personelIzin.getAciklama()))
-							personelIzin.setAciklama(personelIzin.getIzinTipi().getMesaj());
-						personelIzin.setIzinKagidiGeldi(Boolean.TRUE);
-						personelIzin.setIzinDurumu(PersonelIzin.IZIN_DURUMU_ONAYLANDI);
-						PersonelIzinDetay izinDetay = new PersonelIzinDetay();
-						izinDetay.setPersonelIzin(personelIzin);
-						izinDetay.setHakEdisIzin(hakEdisIzin);
-						izinDetay.setIzinMiktari(personelIzin.getIzinSuresi());
-						pdksEntityController.saveOrUpdate(session, entityManager, personelIzin);
-						pdksEntityController.saveOrUpdate(session, entityManager, izinDetay);
+						if (personelIzin.getIzinTipi().getPersonelGirisTipi().equals(IzinTipi.GIRIS_TIPI_YOK)) {
+							izinERPList.add(personelIzin.getIzinERP());
+
+						} else {
+
+							personelIzin.setHesapTipi(PersonelIzin.HESAP_TIPI_GUN);
+							personelIzin.setOlusturanUser(guncelleyenUser);
+							cal.setTime(personelIzin.getBaslangicZamani());
+							if (!PdksUtil.hasStringValue(personelIzin.getAciklama()))
+								personelIzin.setAciklama(personelIzin.getIzinTipi().getMesaj());
+							personelIzin.setIzinKagidiGeldi(Boolean.TRUE);
+							personelIzin.setIzinDurumu(PersonelIzin.IZIN_DURUMU_ONAYLANDI);
+							PersonelIzinDetay izinDetay = new PersonelIzinDetay();
+							izinDetay.setPersonelIzin(personelIzin);
+							izinDetay.setHakEdisIzin(hakEdisIzin);
+							// izinDetay.setIzinMiktari(personelIzin.getIzinSuresi());
+							pdksEntityController.saveOrUpdate(session, entityManager, personelIzin);
+							pdksEntityController.saveOrUpdate(session, entityManager, izinDetay);
+						}
 					}
 					// session.refresh(hakEdisIzin);
 
 				}
-				if (!izinMap.isEmpty()) {
+				if (!izinERPList.isEmpty()) {
+					try {
+						PdksSoapVeriAktar service = ortakIslemler.getPdksSoapVeriAktar();
+						List<IzinERP> izinERPReturnList = service.saveIzinler(izinERPList);
+						if (izinERPReturnList != null) {
+
+						}
+
+					} catch (Exception e) {
+						// TODO: handle exception
+					}
+
+				} else if (!izinMap.isEmpty()) {
 					bakiyeIzinler = new ArrayList<PersonelIzin>(izinMap.values());
 					for (Iterator iterator = bakiyeIzinler.iterator(); iterator.hasNext();) {
 						PersonelIzin personelIzin = (PersonelIzin) iterator.next();
@@ -1897,17 +2133,8 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		Personel pdksPersonel = tempIzin.getPersonel();
 		setUpdateTempIzin(tempIzin);
 		HashMap fields = new HashMap();
-		fields.put("id", tempIzin.getIzinler().clone());
-		if (pdksPersonel.getSirket().getDepartman().isAdminMi()) {
-			if (bakiyeIzinGoster)
-				fields.put("baslangicZamani>=", PdksUtil.getBakiyeYil());
-			else
-				fields.put("baslangicZamani>", PdksUtil.getBakiyeYil());
-		}
 
-		if (session != null)
-			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<PersonelIzin> list = tempIzin.getIzinler().isEmpty() ? new ArrayList<PersonelIzin>() : pdksEntityController.getObjectByInnerObjectListInLogic(fields, PersonelIzin.class);
+		List<PersonelIzin> list = getIzinList(tempIzin);
 		List<PersonelIzin> izinList1 = new ArrayList<PersonelIzin>();
 		Calendar cal = Calendar.getInstance();
 		cal.set(Calendar.MONTH, Calendar.JANUARY);
@@ -2232,6 +2459,22 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 	public static void setSayfaURL(String sayfaURL) {
 		PersonelKalanIzinHome.sayfaURL = sayfaURL;
+	}
+
+	public PersonelIzin getManuelIzin() {
+		return manuelIzin;
+	}
+
+	public void setManuelIzin(PersonelIzin manuelIzin) {
+		this.manuelIzin = manuelIzin;
+	}
+
+	public boolean isManuelIzinGuncelle() {
+		return manuelIzinGuncelle;
+	}
+
+	public void setManuelIzinGuncelle(boolean manuelIzinGuncelle) {
+		this.manuelIzinGuncelle = manuelIzinGuncelle;
 	}
 
 }

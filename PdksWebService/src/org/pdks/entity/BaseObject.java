@@ -16,6 +16,7 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.pdks.genel.model.PdksUtil;
+import org.pdks.security.entity.User;
 
 @MappedSuperclass
 public abstract class BaseObject extends BasePDKSObject implements Serializable, Cloneable {
@@ -35,7 +36,7 @@ public abstract class BaseObject extends BasePDKSObject implements Serializable,
 	protected Boolean durum = Boolean.TRUE, guncellendi;
 	protected User guncelleyenUser, olusturanUser;
 	protected Date olusturmaTarihi = new Date(), guncellemeTarihi;
-	protected boolean checkBoxDurum = Boolean.FALSE;
+	protected boolean checkBoxDurum = Boolean.FALSE, degisti = Boolean.FALSE;
 
 	@Column(name = COLUMN_NAME_DURUM)
 	public Boolean getDurum() {
@@ -135,6 +136,15 @@ public abstract class BaseObject extends BasePDKSObject implements Serializable,
 	@Transient
 	public Boolean isGuncellendi() {
 		return guncellendi != null && guncellendi.booleanValue();
+	}
+
+	@Transient
+	public boolean isDegisti() {
+		return degisti;
+	}
+
+	public void setDegisti(boolean degisti) {
+		this.degisti = degisti;
 	}
 
 	@Transient

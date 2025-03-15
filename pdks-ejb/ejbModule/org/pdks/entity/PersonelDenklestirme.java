@@ -1,7 +1,9 @@
 package org.pdks.entity;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.persistence.CascadeType;
@@ -51,8 +53,11 @@ public class PersonelDenklestirme extends BaseObject {
 	public static final String COLUMN_NAME_KISMI_ODEME_SAAT = "KISMI_ODEME_SAAT";
 	public static final String COLUMN_NAME_PERSONEL_NO = "PERSONEL_NO";
 	public static final String COLUMN_NAME_EKSIK_CALISMA_SURE = "EKSIK_CALISMA_SURE";
+	public static final String COLUMN_NAME_GECEN_AY_DENKLESTIRME = "GECEN_AY_DENKLESTIRME_ID";
 
 	public static double calismaSaatiSua = 7.0d, calismaSaatiPartTime = 4.5d;
+
+	public double isAramaIzniSaat;
 
 	private Integer version = 0;
 
@@ -68,7 +73,7 @@ public class PersonelDenklestirme extends BaseObject {
 
 	private VardiyaGun izinVardiyaGun;
 
-	private PersonelDonemselDurum sutIzniPersonelDonemselDurum, gebePersonelDonemselDurum;
+	// private PersonelDonemselDurum sutIzniPersonelDonemselDurum, gebePersonelDonemselDurum, isAramaPersonelDonemselDurum;
 
 	private Double planlanSure = 0d, eksikCalismaSure = 0d, hesaplananSure = 0d, resmiTatilSure = 0d, haftaCalismaSuresi = 0d, fazlaMesaiSure = 0d, odenenSure = 0d;
 
@@ -76,9 +81,12 @@ public class PersonelDenklestirme extends BaseObject {
 
 	private Integer egitimSuresiAksamGunSayisi;
 
-	private Boolean suaDurum, fazlaMesaiIzinKullan = Boolean.FALSE, fazlaMesaiOde, sutIzniDurum, partTime;
+	private Boolean suaDurum, fazlaMesaiIzinKullan = Boolean.FALSE, fazlaMesaiOde, sutIzniDurum, partTime, bakiyeSifirlaDurum = Boolean.FALSE;
 
 	private boolean erpAktarildi = Boolean.FALSE, onaylandi = Boolean.FALSE, denklestirme;
+
+	// private HashMap<PersonelDurumTipi, PersonelDonemselDurum> donemselDurumMap = new HashMap<PersonelDurumTipi, PersonelDonemselDurum>();
+	private HashMap<PersonelDurumTipi, List<PersonelDonemselDurum>> donemselDurumlarMap = new HashMap<PersonelDurumTipi, List<PersonelDonemselDurum>>();
 
 	private String mesaj;
 
@@ -87,16 +95,27 @@ public class PersonelDenklestirme extends BaseObject {
 		this.setGuncellendi(null);
 	}
 
-	public PersonelDenklestirme(Personel pdksPersonel, DenklestirmeAy denklestirmeAy, CalismaModeliAy cmAy) {
+	/**
+	 * @param pdksPersonel
+	 * @param da
+	 * @param cmAy
+	 */
+	public PersonelDenklestirme(Personel pdksPersonel, DenklestirmeAy da, CalismaModeliAy cmAy) {
 		super();
 		this.setPersonel(pdksPersonel);
-		this.denklestirmeAy = denklestirmeAy;
+		if (da == null && cmAy != null)
+			da = cmAy.getDenklestirmeAy();
+		this.denklestirmeAy = da;
 		this.calismaModeliAy = cmAy;
 		if (cmAy != null) {
 			CalismaModeli cm = cmAy.getCalismaModeli();
 			this.onaylandi = cm.isIlkPlanOnaylidir() || cm.isFazlaMesaiVarMi() == false;
 			if (cm.isFazlaMesaiVarMi() == false)
 				this.fazlaMesaiOde = false;
+		}
+		if (da != null && pdksPersonel.getFazlaMesaiOde() == false && (da.getDenklestirmeDevret() == null || da.getDenklestirmeDevret().booleanValue())) {
+			this.fazlaMesaiOde = false;
+			this.fazlaMesaiIzinKullan = true;
 		}
 
 		this.setGuncellendi(Boolean.FALSE);
@@ -159,7 +178,7 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH)
-	@JoinColumn(name = "GECEN_AY_DENKLESTIRME_ID")
+	@JoinColumn(name = COLUMN_NAME_GECEN_AY_DENKLESTIRME)
 	@Fetch(FetchMode.JOIN)
 	public PersonelDenklestirme getPersonelDenklestirmeGecenAy() {
 		return personelDenklestirmeGecenAy;
@@ -478,24 +497,38 @@ public class PersonelDenklestirme extends BaseObject {
 
 	/**
 	 * @param cm
+	 * @param gebePersonelDonemselDurum
 	 * @param vardiyalar
 	 * @return
 	 */
-	private double getPlananSureHesapla(CalismaModeli cm, List<VardiyaGun> vardiyalar) {
+	private double getPlananSureHesapla(CalismaModeli cm, PersonelDonemselDurum gebePersonelDonemselDurum, List<VardiyaGun> vardiyalar) {
 		double sure = 0.0d, gun = cm.getHaftaIci();
+		Double sutIzniSabitSaat = null;
+		if (cm.getSutIzniSabitSaat() != null && cm.getSutIzniSabitSaat().doubleValue() > 0.0d)
+			sutIzniSabitSaat = cm.getSutIzniSabitSaat();
 		for (VardiyaGun vg : vardiyalar) {
+			double sureGunlukSut = sutIzniSabitSaat == null ? cm.getSutIzinSaat(PdksUtil.getDateField(vg.getVardiyaDate(), Calendar.DAY_OF_WEEK)) : sutIzniSabitSaat;
 			Tatil tatil = vg.getTatil();
 			Vardiya vardiya = vg.getVardiya();
-			double gunPlanSure = gun, sutIzniSure = 0.0d;
+			double gunPlanSure = gebePersonelDonemselDurum == null ? gun : cm.getSaat(PdksUtil.getDateField(vg.getVardiyaDate(), Calendar.DAY_OF_WEEK)), sutIzniSure = 0.0d;
 			if (vg.isSutIzniVar()) {
-				sutIzniSure = gunPlanSure <= 9.0d ? cm.getSutIzinSaat(PdksUtil.getDateField(vg.getVardiyaDate(), Calendar.DAY_OF_WEEK)) : 7.5d;
+				sutIzniSure = gunPlanSure <= 9.0d ? sureGunlukSut : 7.5d;
 				gunPlanSure = sutIzniSure;
+				logger.debug(vg.getVardiyaDateStr() + " Sut İzni " + gunPlanSure + " ");
+			} else if (vg.isGebePersonelDonemselDurum()) {
+				sutIzniSure = gunPlanSure > 7.5d ? 7.5d : gunPlanSure;
+				gunPlanSure = sutIzniSure;
+				logger.debug(vg.getVardiyaDateStr() + " Gebe " + gunPlanSure + " ");
+			} else if (isSuaDurumu()) {
+				sutIzniSure = gunPlanSure > 7.5d ? 7.5d : gunPlanSure;
+				gunPlanSure = AylikPuantaj.getGunlukCalismaSuresi();
+				logger.debug(vg.getVardiyaDateStr() + " Şua " + gunPlanSure + " ");
 			}
 			if (vg.isAyinGunu() && vardiya != null && vardiya.getId() != null) {
-				boolean hesapla = !(vg.isIzinli() || vardiya.isHaftaTatil() || tatil != null);
+				boolean hesapla = !(vg.isIzinli() || vardiya.isHaftaTatil() || tatil != null || (isSuaDurumu() && vardiya.isOff()));
 				if (!hesapla) {
 					gunPlanSure = 0;
-					if (vardiya.isHaftaTatil() == false && tatil != null && tatil.isYarimGunMu()) {
+					if (vardiya.isHaftaTatil() == false && tatil != null && tatil.isYarimGunMu() && vg.isIzinli() == false) {
 						gunPlanSure = cm.getArife();
 						if (sutIzniSure > 0.0d && gunPlanSure > sutIzniSure)
 							gunPlanSure = sutIzniSure;
@@ -518,21 +551,25 @@ public class PersonelDenklestirme extends BaseObject {
 	@Transient
 	public Double getMaksimumSure(double izinSure, double arifeToplamSure, List<VardiyaGun> vardiyalar) {
 		CalismaModeli cm = calismaModeliAy != null ? calismaModeliAy.getCalismaModeli() : personel.getCalismaModeli();
+		PersonelDonemselDurum gebePersonelDonemselDurum = getGebePersonelDonemselDurum(), sutIzniPersonelDonemselDurum = getSutIzniPersonelDonemselDurum();
+		isAramaIzniSaat = 0.0d;
+		if (donemselDurumlarMap.containsKey(PersonelDurumTipi.IS_ARAMA_IZNI) && personel != null && personel.getIsAramaGunlukSaat() > 0.0d)
+			isAramaIzniSaat = personel.getIsAramaGunlukSaat();
 		double aylikSure = calismaModeliAy != null ? calismaModeliAy.getSure() : denklestirmeAy.getSure();
-		double aylikSutSure = calismaModeliAy != null ? calismaModeliAy.getToplamIzinSure() : denklestirmeAy.getToplamIzinSure();
+
+		double aylikSutSure = calismaModeliAy != null && calismaModeliAy.getToplamIzinSure() > 0.0d ? calismaModeliAy.getToplamIzinSure() : denklestirmeAy.getToplamIzinSure();
 		if (calismaModeliAy != null && cm.getToplamGunGuncelle() && sutIzniSaatSayisi > 0)
 			aylikSure = sutIzniSaatSayisi;
-		else if (cm.isHaftaTatilSabitDegil() || sutIzniPersonelDonemselDurum != null) {
-			aylikSure = getPlananSureHesapla(cm, vardiyalar);
+		else if (cm.isHaftaTatilSabitDegil() || sutIzniPersonelDonemselDurum != null || gebePersonelDonemselDurum != null) {
+			aylikSure = getPlananSureHesapla(cm, gebePersonelDonemselDurum, vardiyalar);
 			if (sutIzniPersonelDonemselDurum != null)
 				aylikSutSure = aylikSure;
+		} else {
+			if (izinSure > 0.0d && aylikSure >= izinSure)
+				aylikSure -= izinSure;
 		}
-
-		else if (izinSure > 0.0d)
-			aylikSure -= izinSure;
-
 		Double gunlukCalismaSuresi = calismaModeliAy != null ? AylikPuantaj.getGunlukCalismaSuresi() : null;
-		if (isSuaDurumu()) {
+		if (isSuaDurumu() || (cm != null && cm.isSua())) {
 			aylikSure = aylikSureHesapla(aylikSure - arifeToplamSure, calismaSuaSaati, gunlukCalismaSuresi) + arifeToplamSure;
 		} else if (isPartTimeDurumu()) {
 			aylikSure = aylikSureHesapla(aylikSure - arifeToplamSure, calismaSaatiPartTime, gunlukCalismaSuresi) + arifeToplamSure;
@@ -540,8 +577,36 @@ public class PersonelDenklestirme extends BaseObject {
 
 		double sutIzniSure = sutIzniSaatSayisi != null && sutIzniSaatSayisi.doubleValue() > 0.0d && sutIzniSaatSayisi.doubleValue() != aylikSutSure ? sutIzniSaatSayisi.doubleValue() : aylikSutSure;
 		double maxSure = sutIzniDurum == null || sutIzniDurum.equals(Boolean.FALSE) || planlanSure == 0 ? aylikSure : sutIzniSure;
-
+		if (isAramaIzniSaat > 0.0d) {
+			double isAramaSure = getIsAramaSure(vardiyalar);
+			maxSure -= isAramaSure;
+		}
 		return maxSure;
+	}
+
+	/**
+	 * @param vardiyalar
+	 * @return
+	 */
+	private double getIsAramaSure(List<VardiyaGun> vardiyalar) {
+		double isAramaSure = 0.0d;
+		for (VardiyaGun vg : vardiyalar) {
+			Vardiya vardiya = vg.getVardiya();
+			if (vg.isAyinGunu() && vardiya != null && vardiya.getId() != null) {
+				// if (vg.getVardiyaDateStr().endsWith("1209"))
+				// logger.debug("");
+				if (vg.getIsAramaIzmiPersonelDonemselDurum()) {
+					double sure = 0.0d;
+					Tatil tatil = vg.getTatil();
+					boolean hesapla = !(vg.isIzinli() || vardiya.isHaftaTatil() || tatil != null);
+					if (hesapla)
+						sure = isAramaIzniSaat;
+					isAramaSure += sure;
+				}
+
+			}
+		}
+		return isAramaSure;
 	}
 
 	/**
@@ -596,7 +661,10 @@ public class PersonelDenklestirme extends BaseObject {
 
 	@Transient
 	public boolean isSuaDurumu() {
-		return suaDurum != null && suaDurum.booleanValue();
+		boolean sd = suaDurum != null && suaDurum.booleanValue();
+		if (!sd && calismaModeliAy != null)
+			sd = calismaModeliAy.getCalismaModeli() != null && calismaModeliAy.getCalismaModeli().isSua();
+		return sd;
 	}
 
 	@Transient
@@ -635,14 +703,6 @@ public class PersonelDenklestirme extends BaseObject {
 			key += "_" + personel.getPdksSicilNo();
 		}
 		return key;
-	}
-
-	public static double getCalismaSaatiPartTime() {
-		return calismaSaatiPartTime;
-	}
-
-	public static void setCalismaSaatiPartTime(double calismaSaatiPartTime) {
-		PersonelDenklestirme.calismaSaatiPartTime = calismaSaatiPartTime;
 	}
 
 	@Transient
@@ -697,14 +757,6 @@ public class PersonelDenklestirme extends BaseObject {
 		this.calismaSuaSaati = calismaSuaSaati;
 	}
 
-	public static double getCalismaSaatiSua() {
-		return calismaSaatiSua;
-	}
-
-	public static void setCalismaSaatiSua(double calismaSaatiSua) {
-		PersonelDenklestirme.calismaSaatiSua = calismaSaatiSua;
-	}
-
 	public void entityRefresh() {
 		if (this.getBaseObject() != null) {
 			PersonelDenklestirme pd = (PersonelDenklestirme) this.getBaseObject();
@@ -731,21 +783,143 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	@Transient
-	public PersonelDonemselDurum getSutIzniPersonelDonemselDurum() {
-		return sutIzniPersonelDonemselDurum;
+	public PersonelDonemselDurum getPersonelDonemselDurum(PersonelDurumTipi key) {
+		PersonelDonemselDurum personelDonemselDurum = null;
+		if (key != null && donemselDurumlarMap.containsKey(key))
+			personelDonemselDurum = donemselDurumlarMap.get(key).get(0);
+		return personelDonemselDurum;
 	}
 
-	public void setSutIzniPersonelDonemselDurum(PersonelDonemselDurum sutIzniPersonelDonemselDurum) {
-		this.sutIzniPersonelDonemselDurum = sutIzniPersonelDonemselDurum;
+	@Transient
+	public PersonelDonemselDurum getSutIzniPersonelDonemselDurum() {
+		PersonelDonemselDurum sutIzniPersonelDonemselDurum = getPersonelDonemselDurum(PersonelDurumTipi.SUT_IZNI);
+		return sutIzniPersonelDonemselDurum;
 	}
 
 	@Transient
 	public PersonelDonemselDurum getGebePersonelDonemselDurum() {
+		PersonelDonemselDurum gebePersonelDonemselDurum = getPersonelDonemselDurum(PersonelDurumTipi.GEBE);
 		return gebePersonelDonemselDurum;
 	}
 
-	public void setGebePersonelDonemselDurum(PersonelDonemselDurum gebePersonelDonemselDurum) {
-		this.gebePersonelDonemselDurum = gebePersonelDonemselDurum;
+	@Transient
+	public PersonelDonemselDurum getIsAramaPersonelDonemselDurum() {
+		PersonelDonemselDurum isAramaPersonelDonemselDurum = getPersonelDonemselDurum(PersonelDurumTipi.IS_ARAMA_IZNI);
+		return isAramaPersonelDonemselDurum;
+	}
+
+	public void setSutIzniPersonelDonemselDurum(PersonelDonemselDurum value) {
+		addPersonelDonemselDurum(PersonelDurumTipi.SUT_IZNI, value);
+	}
+
+	public void setGebePersonelDonemselDurum(PersonelDonemselDurum value) {
+		addPersonelDonemselDurum(PersonelDurumTipi.GEBE, value);
+	}
+
+	public void setIsAramaPersonelDonemselDurum(PersonelDonemselDurum value) {
+		addPersonelDonemselDurum(PersonelDurumTipi.IS_ARAMA_IZNI, value);
+	}
+
+	/**
+	 * @param key
+	 * @param value
+	 */
+	public void addPersonelDonemselDurum(PersonelDurumTipi key, PersonelDonemselDurum value) {
+		if (key != null) {
+			if (value != null) {
+				List<PersonelDonemselDurum> list = donemselDurumlarMap.containsKey(key) ? donemselDurumlarMap.get(key) : new ArrayList<PersonelDonemselDurum>();
+				if (list.isEmpty())
+					donemselDurumlarMap.put(key, list);
+				list.add(value);
+			} else {
+				if (donemselDurumlarMap.containsKey(key))
+					donemselDurumlarMap.remove(key);
+			}
+		}
+	}
+
+	@Transient
+	public String getGebeDurumAciklama() {
+		String str = getDurumAciklama(PersonelDurumTipi.GEBE);
+		return str;
+	}
+
+	@Transient
+	public String getSutIzniDurumAciklama() {
+		String str = getDurumAciklama(PersonelDurumTipi.SUT_IZNI);
+		return str;
+	}
+
+	@Transient
+	public String getIsAramaIzniDurumAciklama() {
+		String str = getDurumAciklama(PersonelDurumTipi.IS_ARAMA_IZNI);
+		return str;
+	}
+
+	@Transient
+	public String getDurumAciklama(PersonelDurumTipi key) {
+		StringBuffer sb = new StringBuffer();
+		PersonelDonemselDurum personelDonemselDurum = null;
+		if (key != null && donemselDurumlarMap.containsKey(key)) {
+			String pattern = PdksUtil.getDateFormat();
+			List<PersonelDonemselDurum> list = donemselDurumlarMap.get(key);
+			for (PersonelDonemselDurum pdd : list) {
+				personelDonemselDurum = pdd;
+				if (sb.length() > 0)
+					sb.append(", ");
+				sb.append(PdksUtil.convertToDateString(pdd.getBasTarih(), pattern) + " - " + PdksUtil.convertToDateString(pdd.getBitTarih(), pattern));
+			}
+		}
+		String str = "";
+		if (personelDonemselDurum != null) {
+			str = sb.toString();
+			str = "<B>" + personelDonemselDurum.getPersonelDurumTipiAciklama() + " " + (str.indexOf(",") > 0 ? "Dönemleri" : "Dönemi") + " : </B>" + str;
+		}
+		sb = null;
+		return str;
+	}
+
+	@Transient
+	public HashMap<PersonelDurumTipi, List<PersonelDonemselDurum>> getDonemselDurumlarMap() {
+		return donemselDurumlarMap;
+	}
+
+	public void setDonemselDurumlarMap(HashMap<PersonelDurumTipi, List<PersonelDonemselDurum>> donemselDurumlarMap) {
+		this.donemselDurumlarMap = donemselDurumlarMap;
+	}
+
+	public static double getCalismaSaatiSua() {
+		return calismaSaatiSua;
+	}
+
+	public static void setCalismaSaatiSua(double calismaSaatiSua) {
+		PersonelDenklestirme.calismaSaatiSua = calismaSaatiSua;
+	}
+
+	public static double getCalismaSaatiPartTime() {
+		return calismaSaatiPartTime;
+	}
+
+	public static void setCalismaSaatiPartTime(double calismaSaatiPartTime) {
+		PersonelDenklestirme.calismaSaatiPartTime = calismaSaatiPartTime;
+	}
+
+	@Transient
+	public double getIsAramaIzniSaat() {
+		return isAramaIzniSaat;
+	}
+
+	public void setIsAramaIzniSaat(double isAramaIzniSaat) {
+		this.isAramaIzniSaat = isAramaIzniSaat;
+	}
+
+	@Transient
+	public Boolean getBakiyeSifirlaDurum() {
+		return bakiyeSifirlaDurum;
+	}
+
+	public void setBakiyeSifirlaDurum(Boolean bakiyeSifirlaDurum) {
+		this.bakiyeSifirlaDurum = bakiyeSifirlaDurum;
 	}
 
 }

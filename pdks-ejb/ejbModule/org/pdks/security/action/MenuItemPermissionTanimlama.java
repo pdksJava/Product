@@ -305,7 +305,7 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 			}
 			if (!selectedRolFromDataTableList.isEmpty()) {
 				if (saveRolsAndMenuItemsAsAccountPermission() != null)
-					startupAction.fillStartMethod(authenticatedUser, session);
+					startupAction.fillStartMethod(authenticatedUser, true, session);
 			} else
 				PdksUtil.addMessageWarn("Yetkilendirilecek rol seçiniz!");
 		} else
@@ -346,7 +346,7 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 			}
 			if (!selectedRolFromDataTableList.isEmpty()) {
 				if (deleteMenuItemsAndRolesFromAccountPermission() != null)
-					startupAction.fillStartMethod(authenticatedUser, session);
+					startupAction.fillStartMethod(authenticatedUser, true, session);
 			} else
 				PdksUtil.addMessageWarn("Yetkilendirilecek rol seçiniz!");
 		} else
@@ -514,6 +514,7 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 	 * @param tempRoleFromDataTable
 	 * @param tempMenuItemFromTree
 	 */
+
 	private void altMenuBilesenlerindenYetkileriCikar(ArrayList<AccountPermission> deleteAccountPermissionList, HashMap parametreMap, Role tempRoleFromDataTable, MenuItem tempMenuItemFromTree) {
 		String key;
 		for (MenuItem childOfTempMenuItemFromTree : tempMenuItemFromTree.getChildMenuItemListSirali()) {
@@ -694,17 +695,11 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 		// permissionun ait oldugu menuitem bulunur.
 		HashMap parametreMap = new HashMap();
 
-		parametreMap.put("name", selectedAccPermission.getTarget());
-		if (session != null)
-			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-		MenuItem menuItem = (MenuItem) pdksEntityController.getObjectByInnerObject(parametreMap, MenuItem.class, "");
-		// permissionun ait oldugu rol bulunur.
-		parametreMap.clear();
+		MenuItem menuItem = (MenuItem) pdksEntityController.getSQLParamByFieldObject(MenuItem.TABLE_NAME, MenuItem.COLUMN_NAME_ADI, selectedAccPermission.getTarget(), MenuItem.class, session);
 
-		parametreMap.put("rolename", selectedAccPermission.getRecipient());
-		if (session != null)
-			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-		Role rol = (Role) pdksEntityController.getObjectByInnerObject(parametreMap, Role.class, "");
+		// permissionun ait oldugu rol bulunur.
+
+		Role rol = (Role) pdksEntityController.getSQLParamByFieldObject(Role.TABLE_NAME, Role.COLUMN_NAME_ROLE_NAME, selectedAccPermission.getRecipient(), Role.class, session);
 
 		// permissionlar cekilir ve mape konur.
 		parametreMap.clear();
@@ -732,7 +727,7 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 				pdksEntityController.saveOrUpdate(session, entityManager, accountPermission);
 			}
 			session.flush();
-			startupAction.fillStartMethod(authenticatedUser, session);
+			startupAction.fillStartMethod(authenticatedUser, true, session);
 		}
 
 		getSelectedMenuItemFromTreeList().clear();

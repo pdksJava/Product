@@ -33,6 +33,7 @@ import org.jboss.seam.annotations.async.IntervalCron;
 import org.jboss.seam.async.QuartzTriggerHandle;
 import org.jboss.seam.faces.Renderer;
 import org.pdks.entity.CalismaModeli;
+import org.pdks.entity.Departman;
 import org.pdks.entity.Dosya;
 import org.pdks.entity.HareketKGS;
 import org.pdks.entity.Kapi;
@@ -52,8 +53,10 @@ import org.pdks.entity.Tatil;
 import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGun;
 import org.pdks.security.entity.DefaultPasswordGenerator;
+import org.pdks.security.entity.OrganizasyonTipi;
 import org.pdks.security.entity.Role;
 import org.pdks.security.entity.User;
+import org.pdks.security.entity.UserDigerOrganizasyon;
 import org.pdks.security.entity.UserVekalet;
 import org.pdks.session.ExcelUtil;
 import org.pdks.session.OrtakIslemler;
@@ -98,7 +101,7 @@ public class IseGelmemeUyari implements Serializable {
 	private String hataKonum, personelNoAciklama, tesisAciklama, bolumAciklama, altBolumAciklama, yoneticiAciklama, calismaModeliBaslikAciklama;
 
 	private boolean statuGoster = Boolean.FALSE, hariciPersonelVar, yoneticiTanimsiz = Boolean.FALSE, yoneticiMailGonderme = Boolean.FALSE, izinVar = Boolean.FALSE, tesisVar = Boolean.FALSE, hataliHareketVar = Boolean.FALSE;
-
+	private boolean izinDahil = false;
 	private Tanim ekSaha1, ekSaha2, ekSaha3, ekSaha4;
 	private CellStyle header = null;
 	private CellStyle styleOdd = null;
@@ -120,6 +123,7 @@ public class IseGelmemeUyari implements Serializable {
 	private HashMap<Long, List<Long>> yoneticiPerListMap;
 	private HashMap<Long, List<HareketKGS>> perHareketListMap;
 	private TreeMap<Long, User> userYoneticiMap;
+	private HashMap<Long, List<Long>> userTesisMap;
 
 	/**
 	 * @param sessionx
@@ -185,9 +189,9 @@ public class IseGelmemeUyari implements Serializable {
 		try {
 			HashMap fields = new HashMap();
 			StringBuffer sb = new StringBuffer();
-			sb.append("SELECT P.*   FROM " + Personel.TABLE_NAME + " P WITH(nolock) ");
-			sb.append(" where P." + Personel.COLUMN_NAME_DURUM + " = 1 AND P." + Personel.COLUMN_NAME_HAREKET_MAIL_ID + " IS NOT NULL");
-			sb.append(" AND P." + Personel.COLUMN_NAME_MAIL_TAKIP + " = 1 AND P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
+			sb.append("select P.* from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK() + " ");
+			sb.append(" where P." + Personel.COLUMN_NAME_DURUM + " = 1 and P." + Personel.COLUMN_NAME_HAREKET_MAIL_ID + " is not null");
+			sb.append(" and P." + Personel.COLUMN_NAME_MAIL_TAKIP + " = 1 and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			// fields.put("ad", "hareketMailGrubu");
@@ -248,7 +252,7 @@ public class IseGelmemeUyari implements Serializable {
 		String yoneticiTanimsizStr = ortakIslemler.getParameterKey("yoneticiTanimsiz");
 		yoneticiTanimsiz = PdksUtil.hasStringValue(yoneticiTanimsizStr);
 		boolean devam = tarih == null;
-
+		userTesisMap = null;
 		if (tarih == null)
 			tarih = (Date) bugun.clone();
 		else
@@ -342,7 +346,7 @@ public class IseGelmemeUyari implements Serializable {
 					// Vardiya kayıtları okunuyor
 					TreeMap<String, VardiyaGun> vardiyalar = ortakIslemler.getIslemVardiyalar(personeller, oncekiGun, sonrakiGun, Boolean.FALSE, session, Boolean.TRUE);
 					try {
-						boolean islem = ortakIslemler.getVardiyaHareketIslenecekList(new ArrayList<VardiyaGun>(vardiyalar.values()), tarih, session);
+						boolean islem = ortakIslemler.getVardiyaHareketIslenecekList(new ArrayList<VardiyaGun>(vardiyalar.values()), tarih, tarih, session);
 						if (islem)
 							vardiyalar = ortakIslemler.getIslemVardiyalar(personeller, oncekiGun, sonrakiGun, Boolean.FALSE, session, Boolean.TRUE);
 
@@ -439,6 +443,13 @@ public class IseGelmemeUyari implements Serializable {
 						}
 
 					}
+					if (izinDahil == false) {
+						for (Iterator iterator2 = vardiyaList.iterator(); iterator2.hasNext();) {
+							VardiyaGun pdksVardiyaGun = (VardiyaGun) iterator2.next();
+							if (pdksVardiyaGun.getIzin() != null && (pdksVardiyaGun.getHareketler() == null || pdksVardiyaGun.getHareketler().isEmpty()))
+								iterator2.remove();
+						}
+					}
 					if (!vardiyaList.isEmpty()) {
 						TreeMap<String, Object> dataMap = new TreeMap<String, Object>();
 						try {
@@ -452,10 +463,6 @@ public class IseGelmemeUyari implements Serializable {
 							dataMap.remove("hareketPersonelMap");
 						TreeMap<String, List<VardiyaGun>> hareketHataliMap = new TreeMap<String, List<VardiyaGun>>();
 						TreeMap<String, List<String>> mailPersonelMap = (TreeMap<String, List<String>>) dataMap.get("mailPersonelMap");
-						map.clear();
-						map.put(PdksEntityController.MAP_KEY_SESSION, session);
-						map.put("name", "ikUyariCC");
-						map.put("active", Boolean.TRUE);
 
 						map.clear();
 						map.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -640,6 +647,8 @@ public class IseGelmemeUyari implements Serializable {
 								fillEkSahaTanim(session);
 								hareketPersonelMap = null;
 								dataMap.put("hareketHataliMap", hareketHataliMap);
+								if (mailPersonelMap != null && !dataMap.containsKey("mailPersonelMap"))
+									dataMap.put("mailPersonelMap", mailPersonelMap);
 								yoneticiyeMailGonder(islemYapan, userMap, yoneticiMap, dataMap, manuel, session, mailGonder);
 							}
 
@@ -668,6 +677,7 @@ public class IseGelmemeUyari implements Serializable {
 	 * @param session
 	 */
 	private void yoneticiyeMailGonder(User islemYapan, TreeMap<Long, User> userMap, HashMap<Long, Personel> yoneticiMap, TreeMap<String, Object> dataMap, boolean manuel, Session session, boolean mailGonder) throws Exception {
+		HashMap<Long, HashMap<String, HashMap<String, List<User>>>> ikMap = new HashMap<Long, HashMap<String, HashMap<String, List<User>>>>();
 		if (yoneticiMap != null && !yoneticiMap.isEmpty()) {
 			TreeMap<String, List<VardiyaGun>> hareketHataliMap = (TreeMap<String, List<VardiyaGun>>) dataMap.get("hareketHataliMap");
 			if (hareketHataliMap == null)
@@ -675,6 +685,8 @@ public class IseGelmemeUyari implements Serializable {
 			TreeMap<String, List<String>> mailPersonelMap = (TreeMap<String, List<String>>) dataMap.get("mailPersonelMap");
 			if (mailPersonelMap == null)
 				mailPersonelMap = new TreeMap<String, List<String>>();
+			dataMap.put("hareketHataliMap", hareketHataliMap);
+			dataMap.put("mailPersonelMap", mailPersonelMap);
 			List<Personel> yoneticiler = new ArrayList<Personel>(yoneticiMap.values());
 			boolean hareketExcelGonder = PdksUtil.hasStringValue(hareketExcelGonderDurum);
 			if (hareketExcelGonder) {
@@ -708,14 +720,36 @@ public class IseGelmemeUyari implements Serializable {
 			String renderAdres = "/email/" + (PdksUtil.getTestDurum() == false ? "iseGelisUyariMail.xhtml" : "iseGelisUyariTestMail.xhtml");
 			List<User> mailIKList = new ArrayList<User>();
 			yoneticiMailGonderme = ortakIslemler.getParameterKey("yoneticiMailGonderme").equals("1");
+			boolean ikMailGonderme = ortakIslemler.getParameterKey("ikMailGonderme").equals("1");
+			if (ikMailGonderme && userTesisMap == null) {
+				HashMap fields = new HashMap();
+				StringBuffer sb = new StringBuffer();
+				sb.append("select UR.* from " + UserDigerOrganizasyon.TABLE_NAME + " UR " + PdksEntityController.getSelectLOCK());
+				sb.append(" where " + UserDigerOrganizasyon.COLUMN_NAME_TIPI + " = " + OrganizasyonTipi.TESIS.value());
+				if (session != null)
+					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+				List<UserDigerOrganizasyon> digerOrganizasyonsList = pdksEntityController.getObjectBySQLList(sb, fields, UserDigerOrganizasyon.class);
+				userTesisMap = new HashMap<Long, List<Long>>();
+				for (UserDigerOrganizasyon userDigerOrganizasyon : digerOrganizasyonsList) {
+					User user = userDigerOrganizasyon.getUser();
+					if (user == null || user.isDurum() == false || user.getPdksPersonel().isCalisiyor() == false)
+						continue;
+					Long key = user.getId();
+					List<Long> tesisList = userTesisMap.containsKey(key) ? userTesisMap.get(key) : new ArrayList<Long>();
+					if (tesisList.isEmpty()) {
+						if (user.getPdksPersonel().getTesis() != null)
+							tesisList.add(user.getPdksPersonel().getTesis().getId());
+						userTesisMap.put(key, tesisList);
+					}
+					if (!tesisList.contains(userDigerOrganizasyon.getOrganizasyon().getId()))
+						tesisList.add(userDigerOrganizasyon.getOrganizasyon().getId());
+				}
+			}
 			HashMap<Long, List<User>> depMail = new HashMap<Long, List<User>>();
 
 			for (Iterator iterator = yoneticiler.iterator(); iterator.hasNext();) {
 				Personel personelYonetici = (Personel) iterator.next();
-				if (!personelYonetici.isCalisiyor()) {
-					iterator.remove();
-					continue;
-				}
+				boolean yoneticiCalisiyor = personelYonetici.isCalisiyor();
 				List<Long> depMailList = new ArrayList<Long>();
 				String eposta = null;
 				try {
@@ -730,12 +764,15 @@ public class IseGelmemeUyari implements Serializable {
 						yonetici = (User) user.clone();
 						yonetici.setYetkiliRollerim(yetkiliRollerim);
 					} else
-						continue;
+						yoneticiCalisiyor = false;
 
 					eposta = yonetici != null ? yonetici.getEmail() : "";
 					List<VardiyaGun> personelVardiyalari = personelYonetici.getPersonelVardiyalari();
-					if (personelVardiyalari == null)
+					if (personelVardiyalari == null) {
 						personelVardiyalari = new ArrayList<VardiyaGun>();
+						personelYonetici.setPersonelVardiyalari(personelVardiyalari);
+					}
+
 					List<String> hariciPersoneller = mailPersonelMap.containsKey(eposta) ? mailPersonelMap.get(eposta) : new ArrayList<String>();
 					hariciPersonelVar = !hariciPersoneller.isEmpty() && eposta.indexOf("@") > 0;
 					if (hariciPersonelVar) {
@@ -751,9 +788,6 @@ public class IseGelmemeUyari implements Serializable {
 						}
 						if (!ikMailList.contains(eposta))
 							mailPersonelMap.remove(eposta);
-						else
-							logger.debug(eposta);
-
 					}
 					hariciPersoneller = null;
 					mailIKList.clear();
@@ -767,11 +801,9 @@ public class IseGelmemeUyari implements Serializable {
 						else
 							userIKList = new ArrayList<User>();
 						if (yonetici != null && yonetici.isSuperVisor() && personelYonetici.getYoneticisi() != null && personelYonetici.getYoneticisi().isCalisiyor()) {
-							HashMap fields = new HashMap();
-							if (session != null)
-								fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-							fields.put("pdksPersonel.id", personelYonetici.getYoneticisi().getId());
-							User yoneticiDiger = (User) pdksEntityController.getObjectByInnerObject(fields, User.class);
+
+							User yoneticiDiger = (User) pdksEntityController.getSQLParamByFieldObject(User.TABLE_NAME, User.COLUMN_NAME_PERSONEL, personelYonetici.getYoneticisi().getId(), User.class, session);
+
 							if (yoneticiDiger != null && yoneticiDiger.isDurum()) {
 								ortakIslemler.setUserRoller(yoneticiDiger, session);
 								if (yoneticiDiger.isYoneticiKontratli())
@@ -779,10 +811,12 @@ public class IseGelmemeUyari implements Serializable {
 							}
 						}
 						Personel yoneticisi = (Personel) yoneticiMap.get(yoneticisiId).clone();
-
+						HashMap<Long, String> map = new HashMap<Long, String>();
 						for (VardiyaGun pdksVardiyaGun : personelVardiyalari) {
-							Long departmanId = pdksVardiyaGun.getPersonel().getSirket().getDepartman().getId();
-							String mailBoxStr = pdksVardiyaGun.getPersonel().getSirket().getDepartman().getMailBox();
+							Departman departman = pdksVardiyaGun.getPersonel().getSirket().getDepartman();
+							Long departmanId = departman.getId();
+							String mailBoxStr = map.containsKey(departmanId) ? map.get(departmanId) : departman.getMailBox();
+							List<Long> personelIdList = null;
 							if (mailBoxStr != null && mailBoxStr.indexOf("@") > 0) {
 								if (!depMailList.contains(departmanId)) {
 									depMailList.add(departmanId);
@@ -797,6 +831,15 @@ public class IseGelmemeUyari implements Serializable {
 											if (!ikMailList.contains(mail) && mail.indexOf("@") > 0)
 												ikMailList.add(mail);
 										}
+										String sb = ortakIslemler.adresDuzelt(mailList);
+										mailBox = sb.indexOf("@") > 0 ? sb : null;
+										if (mailBox == null || !mailBox.equalsIgnoreCase(mailBoxStr)) {
+											mailBoxStr = mailBox;
+											departman.setMailBox(mailBoxStr);
+											session.saveOrUpdate(departman);
+											session.flush();
+										}
+										map.put(departmanId, mailBoxStr);
 										if (!mailList.isEmpty()) {
 											List<User> aktifUserList = ortakIslemler.getAktifMailUser(mailBox, session);
 											for (User userYonetici : aktifUserList) {
@@ -804,6 +847,7 @@ public class IseGelmemeUyari implements Serializable {
 												list.add(userYonetici);
 											}
 										}
+
 										TreeMap<String, User> userYoneticilerMap = null;
 										if (!mailList.isEmpty()) {
 											userYoneticilerMap = ortakIslemler.getUserRoller(islemTarihi, mailList, session);
@@ -816,42 +860,106 @@ public class IseGelmemeUyari implements Serializable {
 											if (yoneticiUser == null) {
 												yoneticiUser = new User();
 												yoneticiUser.setEmail(mail);
+											} else if (ikMailGonderme && yoneticiUser.getPdksPersonel() != null) {
+												if (personelIdList == null)
+													personelIdList = new ArrayList<Long>();
+												personelIdList.add(yoneticiUser.getPersonelId());
 											}
+
 											list.add(yoneticiUser);
 										}
 										depMail.put(departmanId, list);
+
 									}
 								}
+
+							}
+
+							Personel personel = pdksVardiyaGun.getPersonel();
+							String sicilNo = personel.getPdksSicilNo();
+							if (ikMailGonderme) {
+								HashMap<String, HashMap<String, List<User>>> ikSorguMap = null;
+								if (ikMap.containsKey(departmanId) == false) {
+									ikSorguMap = ortakIslemler.getIKRollerUser(personelIdList, departmanId, session);
+									ikMap.put(departmanId, ikSorguMap);
+									personelIdList = null;
+								} else
+									ikSorguMap = ikMap.get(departmanId);
+								if (ikSorguMap != null) {
+									for (String rolAdi : ikSorguMap.keySet()) {
+										boolean ikRol = rolAdi.equals(Role.TIPI_IK);
+										HashMap<String, List<User>> userIKMap = ikSorguMap.get(rolAdi);
+										String perKey = rolAdi;
+										if (ikRol == false)
+											perKey = (rolAdi.equals(Role.TIPI_IK_SIRKET) ? "" + personel.getSirket().getId() : (personel.getTesis() != null ? String.valueOf(personel.getTesis().getId()) : ""));
+										if (userIKMap.containsKey(perKey)) {
+											List<User> userList = userIKMap.get(perKey);
+											for (User userIK : userList) {
+												String mailIK = userIK.getEmail();
+												if (ikRol) {
+													boolean ekle = true;
+													if (mailIKList == null)
+														mailIKList = new ArrayList<User>();
+													for (User user : mailIKList) {
+														if (user.getId() != null && user.getId().equals(userIK.getId()))
+															ekle = false;
+
+													}
+													if (ekle)
+														mailIKList.add(userIK);
+												}
+												List<String> list = mailPersonelMap.containsKey(mailIK) ? mailPersonelMap.get(mailIK) : new ArrayList<String>();
+												if (!ikMailList.contains(mailIK))
+													ikMailList.add(mailIK);
+												if (list.isEmpty())
+													mailPersonelMap.put(mailIK, list);
+												if (!list.contains(sicilNo))
+													list.add(sicilNo);
+
+											}
+
+										}
+
+									}
+								}
+							}
+							personelIdList = null;
+							boolean ekle = true;
+							List<VardiyaGun> vList = hareketHataliMap.containsKey(sicilNo) ? hareketHataliMap.get(sicilNo) : new ArrayList<VardiyaGun>();
+							String key = pdksVardiyaGun.getSortBolumKey();
+							for (VardiyaGun vardiyaGun : vList) {
+								if (vardiyaGun.getSortBolumKey().equals(key)) {
+									ekle = false;
+									break;
+								}
+							}
+							if (ekle) {
+								if (vList.isEmpty())
+									hareketHataliMap.put(sicilNo, vList);
+								vList.add(pdksVardiyaGun);
 
 							}
 							if (depMail.containsKey(departmanId)) {
 								List<User> yoneticiList = depMail.get(departmanId);
-								String sicilNo = pdksVardiyaGun.getPersonel().getPdksSicilNo();
-								List<VardiyaGun> vList = hareketHataliMap.containsKey(sicilNo) ? hareketHataliMap.get(sicilNo) : new ArrayList<VardiyaGun>();
-								boolean ekle = true;
-								String key = pdksVardiyaGun.getSortBolumKey();
-								for (VardiyaGun vardiyaGun : vList) {
-									if (vardiyaGun.getSortBolumKey().equals(key)) {
-										ekle = false;
-										break;
+								if (ekle) {
+									for (Iterator iterator2 = yoneticiList.iterator(); iterator2.hasNext();) {
+										User user2 = (User) iterator2.next();
+										String mailIK = user2.getEmail();
+										List<String> list = mailPersonelMap.containsKey(mailIK) ? mailPersonelMap.get(mailIK) : new ArrayList<String>();
+										if (list.isEmpty())
+											mailPersonelMap.put(mailIK, list);
+										if (!list.contains(sicilNo))
+											list.add(sicilNo);
 									}
-								}
-								if (vList.isEmpty())
-									hareketHataliMap.put(sicilNo, vList);
 
-								if (ekle)
-									vList.add(pdksVardiyaGun);
-								for (Iterator iterator2 = yoneticiList.iterator(); iterator2.hasNext();) {
-									User user2 = (User) iterator2.next();
-									String mailIK = user2.getEmail();
-									List<String> list = mailPersonelMap.containsKey(mailIK) ? mailPersonelMap.get(mailIK) : new ArrayList<String>();
-									if (list.isEmpty())
-										mailPersonelMap.put(mailIK, list);
-									if (!list.contains(sicilNo))
-										list.add(sicilNo);
 								}
 							}
 
+						}
+						if (yoneticiCalisiyor == false) {
+							if (personelYonetici != null)
+								logger.info(personelYonetici.getPdksSicilNo() + " " + personelYonetici.getAdSoyad());
+							continue;
 						}
 						User user = yonetici != null ? (User) yonetici.clone() : null;
 						if (user == null || !user.isDurum() || !user.getPdksPersonel().isCalisiyor()) {
@@ -878,9 +986,10 @@ public class IseGelmemeUyari implements Serializable {
 						statuGoster = Boolean.FALSE;
 						ekSahaAlanAdi = "ekSaha" + ekSahaAlanNo;
 						MailStatu mailSatu = null;
+
 						try {
 
-							if (mailGonder && !mailPersonelMap.containsKey(yonetici.getEmail())) {
+							if (yoneticiCalisiyor && mailGonder && !mailPersonelMap.containsKey(yonetici.getEmail())) {
 								baslikAyarla(userYonetici.getPdksPersonel());
 
 								mailSatu = mailGonder(renderAdres, false, session);
@@ -991,56 +1100,61 @@ public class IseGelmemeUyari implements Serializable {
 	 */
 	private MailStatu mailGonder(String renderAdres, boolean hariciGonder, Session session) throws Exception {
 		MailStatu mailSatu = null;
-		MailObject mail = new MailObject();
-		boolean devam = true;
-		if (yoneticiMailGonderme == false || hariciGonder) {
-			if (userYonetici.getPdksPersonel() == null || userYonetici.getPdksPersonel().isCalisiyor())
-				mail.getToList().add(userYonetici.getMailPersonel());
-			if (userUstYonetici != null && hariciGonder == false)
-				if (userUstYonetici.getPdksPersonel() == null || userUstYonetici.getPdksPersonel().isCalisiyor())
-					mail.getCcList().add(userUstYonetici.getMailPersonel());
-			devam = !mail.getToList().isEmpty();
-		} else
-			devam = ikMailList.contains(userYonetici.getStaffId());
-		if (devam) {
-			List<VardiyaGun> list = userYonetici.getPdksPersonel().getPersonelVardiyalari();
-			mail.setSubject("Giriş-Çıkış problemli personeller");
-			StringBuffer sb = new StringBuffer();
-			sb.append("<p>Sayın " + userYonetici.getAdSoyad() + "</p>");
-			if (list != null && !list.isEmpty()) {
-				sb.append("<p>Aşağıdaki personel giriş çıkışlarında problem vardır.</p>");
-				sb.append("<p></p>");
-				sb.append("<p>Saygılarımla,</p>");
-				sb.append("<p></p>");
-			}
+		List<VardiyaGun> list = userYonetici.getPdksPersonel().getPersonelVardiyalari();
+		if (list != null && list.isEmpty() == false) {
+			MailObject mail = new MailObject();
+			boolean devam = true;
+			if (yoneticiMailGonderme == false || hariciGonder) {
+				if (userYonetici.getPdksPersonel() == null || userYonetici.getPdksPersonel().isCalisiyor())
+					mail.getToList().add(userYonetici.getMailPersonel());
+				if (userUstYonetici != null && hariciGonder == false)
+					if (userUstYonetici.getPdksPersonel() == null || userUstYonetici.getPdksPersonel().isCalisiyor())
+						mail.getCcList().add(userUstYonetici.getMailPersonel());
+				devam = !mail.getToList().isEmpty();
+			} else
+				devam = ikMailList.contains(userYonetici.getStaffId());
 
-			Workbook wb = new XSSFWorkbook();
-			if (mesajIcerikOlustur(userYonetici, sb, list, null, wb, session)) {
-				userYoneticiList.add(userYonetici);
-				if (list == null || list.isEmpty()) {
+			if (devam) {
+				mail.setSubject("Giriş-Çıkış problemli personeller");
+				StringBuffer sb = new StringBuffer();
+				sb.append("<p>Sayın " + userYonetici.getAdSoyad() + "</p>");
+				if (list != null && !list.isEmpty()) {
+					sb.append("<p>Aşağıdaki personel giriş çıkışlarında problem vardır.</p>");
 					sb.append("<p></p>");
 					sb.append("<p>Saygılarımla,</p>");
+					sb.append("<p></p>");
 				}
 
-				if (uyariNot != null)
-					sb.append(uyariNot.getValue());
-				mail.setBody(sb.toString());
-				try {
-					if (tesisYetki && tesisVar)
-						mail.getCcList().clear();
-					ByteArrayOutputStream baos = new ByteArrayOutputStream();
-					wb.write(baos);
-					MailFile mailFile = new MailFile();
-					mailFile.setIcerik(baos.toByteArray());
-					mailFile.setDisplayName("Işe Gelmeme Durum_" + PdksUtil.convertToDateString(islemTarihi, "yyyyMMdd") + ".xlsx");
-					mail.getAttachmentFiles().add(mailFile);
-					mailSatu = ortakIslemler.mailSoapServisGonder(true, mail, renderer, renderAdres, session);
-				} catch (Exception e) {
-					logger.error(e);
-					e.printStackTrace();
+				Workbook wb = new XSSFWorkbook();
+				if (mesajIcerikOlustur(userYonetici, sb, list, null, wb, session)) {
+					userYoneticiList.add(userYonetici);
+					if (list == null || list.isEmpty()) {
+						sb.append("<p></p>");
+						sb.append("<p>Saygılarımla,</p>");
+					}
+
+					if (uyariNot != null)
+						sb.append(uyariNot.getValue());
+					mail.setBody(sb.toString());
+					try {
+						if (tesisYetki && tesisVar)
+							mail.getCcList().clear();
+						ByteArrayOutputStream baos = new ByteArrayOutputStream();
+						wb.write(baos);
+						MailFile mailFile = new MailFile();
+						mailFile.setIcerik(baos.toByteArray());
+						mailFile.setDisplayName("Işe Gelmeme Durum_" + PdksUtil.convertToDateString(islemTarihi, "yyyyMMdd") + ".xlsx");
+						mail.getAttachmentFiles().add(mailFile);
+						mailSatu = ortakIslemler.mailSoapServisGonder(true, mail, renderer, renderAdres, session);
+					} catch (Exception e) {
+						logger.error(e);
+						e.printStackTrace();
+					}
+				} else {
+					if (userYonetici != null)
+						logger.error("");
 				}
 			}
-
 		}
 
 		return mailSatu;
@@ -1060,11 +1174,13 @@ public class IseGelmemeUyari implements Serializable {
 		try {
 			if (wb == null)
 				wb = new XSSFWorkbook();
+			if (user != null)
+				PdksUtil.setUserYetki(user);
 			boolean userIK = user != null ? user.isIK() || user.isGenelMudur() : false;
 			if (userIK) {
 				userIK = false;
 				for (Role role : user.getYetkiliRollerim()) {
-					if (role.getRolename().equals(Role.TIPI_IK) || role.getRolename().equals(Role.TIPI_GENEL_MUDUR)) {
+					if (role.getRolename().equals(Role.TIPI_IK) || role.getRolename().equals(Role.TIPI_IK_SIRKET) || role.getRolename().equals(Role.TIPI_IK_Tesis) || role.getRolename().equals(Role.TIPI_GENEL_MUDUR)) {
 						userIK = true;
 						break;
 					}
@@ -1144,6 +1260,7 @@ public class IseGelmemeUyari implements Serializable {
 			if (vardiyaGunList != null && !vardiyaGunList.isEmpty()) {
 
 				for (VardiyaGun vardiyaGun : vardiyaGunList) {
+
 					Personel personel = vardiyaGun.getPersonel();
 					if (map1 != null) {
 						String vardiyaKey = user.getId() + "_" + vardiyaGun.getVardiyaKeyStr();
@@ -1476,7 +1593,10 @@ public class IseGelmemeUyari implements Serializable {
 			} else {
 				if (hareketExcelEkle)
 					sb.append("<p><SPAN style='color:blue;'> Personel giriş çıkışlarında problem yoktur.</SPAN></p>");
+				else if (user.getId() != null)
+					logger.info(user.getAdSoyad() + " " + user.getUsername());
 			}
+
 			if (hareketExcelEkle && !yoneticiPerIdList.isEmpty()) {
 				TreeMap<String, Liste> listeMap = new TreeMap<String, Liste>();
 				List<Long> sirketIdList = new ArrayList<Long>(), tesisIdList = new ArrayList<Long>(), altBolumIdList = new ArrayList<Long>(), calismaModeliIdList = new ArrayList<Long>();
@@ -1484,10 +1604,42 @@ public class IseGelmemeUyari implements Serializable {
 				Sirket sirket = null;
 				Tanim tesis = null, bolum = null, altBolum = null;
 				boolean hariciPersonelPlandaVar = false;
-
+				List<Long> userTesisIdList = userTesisMap != null && userTesisMap.containsKey(user.getId()) ? userTesisMap.get(user.getId()) : null;
 				for (Long perNoId : yoneticiPerIdList) {
 					if (perHareketListMap.containsKey(perNoId)) {
 						List<HareketKGS> hareketList = perHareketListMap.get(perNoId);
+						if (user.isIK_Tesis() || user.isIKSirket() || userTesisIdList != null) {
+							if (user.getPdksPersonel() != null) {
+								Long tesisId = user.getPdksPersonel().getTesis() != null ? user.getPdksPersonel().getTesis().getId() : 0L;
+								Long sirketId = user.getPdksPersonel().getSirket() != null ? user.getPdksPersonel().getSirket().getId() : 0L;
+								for (Iterator iterator = hareketList.iterator(); iterator.hasNext();) {
+									HareketKGS hareketKGS = (HareketKGS) iterator.next();
+									boolean sil = false;
+									if (hareketKGS != null) {
+										VardiyaGun vg = hareketKGS.getVardiyaGun();
+										if (vg != null) {
+											Personel personel = vg.getPdksPersonel();
+											if (personel != null) {
+												if (userTesisIdList != null) {
+													if (personel.getTesis() == null || !userTesisIdList.contains(personel.getTesis().getId()))
+														sil = true;
+												} else if (user.isIK_Tesis()) {
+													if (personel.getTesis() == null || !tesisId.equals(personel.getTesis().getId()))
+														sil = true;
+												} else if (user.isIKSirket()) {
+													if (personel.getSirket() == null || !sirketId.equals(personel.getSirket().getId()))
+														sil = true;
+												}
+											}
+
+										}
+
+									}
+									if (sil)
+										iterator.remove();
+								}
+							}
+						}
 						if (!hareketList.isEmpty()) {
 							HareketKGS hareketKGS = hareketList.get(0);
 							VardiyaGun vg = hareketKGS.getVardiyaGun();
@@ -1812,16 +1964,22 @@ public class IseGelmemeUyari implements Serializable {
 				boolean zamanTamam = PdksUtil.zamanKontrolDurum();
 				// zamanTamam = true;
 				if (zamanTamam && PdksUtil.getCanliSunucuDurum()) {
+					izinDahil = true;
 					// logger.error("Ise gelme durumu " + PdksUtil.getCurrentTimeStampStr());
 					session = PdksUtil.getSession(entityManager, Boolean.TRUE);
 					hataKonum = "Paramatre okunuyor ";
 					Parameter parameter = ortakIslemler.getParameter(session, PARAMETER_KEY);
+					if (parameter == null) {
+						parameter = ortakIslemler.getParameter(session, PARAMETER_KEY + "IzinHaric");
+						izinDahil = parameter == null;
+					}
+
 					String value = (parameter != null) ? parameter.getValue() : null;
 					hataKonum = "Paramatre okundu ";
 					if (value != null) {
 						hataGonder = Boolean.TRUE;
 						hataKonum = "Zaman kontrolu yapılıyor ";
-						Date time = zamanlayici.getDbTime(session);
+						Date time = ortakIslemler.getBugun();
 						boolean zamanDurum = PdksUtil.getTestDurum() == false && PdksUtil.zamanKontrol(PARAMETER_KEY, value, time) && ortakIslemler.getGuncellemeDurum(PdksLog.TABLE_NAME, session);
 						// if (!zamanDurum)
 						// zamanDurum = PdksUtil.getTestDurum();
@@ -1862,7 +2020,6 @@ public class IseGelmemeUyari implements Serializable {
 	 */
 	public String iseGelmemeDurumuCalistir(Date tarih, Session session, User islemYapan, boolean manuel, boolean mailGonder) throws Exception {
 		uyariNot = null;
-
 		if (userYoneticiList == null)
 			userYoneticiList = new ArrayList<User>();
 		else
@@ -1882,15 +2039,15 @@ public class IseGelmemeUyari implements Serializable {
 			MailObject mail = new MailObject();
 			HashMap fields = new HashMap();
 			sb = new StringBuffer();
-			sb.append("WITH BUGUN AS ( ");
-			sb.append("		select 1 AS ID ");
+			sb.append("with BUGUN as ( ");
+			sb.append("		select 1 as ID ");
 			sb.append("	),");
-			sb.append("	DEP_YONETICI AS (");
-			sb.append("		SELECT R.ROLENAME DEP_YONETICI_ROL_ADI FROM " + Role.TABLE_NAME + " R WITH(nolock)");
-			sb.append("		WHERE R." + Role.COLUMN_NAME_ROLE_NAME + " = '" + Role.TIPI_DIREKTOR_SUPER_VISOR + "' AND R." + Role.COLUMN_NAME_STATUS + " = 1 ");
+			sb.append("	DEP_YONETICI as (");
+			sb.append("		select R.ROLENAME DEP_YONETICI_ROL_ADI from " + Role.TABLE_NAME + " R " + PdksEntityController.getSelectLOCK() + " ");
+			sb.append(" where R." + Role.COLUMN_NAME_ROLE_NAME + " = '" + Role.TIPI_DIREKTOR_SUPER_VISOR + "' and R." + Role.COLUMN_NAME_STATUS + " = 1 ");
 			sb.append("	) ");
-			sb.append("	SELECT COALESCE(DY.DEP_YONETICI_ROL_ADI,'') DEP_YONETICI_ROL_ADI, GETDATE() AS TARIH FROM BUGUN B ");
-			sb.append("	LEFT JOIN DEP_YONETICI DY WITH(nolock) ON 1=1");
+			sb.append("	select COALESCE(DY.DEP_YONETICI_ROL_ADI,'') DEP_YONETICI_ROL_ADI, GETDATE() as TARIH from BUGUN B ");
+			sb.append("	left join DEP_YONETICI DY " + PdksEntityController.getJoinLOCK() + " on 1=1");
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<Object[]> veriList = pdksEntityController.getObjectBySQLList(sb, fields, null);
@@ -1909,19 +2066,22 @@ public class IseGelmemeUyari implements Serializable {
 				User user = (User) iterator.next();
 				List<VardiyaGun> list = user.getPdksPersonel().getPersonelVardiyalari();
 				Long key = user.getId();
-				if (userMap.containsKey(key)) {
+				if (userMap.containsKey(key) && list != null) {
 					User user2 = userMap.get(key);
 					List<VardiyaGun> list2 = user2.getPdksPersonel().getPersonelVardiyalari();
-					for (VardiyaGun vardiyaGun : list) {
-						boolean ekle = true;
-						for (VardiyaGun vardiyaGun2 : list2) {
-							if (vardiyaGun2.getId().equals(vardiyaGun.getId())) {
-								ekle = false;
-								break;
+					if (list2 != null) {
+						for (VardiyaGun vardiyaGun : list) {
+							boolean ekle = true;
+							for (VardiyaGun vardiyaGun2 : list2) {
+								if (vardiyaGun2.getId().equals(vardiyaGun.getId())) {
+									ekle = false;
+									break;
+								}
 							}
+
+							if (ekle)
+								list2.add(vardiyaGun);
 						}
-						if (ekle)
-							list2.add(vardiyaGun);
 					}
 					iterator.remove();
 				} else if (list != null && !list.isEmpty())

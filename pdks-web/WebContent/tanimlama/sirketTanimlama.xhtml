@@ -50,14 +50,14 @@
 							<f:facet name="header">
 								<h:outputText value="Grup Adı" />
 							</f:facet>
-							<ui:fragment rendered="#{sirket.sirketGrup!=null}">
+							<ui:fragment rendered="#{sirket.sirketGrup != null}">
 								<h:outputText value="#{sirket.sirketGrup.aciklama}" />
 							</ui:fragment>
 						</rich:column>
 
 						<rich:column rendered="#{authenticatedUser.admin or authenticatedUser.IKAdmin}">
 							<f:facet name="header">
-								<h:outputText value="PDKS Departman" />
+								<h:outputText value="#{ortakIslemler.firmaKaynagiAciklama()}" />
 							</f:facet>
 							<h:outputText value="#{sirket.departman.departmanTanim.aciklama}" />
 						</rich:column>
@@ -92,7 +92,7 @@
 							</f:facet>
 							<h:outputText value="#{authenticatedUser.getYesNo(sirket.fazlaMesai)}" />
 						</rich:column>
-						<rich:column rendered="#{ortakIslemler.getParameterKey('uygulamaTipi')=='H'}">
+						<rich:column rendered="#{ortakIslemler.getParameterKey('uygulamaTipi') == 'H'}">
 							<f:facet name="header">
 								<h:outputText value="Şua Olabilir" />
 							</f:facet>
@@ -104,13 +104,19 @@
 							</f:facet>
 							<h:outputText value="#{authenticatedUser.getYesNo(sirket.fazlaMesaiOde)}" />
 						</rich:column>
-						<rich:column rendered="#{ortakIslemler.getParameterKey('fazlaMesaiTalepDurum')=='1'}">
+						<rich:column>
+							<f:facet name="header">
+								<h:outputText value="İzin Kartı Var" />
+							</f:facet>
+							<h:outputText value="#{authenticatedUser.getYesNo(sirket.izinKartiVar)}" />
+						</rich:column>
+						<rich:column rendered="#{ortakIslemler.getParameterKey('fazlaMesaiTalepDurum') == '1'}">
 							<f:facet name="header">
 								<h:outputText value="Fazla Mesai Talep" />
 							</f:facet>
 							<h:outputText value="#{authenticatedUser.getYesNo(sirket.fazlaMesaiTalepGirilebilir)}" />
 						</rich:column>
-						<s:decorate template="/layout/edit.xhtml" rendered="#{ortakIslemler.getParameterKey('fazlaMesaiTalepDurum')=='1'}">
+						<s:decorate template="/layout/edit.xhtml" rendered="#{ortakIslemler.getParameterKey('fazlaMesaiTalepDurum') == '1'}">
 							<ui:define name="label">Fazla Mesai Talep</ui:define>
 							<h:selectBooleanCheckbox value="#{departmanHome.instance.fazlaMesaiTalepGirilebilir}" />
 						</s:decorate>
@@ -120,6 +126,27 @@
 							</f:facet>
 							<h:outputText value="#{authenticatedUser.getYesNo(sirket.istenAyrilmaTarihindeCalisiyor)}" />
 						</rich:column>
+						<rich:column rendered="#{authenticatedUser.admin}">
+							<f:facet name="header">
+								<h:outputText value="İş Arama Günlük Saat" />
+							</f:facet>
+							<h:outputText value="#{authenticatedUser.sayiFormatliGoster(sirket.isAramaGunlukSaat)}" />
+						</rich:column>
+						<c:if test="#{sirketHome.erpDatabaseDurum and authenticatedUser.admin}">
+							<rich:column>
+								<f:facet name="header">
+									<h:outputText value="ERP Database Adı" />
+								</f:facet>
+								<h:outputText value="#{sirket.databaseAdiERP}" />
+							</rich:column>
+							<rich:column>
+								<f:facet name="header">
+									<h:outputText value="ERP Database Koud" />
+								</f:facet>
+								<h:outputText value="#{sirket.databaseKoduERP}" />
+							</rich:column>
+						</c:if>
+
 						<rich:column rendered="#{ortakIslemler.tesisDurumu and authenticatedUser.admin}">
 							<f:facet name="header">
 								<h:outputText value="#{ortakIslemler.tesisAciklama()} Durumu" />
@@ -189,9 +216,9 @@
 							</s:decorate>
 							<s:decorate template="/layout/edit.xhtml"
 								rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin) and not empty sirketHome.departmanList}">
-								<ui:define name="label">PDKS Departman</ui:define>
-								<h:selectOneMenu required="true" id="toComp" value="#{sirketHome.seciliSirket.departman}" disabled="#{sirketHome.departmanList.size()==1}"
-									requiredMessage="PDKS Departman giriniz">
+								<ui:define name="label">#{ortakIslemler.firmaKaynagiAciklama()}</ui:define>
+								<h:selectOneMenu required="true" id="toComp" value="#{sirketHome.seciliSirket.departman}" disabled="#{sirketHome.departmanList.size() == 1}"
+									requiredMessage="#{ortakIslemler.firmaKaynagiAciklama()} giriniz">
 									<s:selectItems var="comp" value="#{sirketHome.departmanList}" label="#{comp.departmanTanim.aciklama}" noSelectionLabel="Lütfen seçiniz" />
 									<s:convertEntity />
 								</h:selectOneMenu>
@@ -216,6 +243,17 @@
 											<a4j:support event="onchange" status="ajaxStatus" />
 										</h:selectOneMenu>
 									</s:decorate>
+									<c:if test="#{sirketHome.erpDatabaseDurum and authenticatedUser.admin}">
+										<s:decorate template="/layout/edit.xhtml">
+											<ui:define name="label">ERP Database Adı</ui:define>
+											<h:inputText value="#{sirketHome.seciliSirket.databaseAdiERP}" size="15" maxlength="128" />
+										</s:decorate>
+										<s:decorate template="/layout/edit.xhtml">
+											<ui:define name="label">ERP Database Kodu</ui:define>
+											<h:inputText value="#{sirketHome.seciliSirket.databaseKoduERP}" size="15" maxlength="32" />
+										</s:decorate>
+
+									</c:if>
 								</c:if>
 								<s:decorate template="/layout/edit.xhtml">
 									<ui:define name="label">LDAP</ui:define>
@@ -228,7 +266,10 @@
 									<ui:define name="label">LDAP Ön Ek</ui:define>
 									<h:inputText value="#{sirketHome.seciliSirket.lpdapOnEk}" size="5" maxlength="5" />
 								</s:decorate>
-
+								<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin}">
+									<ui:define name="label">İş Arama Günlük Saat</ui:define>
+									<h:inputText value="#{sirketHome.seciliSirket.isAramaGunlukSaat}" size="5" maxlength="5" />
+								</s:decorate>
 								<s:decorate template="/layout/edit.xhtml">
 									<ui:define name="label">PDKS Dahil</ui:define>
 									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.pdks}" />
@@ -245,16 +286,20 @@
 									<ui:define name="label">Fazla Mesai Öde</ui:define>
 									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.fazlaMesaiOde}" />
 								</s:decorate>
-								<s:decorate template="/layout/edit.xhtml" rendered="#{ortakIslemler.getParameterKey('fazlaMesaiIzinKullan')=='1'}">
-									<ui:define name="label">Fazla Mesai İzin Kullandır</ui:define>
+								<s:decorate template="/layout/edit.xhtml"
+									rendered="#{sirketHome.seciliSirket.fazlaMesaiIzinKullan or ortakIslemler.getParameterKey('fazlaMesaiIzinKullan') == '1'}">
+									<ui:define name="label">#{ortakIslemler.fmIzinKullanAciklama()}</ui:define>
 									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.fazlaMesaiIzinKullan}" />
 								</s:decorate>
 								<s:decorate template="/layout/edit.xhtml"
-									rendered="#{ortakIslemler.getParameterKey('fazlaMesaiTalepDurum')=='1' and sirketHome.seciliSirket.departman.fazlaMesaiTalepGirilebilir}">
+									rendered="#{ortakIslemler.getParameterKey('fazlaMesaiTalepDurum') == '1' and sirketHome.seciliSirket.departman.fazlaMesaiTalepGirilebilir}">
 									<ui:define name="label">Fazla Mesai Talep</ui:define>
 									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.fazlaMesaiTalepGirilebilir}" />
 								</s:decorate>
-
+								<s:decorate template="/layout/edit.xhtml" rendered="#{sirketHome.seciliSirket.izinGirer == false}">
+									<ui:define name="label">İzin Kartı Var</ui:define>
+									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.izinKartiVar}" />
+								</s:decorate>
 
 								<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin}">
 									<ui:define name="label">İşten Ayrıldığı Tarih Çalışıyor</ui:define>
@@ -275,11 +320,11 @@
 					<!--  -->
 
 					<a4j:commandButton status="ajaxStatus" value="Kaydet" action="#{sirketHome.save}" reRender="sirketTable"
-						oncomplete="if (#{facesContext.maximumSeverity==null}) #{rich:component('editPanel')}.hide();" />
+						oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" />
 
 
 					<a4j:outputPanel id="personelListTable">
-						<h:panelGrid columns="3" rendered="#{sirketHome.seciliSirket.id!=null and sirketHome.seciliSirket.pdks}">
+						<h:panelGrid columns="3" rendered="#{sirketHome.seciliSirket.id != null and sirketHome.seciliSirket.pdks}">
 							<a4j:commandButton status="ajaxStatus" value="Personel Getir" action="#{sirketHome.fillPersonelList()}" reRender="personelListTable" />
 							<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin or authenticatedUser.IK}">
 								<ui:define name="label">İşten Ayrılanları Getir</ui:define>
@@ -312,17 +357,50 @@
 										<f:facet name="header">
 											<h:outputText value="#{ortakIslemler.yoneticiAciklama()}" />
 										</f:facet>
-										<h:outputText value="#{personelView.pdksPersonel.pdksYonetici.adSoyad}" title="#{personelView.pdksPersonel.asilYonetici1.adSoyad}" />
+										<ui:fragment rendered="#{personelView.pdksPersonel.pdksYonetici!=null}">
+											<DIV title="#{personelView.pdksPersonel.asilYonetici1.adSoyad}">
+												<ui:fragment rendered="#{personelView.pdksPersonel.calisiyor==false or personelView.pdksPersonel.pdksYonetici.calisiyor}">
+													<h:outputText value="#{personelView.pdksPersonel.pdksYonetici.adSoyad}" />
+												</ui:fragment>
+												<ui:fragment rendered="#{personelView.pdksPersonel.calisiyor and personelView.pdksPersonel.pdksYonetici.calisiyor==false}">
+													<span id="yonetici1#{personelView.pdksPersonel.id}" style="color: red"><h:outputText
+															value="#{personelView.pdksPersonel.pdksYonetici.adSoyad}" /></span>
+
+													<rich:toolTip for="yonetici1#{personelView.pdksPersonel.id}">
+										#{personelView.pdksPersonel.pdksYonetici.pdksSicilNo} - #{personelView.pdksPersonel.pdksYonetici.adSoyad}<br></br>
+
+														<b>İşten Ayrılma Tarihi : </b>
+											 #{authenticatedUser.dateFormatla(personelView.pdksPersonel.pdksYonetici.istenAyrilisTarihi)} 
+										</rich:toolTip>
+												</ui:fragment>
+											</DIV>
+										</ui:fragment>
 									</rich:column>
 									<rich:column>
 										<f:facet name="header">
 											<h:outputText value="#{ortakIslemler.yonetici2Aciklama()}" />
 										</f:facet>
-										<h:outputText value="#{personelView.pdksPersonel.yonetici2.adSoyad}" />
+										<ui:fragment rendered="#{personelView.pdksPersonel.yonetici2!=null}">
+											<ui:fragment rendered="#{personelView.pdksPersonel.yonetici2.calisiyor}">
+												<h:outputText value="#{personelView.pdksPersonel.yonetici2.adSoyad}" />
+											</ui:fragment>
+											<ui:fragment rendered="#{personelView.pdksPersonel.yonetici2.calisiyor==false}">
+												<span id="yonetici2#{personelView.pdksPersonel.id}" style="color: red"><h:outputText
+														value="#{personelView.pdksPersonel.yonetici2.adSoyad}" /></span>
+
+												<rich:toolTip for="yonetici2#{personelView.pdksPersonel.id}">
+										#{personelView.pdksPersonel.yonetici2.pdksSicilNo} - #{personelView.pdksPersonel.yonetici2.adSoyad}<br></br>
+
+													<b>İşten Ayrılma Tarihi : </b>
+											 #{authenticatedUser.dateFormatla(personelView.pdksPersonel.yonetici2.istenAyrilisTarihi)} 
+										</rich:toolTip>
+											</ui:fragment>
+
+										</ui:fragment>
 									</rich:column>
 									<rich:column>
 										<f:facet name="header">
-											<h:outputText value="Vardiya Şablon" />
+											<h:outputText value="#{ortakIslemler.vardiyaAciklama()} Şablon" />
 										</f:facet>
 										<h:outputText value="#{personelView.pdksPersonel.sablon.adi}" id="vardiya" />
 									</rich:column>
@@ -350,7 +428,7 @@
 										</f:facet>
 										<h:outputText value="#{authenticatedUser.dateFormatla( personelView.pdksPersonel.istenAyrilisTarihi)}" />
 									</rich:column>
-									<rich:column rendered="#{authenticatedUser.IK and authenticatedUser.IKAdmin==false}">
+									<rich:column rendered="#{authenticatedUser.IK and authenticatedUser.IKAdmin == false}">
 										<f:facet name="header">
 											<h:outputText value="#{sirketHome.bolumAciklama}" />
 										</f:facet>

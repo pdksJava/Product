@@ -12,7 +12,7 @@
 				<thead class="rich-table-thead">
 					<tr class="rich-table-subheader">
 
-						<ui:fragment rendered="#{vardiyaGunHome.planGirisi and vardiyaGunHome.denklestirmeAyDurum}">
+						<ui:fragment rendered="#{vardiyaGunHome.denklestirmeAyDurum}">
 							<th style="width: 90px"><ui:fragment rendered="#{vardiyaGunHome.departman.admin}">
 									<table class="rich-table-thead">
 										<thead>
@@ -45,26 +45,29 @@
 						<th style="width: 30px"><h:outputText value="#{ortakIslemler.personelNoAciklama()}" /></th>
 						<th><h:outputText value="Adı Soyadı" /></th>
 						<th style="width: 60px"><h:outputText value="#{ortakIslemler.yoneticiAciklama()}" /></th>
-						<ui:fragment rendered="#{vardiyaGunHome.ekSaha4Tanim!=null and vardiyaGunHome.aramaSecenekleri.ekSaha4Id lt 0}">
+						<ui:fragment rendered="#{vardiyaGunHome.ekSaha4Tanim != null and vardiyaGunHome.aramaSecenekleri.ekSaha4Id lt 0}">
 							<th style="width: 30px"><h:outputText value="#{vardiyaGunHome.ekSaha4Tanim.aciklama}" /></th>
 						</ui:fragment>
 						<ui:fragment rendered="#{vardiyaGunHome.modelGoster}">
 							<th style="width: 30px"><h:outputText value="#{ortakIslemler.calismaModeliAciklama()}" /></th>
 						</ui:fragment>
-						<ui:fragment rendered="#{vardiyaGunHome.planGirisi}">
-							<th style="width: 30px"><h:outputText value="Denk.Var" /></th>
-							<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiOde}">
-								<th style="width: 30px"><h:outputText value="FM.Öde" title="Fazla Mesai Öde" /></th>
-							</ui:fragment>
-							<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiIzinKullan}">
-								<th style="width: 30px"><h:outputText value="FM İzin Kullan" /></th>
-							</ui:fragment>
+
+						<th style="width: 30px"><h:outputText value="Denk.Var" /></th>
+						<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiOde}">
+							<th style="width: 30px"><h:outputText value="FM.Öde" title="Fazla Mesai Öde" /></th>
 						</ui:fragment>
+						<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiIzinKullan}">
+							<th style="width: 30px"><h:outputText value="#{ortakIslemler.fmIzinKullanAciklama()}" /></th>
+						</ui:fragment>
+
 						<ui:fragment rendered="#{vardiyaGunHome.gebeGoster}">
 							<th style="width: 60px"><h:outputText value="Gebe" /></th>
 						</ui:fragment>
 						<ui:fragment rendered="#{vardiyaGunHome.sutIzniGoster}">
 							<th style="width: 30px"><h:outputText value="Süt İzni" title="Süt İzni Kullanıyor" /></th>
+						</ui:fragment>
+						<ui:fragment rendered="#{vardiyaGunHome.isAramaGoster}">
+							<th style="width: 30px"><h:outputText value="İş Arama İzni" title="İş Arama İzni Kullanıyor" /></th>
 						</ui:fragment>
 						<ui:fragment rendered="#{vardiyaGunHome.partTimeGoster}">
 							<th style="width: 30px"><h:outputText value="Part Time" title="Part Time Çalışıyor" /></th>
@@ -72,7 +75,7 @@
 						<ui:repeat value="#{vardiyaGunHome.aylikPuantajDefault.ayinVardiyalari}" var="vardiya">
 							<td class="#{vardiya.headerClass}" id="tatil#{vardiya.vardiyaDateStr}"
 								style="width: 20px; font-family: Arial, Verdana, sans-serif; font-size: 11px; font-weight: bold; text-align: center;"><ui:fragment
-									rendered="#{vardiyaGunHome.topluFazlaCalismaTalep==false or vardiya.fazlaMesaiTalepDurum==false}">
+									rendered="#{vardiyaGunHome.topluFazlaCalismaTalep == false or vardiya.fazlaMesaiTalepDurum == false}">
 									<h:outputText value="#{authenticatedUser.getTarihFormatla(vardiya.vardiyaDate, 'd')}" />
 
 								</ui:fragment> <ui:fragment rendered="#{vardiyaGunHome.topluFazlaCalismaTalep and vardiya.fazlaMesaiTalepDurum}">
@@ -82,12 +85,12 @@
 										oncomplete="#{rich:component('wait')}.hide();if (#{not empty vardiyaGunHome.aylikPuantajMesaiTalepList}) #{rich:component('topluMesaiTalepPanel')}.show();" />
 
 								</ui:fragment> <bR /> <h:outputText value="#{authenticatedUser.getTarihFormatla(vardiya.vardiyaDate, 'EEE')}" /> <ui:fragment
-									rendered="#{vardiyaGunHome.denklestirmeAyDurum and vardiyaGunHome.planGirisi  and authenticatedUser.departman.admin}">
+									rendered="#{vardiyaGunHome.denklestirmeAyDurum and authenticatedUser.departman.admin}">
 									<ui:fragment rendered="#{vardiyaGunHome.aramaSecenekleri.sirket.erp and vardiyaGunHome.gorevYeriGirisDurum}">
 										<bR />
 										<h:selectBooleanCheckbox value="#{vardiya.checkBoxDurum}" action="#{ortakIslemler.emtpyAjaxFunction()}" status="ajaxStatus" />
 									</ui:fragment>
-								</ui:fragment> <ui:fragment rendered="#{vardiya.tatil!=null}">
+								</ui:fragment> <ui:fragment rendered="#{vardiya.tatil != null}">
 									<rich:toolTip for="tatil#{vardiya.vardiyaDateStr}">
 										<SPAN style="color: green; font-size: 12px;"><B>#{vardiya.tatil.ad}</B></SPAN>
 									</rich:toolTip>
@@ -159,13 +162,13 @@
 						<ui:fragment rendered="#{vardiyaGunHome.aksamGunVar}">
 							<th style="width: 20px; font-family: Arial, Verdana, sans-serif; font-size: 11px; text-align: center;" id="baslikA"><h:outputText
 									value="A" /> <rich:toolTip for="baslikA">
-									<SPAN style="font-size: 12px; font-weight: normal;"><B>Akşam Vardiyası: </B>Gün Adet</SPAN>
+									<SPAN style="font-size: 12px; font-weight: normal;"><B>Akşam #{ortakIslemler.vardiyaAciklama()}: </B>Gün Adet</SPAN>
 								</rich:toolTip></th>
 						</ui:fragment>
 						<ui:fragment rendered="#{vardiyaGunHome.aksamSaatVar}">
 							<th style="width: 20px; font-family: Arial, Verdana, sans-serif; font-size: 11px; text-align: center;" id="baslikAS"><h:outputText
 									value="AS" /> <rich:toolTip for="baslikAS">
-									<SPAN style="font-size: 12px; font-weight: normal;"><B>Akşam Vardiyası: </B>Saat Toplamı</SPAN>
+									<SPAN style="font-size: 12px; font-weight: normal;"><B>Akşam #{ortakIslemler.vardiyaAciklama()}: </B>Saat Toplamı</SPAN>
 								</rich:toolTip></th>
 						</ui:fragment>
 						<ui:fragment rendered="#{vardiyaGunHome.veriGoster('suaDurum', vardiyaGunHome.aylikPuantajList)}">
@@ -305,19 +308,19 @@
 				<tbody>
 					<a4j:repeat value="#{vardiyaGunHome.aylikPuantajList}" var="aylikPuantaj">
 						<tr>
-							<ui:fragment rendered="#{vardiyaGunHome.planGirisi and vardiyaGunHome.denklestirmeAyDurum}">
+							<ui:fragment rendered="#{vardiyaGunHome.denklestirmeAyDurum}">
 								<td class="#{aylikPuantaj.trClass}"><ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.erpAktarildi}">
 										<span
 											title="#{aylikPuantaj.personelDenklestirme.guncelleyenUser.adSoyad} - #{authenticatedUser.dateTimeLongFormatla(aylikPuantaj.personelDenklestirme.guncellemeTarihi)}"
 											style="color: blue; font-size: 14; font-weight: bold;">ERP Aktarıldı. </span>
-									</ui:fragment> <ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.erpAktarildi==false}">
+									</ui:fragment> <ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.erpAktarildi == false}">
 
 										<table>
 											<TR>
 												<ui:fragment
-													rendered="#{(vardiyaGunHome.kullaniciPersonel==false or vardiyaGunHome.calismaPlanKilit!=null) and (vardiyaGunHome.yoneticiERP1Kontrol==false or aylikPuantaj.yonetici.id!=null or aylikPuantaj.pdksPersonel.sanalPersonel)}">
+													rendered="#{(vardiyaGunHome.kullaniciPersonel == false or vardiyaGunHome.calismaPlanKilit != null) and (vardiyaGunHome.yoneticiERP1Kontrol == false or aylikPuantaj.yonetici.id != null or aylikPuantaj.pdksPersonel.sanalPersonel)}">
 
-													<TD><h:selectBooleanCheckbox value="#{aylikPuantaj.onayDurum}" disabled="#{vardiyaGunHome.calismaPlanKilit!=null}">
+													<TD><h:selectBooleanCheckbox value="#{aylikPuantaj.onayDurum}" disabled="#{vardiyaGunHome.calismaPlanKilit != null}">
 															<a4j:support event="onclick" />
 														</h:selectBooleanCheckbox></TD>
 													<TD><a4j:commandLink id="editAylikLink" ajaxSingle="true" action="#{vardiyaGunHome.aylikPuantajSec(aylikPuantaj,'P')}"
@@ -329,7 +332,7 @@
 												<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiTalepVar}">
 													<TD><ui:fragment rendered="#{aylikPuantaj.fazlaMesaiDurum}">
 															<a4j:commandLink id="mesaiAylikLink" ajaxSingle="true"
-																disabled="#{aylikPuantaj.personelDenklestirme.onaylandi==false and aylikPuantaj.personelDenklestirme.calismaModeliAy.hareketKaydiVardiyaBulsunmu==false}"
+																disabled="#{aylikPuantaj.personelDenklestirme.onaylandi == false and aylikPuantaj.personelDenklestirme.calismaModeliAy.hareketKaydiVardiyaBulsunmu == false}"
 																action="#{vardiyaGunHome.aylikPuantajSec(aylikPuantaj,'M')}" onclick="#{rich:component('wait')}.show()"
 																oncomplete="#{rich:component('wait')}.hide(); #{rich:component('mesaiAylikPanel')}.show()" reRender="mesaiAylikPanel,secimlerMesai">
 																<h:graphicImage value="/img/home_32.png" style="border:0" height="16" />
@@ -338,7 +341,7 @@
 																<H3>#{aylikPuantaj.pdksPersonel.adSoyad} Fazla Mesai Talep Güncelle</H3>
 
 																<B>Talep Onaylayan : </B>#{aylikPuantaj.yonetici2.adSoyad}<BR />
-																<ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.onaylandi==false}">
+																<ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.onaylandi == false}">
 																	<SPAN style="color: red; font-weight: bold; font-size: 12px;"><br />Aylık plan onaylanmamıştır!</SPAN>
 																</ui:fragment>
 															</rich:toolTip>
@@ -348,7 +351,7 @@
 													<td><ui:fragment rendered="#{vardiyaGunHome.aramaSecenekleri.sirket.erp}">
 															<a4j:commandLink id="gorevAylikLink" action="#{vardiyaGunHome.aylikGorevYeriDegistir(aylikPuantaj)}"
 																onclick="#{rich:component('wait')}.show()"
-																oncomplete="if (#{facesContext.maximumSeverity==null}) {#{rich:component('editAylikPanel')}.show();} #{rich:component('wait')}.hide();"
+																oncomplete="if (#{facesContext.maximumSeverity == null}) {#{rich:component('editAylikPanel')}.show();} #{rich:component('wait')}.hide();"
 																reRender="editAylikPanel">
 																<h:graphicImage value="/img/address_16.png" style="border:0" />
 															</a4j:commandLink>
@@ -371,14 +374,14 @@
 
 									</ui:fragment>
 								</rich:toolTip></td>
-							<td class="#{aylikPuantaj.trClass}" style="width: 60px" align="left"><ui:fragment rendered="#{aylikPuantaj.yonetici!=null}">
-									<h:outputText value="#{aylikPuantaj.yonetici.adSoyad}" rendered="#{aylikPuantaj.yonetici.id!=null}" />
-									<ui:fragment rendered="#{aylikPuantaj.yonetici.id==null and aylikPuantaj.pdksPersonel.sanalPersonel==false}">
+							<td class="#{aylikPuantaj.trClass}" style="width: 60px" align="left"><ui:fragment rendered="#{aylikPuantaj.yonetici != null}">
+									<h:outputText value="#{aylikPuantaj.yonetici.adSoyad}" rendered="#{aylikPuantaj.yonetici.id != null}" />
+									<ui:fragment rendered="#{aylikPuantaj.yonetici.id == null and aylikPuantaj.pdksPersonel.sanalPersonel == false}">
 										<SPAN style="color: red; font-weight: bold; font-size: 12px"><h:outputText value="#{aylikPuantaj.yonetici.adSoyad}" /></SPAN>
 
 									</ui:fragment>
-								</ui:fragment> <ui:fragment rendered="#{aylikPuantaj.yonetici==null or aylikPuantaj.yonetici.id==null}">
-									<ui:fragment rendered="#{aylikPuantaj.pdksPersonel.sanalPersonel==false and vardiyaGunHome.yoneticiERP1Kontrol}">
+								</ui:fragment> <ui:fragment rendered="#{aylikPuantaj.yonetici == null or aylikPuantaj.yonetici.id == null}">
+									<ui:fragment rendered="#{aylikPuantaj.pdksPersonel.sanalPersonel == false and vardiyaGunHome.yoneticiERP1Kontrol}">
 										<SPAN style="color: red; font-weight: bold; font-size: 12px">#{ortakIslemler.yoneticiAciklama()} tanımsız!</SPAN>
 
 									</ui:fragment>
@@ -387,34 +390,74 @@
 
 									</ui:fragment>
 								</ui:fragment></td>
-							<ui:fragment rendered="#{vardiyaGunHome.ekSaha4Tanim!=null and vardiyaGunHome.aramaSecenekleri.ekSaha4Id lt 0}">
+							<ui:fragment rendered="#{vardiyaGunHome.ekSaha4Tanim != null and vardiyaGunHome.aramaSecenekleri.ekSaha4Id lt 0}">
 								<td class="#{aylikPuantaj.trClass}" style="width: 20px"><h:outputText value="#{aylikPuantaj.pdksPersonel.ekSaha4.aciklama}" /></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.modelGoster}">
 								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="left"><ui:fragment
-										rendered="#{aylikPuantaj.personelDenklestirme!=null and aylikPuantaj.personelDenklestirme.calismaModeliAy!=null}">
+										rendered="#{aylikPuantaj.personelDenklestirme != null and aylikPuantaj.personelDenklestirme.calismaModeliAy != null}">
 										#{aylikPuantaj.personelDenklestirme.calismaModeliAy.calismaModeli.aciklama }
 									</ui:fragment></td>
 							</ui:fragment>
-							<ui:fragment rendered="#{vardiyaGunHome.planGirisi}">
+
+							<td class="#{aylikPuantaj.trClass}" align="center" style="width: 20px"><h:outputText
+									value="#{authenticatedUser.getYesNo(aylikPuantaj.personelDenklestirme.denklestirme)}" /></td>
+							<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiOde}">
 								<td class="#{aylikPuantaj.trClass}" align="center" style="width: 20px"><h:outputText
-										value="#{authenticatedUser.getYesNo(aylikPuantaj.personelDenklestirme.denklestirme)}" /></td>
-								<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiOde}">
-									<td class="#{aylikPuantaj.trClass}" align="center" style="width: 20px"><h:outputText
-											value="#{authenticatedUser.getYesNo(aylikPuantaj.personelDenklestirme.fazlaMesaiOde)}" /></td>
-								</ui:fragment>
-								<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiIzinKullan}">
-									<td class="#{aylikPuantaj.trClass}" align="center" style="width: 20px"><h:outputText
-											value="#{authenticatedUser.getYesNo(aylikPuantaj.personelDenklestirme.fazlaMesaiIzinKullan)}" /></td>
-								</ui:fragment>
+										value="#{authenticatedUser.getYesNo(aylikPuantaj.personelDenklestirme.fazlaMesaiOde)}" /></td>
 							</ui:fragment>
+							<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiIzinKullan}">
+								<td class="#{aylikPuantaj.trClass}" align="center" style="width: 20px"><h:outputText
+										value="#{authenticatedUser.getYesNo(aylikPuantaj.personelDenklestirme.fazlaMesaiIzinKullan)}" /></td>
+							</ui:fragment>
+
 							<ui:fragment rendered="#{vardiyaGunHome.gebeGoster}">
-								<td class="#{aylikPuantaj.trClass}" style="width: 60px" align="center"><h:outputText
-										value="#{authenticatedUser.getYesNo(aylikPuantaj.gebeDurum)}" /></td>
+								<td class="#{aylikPuantaj.trClass}" style="width: 60px" align="center"><ui:fragment
+										rendered="#{aylikPuantaj.personelDenklestirme.gebePersonelDonemselDurum == null}">
+										<h:outputText value="#{authenticatedUser.getYesNo(aylikPuantaj.gebeDurum)}" />
+									</ui:fragment> <ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.gebePersonelDonemselDurum != null}">
+										<span id="gebe#{aylikPuantaj.pdksPersonel.id}" style="font-weight: bold;"> <h:outputText
+												value="#{authenticatedUser.getYesNo(aylikPuantaj.gebeDurum)}" /></span>
+										<ui:fragment rendered="#{vardiyaGunHome.ikRole or vardiyaGunHome.adminRole}">
+											<rich:toolTip for="gebe#{aylikPuantaj.pdksPersonel.id}">
+												<h:panelGrid columns="1">
+													<s:formattedText value="#{aylikPuantaj.personelDenklestirme.gebeDurumAciklama}"></s:formattedText>
+												</h:panelGrid>
+											</rich:toolTip>
+										</ui:fragment>
+									</ui:fragment></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.sutIzniGoster}">
-								<td class="#{aylikPuantaj.trClass}" align="center" style="width: 20px"><h:outputText
-										value="#{authenticatedUser.getYesNo(aylikPuantaj.personelDenklestirme.sutIzniDurum)}" /></td>
+								<td class="#{aylikPuantaj.trClass}" align="center" style="width: 20px"><ui:fragment
+										rendered="#{aylikPuantaj.personelDenklestirme.sutIzniPersonelDonemselDurum == null}">
+										<h:outputText value="#{authenticatedUser.getYesNo(aylikPuantaj.sutIzniDurumu)}" />
+									</ui:fragment> <ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.sutIzniPersonelDonemselDurum != null}">
+										<span id="sutIzni#{aylikPuantaj.pdksPersonel.id}" style="font-weight: bold;"> <h:outputText
+												value="#{authenticatedUser.getYesNo(aylikPuantaj.sutIzniDurumu)}" /></span>
+										<ui:fragment rendered="#{vardiyaGunHome.ikRole or vardiyaGunHome.adminRole}">
+											<rich:toolTip for="sutIzni#{aylikPuantaj.pdksPersonel.id}">
+												<h:panelGrid columns="1">
+													<s:formattedText value="#{aylikPuantaj.personelDenklestirme.sutIzniDurumAciklama}"></s:formattedText>
+												</h:panelGrid>
+											</rich:toolTip>
+										</ui:fragment>
+									</ui:fragment></td>
+							</ui:fragment>
+							<ui:fragment rendered="#{vardiyaGunHome.isAramaGoster}">
+								<td class="#{aylikPuantaj.trClass}" align="center" style="width: 20px"><ui:fragment
+										rendered="#{aylikPuantaj.personelDenklestirme.isAramaPersonelDonemselDurum == null}">
+										<h:outputText value="#{authenticatedUser.getYesNo(aylikPuantaj.isAramaDurum)}" />
+									</ui:fragment> <ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.isAramaPersonelDonemselDurum != null}">
+										<span id="sutIzni#{aylikPuantaj.pdksPersonel.id}" style="font-weight: bold;"> <h:outputText
+												value="#{authenticatedUser.getYesNo(aylikPuantaj.isAramaDurum)}" /></span>
+										<ui:fragment rendered="#{vardiyaGunHome.ikRole or vardiyaGunHome.adminRole}">
+											<rich:toolTip for="sutIzni#{aylikPuantaj.pdksPersonel.id}">
+												<h:panelGrid columns="1">
+													<s:formattedText value="#{aylikPuantaj.personelDenklestirme.isAramaIzniDurumAciklama}"></s:formattedText>
+												</h:panelGrid>
+											</rich:toolTip>
+										</ui:fragment>
+									</ui:fragment></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.partTimeGoster}">
 								<td class="#{aylikPuantaj.trClass}" align="center" style="width: 20px"><h:outputText
@@ -427,7 +470,7 @@
 											<table>
 												<TR>
 													<TD id="vardiya#{vardiyaGun.vardiyaKeyStr}"><h:outputText value="#{vardiyaGun.aciklama}" /> <ui:fragment
-															rendered="#{vardiyaGunHome.ikRole and vardiyaGun.izin!=null and vardiyaGun.vardiya.izin==false}">
+															rendered="#{vardiyaGunHome.ikRole and vardiyaGun.izin != null and vardiyaGun.vardiya.izin == false}">
 															<br />[ #{vardiyaGun.vardiya.kisaAdi} ] </ui:fragment> <rich:toolTip for="vardiya#{vardiyaGun.vardiyaKeyStr}">
 															<SPAN style="font-size: 12px; font-weight: normal; color: black;"> #{authenticatedUser.getTarihFormatla(vardiyaGun.vardiyaDate,
 																'd MMM')} --> #{vardiyaGun.title} <ui:fragment rendered="#{vardiyaGun.resmiTatilSure>0}">
@@ -436,11 +479,20 @@
 
 															</SPAN>
 															<ui:fragment
-																rendered="#{(authenticatedUser.admin or ortakIslemler.testDurum) and vardiyaGun.guncelleyenUser!=null and vardiyaGun.guncellemeTarihi!=null}">
+																rendered="#{(authenticatedUser.admin or ortakIslemler.testDurum) and vardiyaGun.guncelleyenUser != null and vardiyaGun.guncellemeTarihi != null}">
 																<br />
 																<SPAN style="font-size: 12px; font-weight: normal;">Güncelleme : #{vardiyaGun.guncelleyenUser.adSoyad} -->
 																	#{authenticatedUser.dateTimeFormatla(vardiyaGun.guncellemeTarihi)} </SPAN>
 															</ui:fragment>
+															<ui:fragment rendered="#{vardiyaGun.manuelGirisHTML != null}">
+																<h:panelGrid columns="1">
+																	<s:formattedText>
+																		<SPAN style="font-size: 14px; font-weight: normal; color: red;">#{vardiyaGun.manuelGirisHTML}</SPAN>
+																	</s:formattedText>
+																</h:panelGrid>
+
+															</ui:fragment>
+
 														</rich:toolTip></TD>
 													<ui:fragment rendered="#{vardiyaGunHome.vardiyaFazlaMesaiTalepGoster and vardiyaGunHome.isVardiyaFazlaMesailer(vardiyaGun)  }">
 														<TD id="fmt#{vardiyaGun.vardiyaKeyStr}"><a4j:commandLink action="#{vardiyaGunHome.getVardiyaFazlaMesailer(vardiyaGun)}"
@@ -459,14 +511,14 @@
 								</ui:fragment>
 							</a4j:repeat>
 							<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><h:outputText
-									value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.saatToplami)}" rendered="#{aylikPuantaj.saatToplami!=0}" /></td>
+									value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.saatToplami)}" rendered="#{aylikPuantaj.saatToplami != 0}" /></td>
 							<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center">
 								<DIV id="planlananSureAciklama#{aylikPuantaj.personelDenklestirme.id}">
-									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.planlananSure)}" rendered="#{aylikPuantaj.planlananSure!=0}" />
-								</DIV> <ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.calismaModeliAy!=null and aylikPuantaj.sutIzniDurum==false}">
+									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.planlananSure)}" rendered="#{aylikPuantaj.planlananSure != 0}" />
+								</DIV> <ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.calismaModeliAy != null and aylikPuantaj.sutIzniDurum == false}">
 									<rich:toolTip for="planlananSureAciklama#{aylikPuantaj.personelDenklestirme.id}">
 										#{aylikPuantaj.personelDenklestirme.calismaModeliAy.calismaModeli.aciklama} :
-										<ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.calismaModeliAy.calismaModeli.toplamGunGuncelle==false}">
+										<ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.calismaModeliAy.calismaModeli.toplamGunGuncelle == false}">
 											      #{authenticatedUser.sayiFormatliGoster(aylikPuantaj.personelDenklestirme.calismaModeliAy.sure)}  
 										</ui:fragment>
 										<ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.calismaModeliAy.calismaModeli.toplamGunGuncelle}">
@@ -477,14 +529,14 @@
 							</td>
 							<ui:fragment rendered="#{vardiyaGunHome.gerceklesenMesaiKod}">
 								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><h:outputText
-										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.aylikFazlaMesai)}" rendered="#{aylikPuantaj.aylikFazlaMesai!=0}" /></td>
+										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.aylikFazlaMesai)}" rendered="#{aylikPuantaj.aylikFazlaMesai != 0}" /></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.devredenMesaiKod}">
 								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><h:outputText
-										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.gecenAyFazlaMesai)}" rendered="#{aylikPuantaj.gecenAyFazlaMesai!=0}" /></td>
+										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.gecenAyFazlaMesai)}" rendered="#{aylikPuantaj.gecenAyFazlaMesai != 0}" /></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.ucretiOdenenKod}">
-								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment rendered="#{aylikPuantaj.fazlaMesaiSure!=0}">
+								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment rendered="#{aylikPuantaj.fazlaMesaiSure != 0}">
 										<SPAN id="fazlaMesaiSure#{aylikPuantaj.personelDenklestirme.id}"> <h:outputText
 												value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.fazlaMesaiSure)}" />
 										</SPAN>
@@ -496,8 +548,8 @@
 									</ui:fragment></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.eksikMaasGoster}">
-								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment rendered="#{aylikPuantaj.eksikCalismaSure!=0}">
-										<ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.erpAktarildi==false}">
+								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment rendered="#{aylikPuantaj.eksikCalismaSure != 0}">
+										<ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.erpAktarildi == false}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.eksikCalismaSure)}" />
 										</ui:fragment>
 										<ui:fragment rendered="#{aylikPuantaj.personelDenklestirme.erpAktarildi}">
@@ -508,44 +560,44 @@
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.resmiTatilVar}">
 								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><h:outputText
-										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.resmiTatilToplami)}" rendered="#{aylikPuantaj.resmiTatilToplami!=0}" /></td>
+										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.resmiTatilToplami)}" rendered="#{aylikPuantaj.resmiTatilToplami != 0}" /></td>
 
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.haftaTatilVar}">
 								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><h:outputText
-										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.haftaCalismaSuresi)}" rendered="#{aylikPuantaj.haftaCalismaSuresi!=0}" /></td>
+										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.haftaCalismaSuresi)}" rendered="#{aylikPuantaj.haftaCalismaSuresi != 0}" /></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.devredenBakiyeKod}">
 								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><h:outputText
-										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.devredenSure)}" rendered="#{aylikPuantaj.devredenSure!=0}" /></td>
+										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.devredenSure)}" rendered="#{aylikPuantaj.devredenSure != 0}" /></td>
 							</ui:fragment>
 
 							<ui:fragment rendered="#{vardiyaGunHome.aksamGunVar}">
 								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><h:outputText
-										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.aksamVardiyaSayisi)}" rendered="#{aylikPuantaj.aksamVardiyaSayisi!=0}" /></td>
+										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.aksamVardiyaSayisi)}" rendered="#{aylikPuantaj.aksamVardiyaSayisi != 0}" /></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.aksamSaatVar}">
 								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><h:outputText
-										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.aksamVardiyaSaatSayisi)}" rendered="#{aylikPuantaj.aksamVardiyaSaatSayisi!=0}" /></td>
+										value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.aksamVardiyaSaatSayisi)}" rendered="#{aylikPuantaj.aksamVardiyaSaatSayisi != 0}" /></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.veriGoster('suaDurum', vardiyaGunHome.aylikPuantajList)}">
 								<td class="#{aylikPuantaj.trClass}" align="center" style="width: 20px"><h:outputText
 										value="#{authenticatedUser.getYesNo(aylikPuantaj.personelDenklestirme.suaDurum)}"
-										rendered="#{aylikPuantaj.personelDenklestirme.suaDurum!=null}" /></td>
+										rendered="#{aylikPuantaj.personelDenklestirme.suaDurum != null}" /></td>
 							</ui:fragment>
 
 							<c:forEach items="#{vardiyaGunHome.dinamikAlanlar}" var="da">
 								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center" id="ap#{aylikPuantaj.pdksPersonel.id}#{da.id}"><ui:fragment
-										rendered="#{aylikPuantaj.getDinamikAlan(da.id)!=null}">
+										rendered="#{aylikPuantaj.getDinamikAlan(da.id) != null}">
 										<ui:fragment rendered="#{aylikPuantaj.personelDenklestirmeDinamikAlan.devamlilikPrimi}">
 											<ui:fragment rendered="#{aylikPuantaj.personelDenklestirmeDinamikAlan.islemDurum}">
 												<SPAN style="font-weight: bold; font-size: 14;">+</SPAN>
 											</ui:fragment>
-											<ui:fragment rendered="#{aylikPuantaj.personelDenklestirmeDinamikAlan.islemDurum==false}">
+											<ui:fragment rendered="#{aylikPuantaj.personelDenklestirmeDinamikAlan.islemDurum == false}">
 												<SPAN style="font-weight: bold; font-size: 14; color: red">-</SPAN>
 											</ui:fragment>
 										</ui:fragment>
-										<ui:fragment rendered="#{aylikPuantaj.personelDenklestirmeDinamikAlan.devamlilikPrimi==false}">
+										<ui:fragment rendered="#{aylikPuantaj.personelDenklestirmeDinamikAlan.devamlilikPrimi == false}">
 												#{authenticatedUser.getYesNo(aylikPuantaj.personelDenklestirmeDinamikAlan.islemDurum)}
 												<ui:fragment
 												rendered="#{aylikPuantaj.personelDenklestirmeDinamikAlan.izinDurum and aylikPuantaj.personelDenklestirmeDinamikAlan.islemDurum}">
@@ -570,7 +622,7 @@
 							<ui:fragment rendered="#{vardiyaGunHome.bordroPuantajEkranindaGoster}">
 								<ui:fragment rendered="#{vardiyaGunHome.normalCalismaSaatKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.denklestirmeBordro.saatNormal!=0}">
+											rendered="#{aylikPuantaj.denklestirmeBordro.saatNormal != 0}">
 
 											<B><ui:fragment rendered="#{aylikPuantaj.denklestirmeBordro.saatNormal ge aylikPuantaj.planlananSure}">
 													<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.saatNormal)}" />
@@ -582,26 +634,26 @@
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.haftaTatilCalismaSaatKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.calismaModeli.saatlikOdeme and aylikPuantaj.denklestirmeBordro.saatHaftaTatil!=0}">
+											rendered="#{aylikPuantaj.calismaModeli.saatlikOdeme and aylikPuantaj.denklestirmeBordro.saatHaftaTatil != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.saatHaftaTatil)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 
 								<ui:fragment rendered="#{vardiyaGunHome.resmiTatilCalismaSaatKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.calismaModeli.saatlikOdeme and aylikPuantaj.denklestirmeBordro.saatResmiTatil!=0}">
+											rendered="#{aylikPuantaj.calismaModeli.saatlikOdeme and aylikPuantaj.denklestirmeBordro.saatResmiTatil != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.saatResmiTatil)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.izinSureSaatKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.calismaModeli.saatlikOdeme and aylikPuantaj.denklestirmeBordro.saatIzin!=0}">
+											rendered="#{aylikPuantaj.calismaModeli.saatlikOdeme and aylikPuantaj.denklestirmeBordro.saatIzin != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.saatIzin)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.normalCalismaGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.calismaModeli.aylikOdeme and aylikPuantaj.denklestirmeBordro.saatNormal!=0}">
+											rendered="#{aylikPuantaj.calismaModeli.aylikOdeme and aylikPuantaj.denklestirmeBordro.saatNormal != 0}">
 											<B><ui:fragment rendered="#{aylikPuantaj.denklestirmeBordro.saatNormal gt 0}">
 													<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.saatNormal)}" />
 												</ui:fragment> <ui:fragment rendered="#{aylikPuantaj.denklestirmeBordro.saatNormal lt 0}">
@@ -612,70 +664,70 @@
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.haftaTatilCalismaGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.calismaModeli.aylikOdeme and aylikPuantaj.denklestirmeBordro.saatHaftaTatil!=0}">
+											rendered="#{aylikPuantaj.calismaModeli.aylikOdeme and aylikPuantaj.denklestirmeBordro.saatHaftaTatil != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.saatHaftaTatil)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 
 								<ui:fragment rendered="#{vardiyaGunHome.resmiTatilCalismaGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.calismaModeli.aylikOdeme and aylikPuantaj.denklestirmeBordro.saatResmiTatil!=0}">
+											rendered="#{aylikPuantaj.calismaModeli.aylikOdeme and aylikPuantaj.denklestirmeBordro.saatResmiTatil != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.saatResmiTatil)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 
 								<ui:fragment rendered="#{vardiyaGunHome.ucretliIzinGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.denklestirmeBordro.ucretliIzin!=0}">
+											rendered="#{aylikPuantaj.denklestirmeBordro.ucretliIzin != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.ucretliIzin)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.ucretsizIzinGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.denklestirmeBordro.ucretsizIzin!=0}">
+											rendered="#{aylikPuantaj.denklestirmeBordro.ucretsizIzin != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.ucretsizIzin)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.hastalikIzinGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.denklestirmeBordro.raporluIzin!=0}">
+											rendered="#{aylikPuantaj.denklestirmeBordro.raporluIzin != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.raporluIzin)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.normalGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.denklestirmeBordro.normalGunAdet!=0}">
+											rendered="#{aylikPuantaj.denklestirmeBordro.normalGunAdet != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.normalGunAdet)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.haftaTatilGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.denklestirmeBordro.haftaTatilAdet!=0}">
+											rendered="#{aylikPuantaj.denklestirmeBordro.haftaTatilAdet != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.haftaTatilAdet)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.resmiTatilGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.denklestirmeBordro.resmiTatilAdet!=0}">
+											rendered="#{aylikPuantaj.denklestirmeBordro.resmiTatilAdet != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.resmiTatilAdet)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.artikGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.denklestirmeBordro.artikAdet!=0}">
+											rendered="#{aylikPuantaj.denklestirmeBordro.artikAdet != 0}">
 											<h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.artikAdet)}" />
 										</ui:fragment></td>
 								</ui:fragment>
 								<ui:fragment rendered="#{vardiyaGunHome.bordroToplamGunKod}">
 									<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment
-											rendered="#{aylikPuantaj.denklestirmeBordro.bordroToplamGunAdet!=0}">
+											rendered="#{aylikPuantaj.denklestirmeBordro.bordroToplamGunAdet != 0}">
 											<B><h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.denklestirmeBordro.bordroToplamGunAdet)}" /></B>
 										</ui:fragment></td>
 								</ui:fragment>
 
 							</ui:fragment>
 							<a4j:repeat value="#{aylikPuantaj.izinAdetList}" var="adet">
-								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment rendered="#{adet!=null}">
+								<td class="#{aylikPuantaj.trClass}" style="width: 20px" align="center"><ui:fragment rendered="#{adet != null}">
 									#{authenticatedUser.sayiFormatliGoster(adet)}</ui:fragment></td>
 							</a4j:repeat>
 
@@ -683,50 +735,50 @@
 					</a4j:repeat>
 
 					<tr>
-						<ui:fragment rendered="#{vardiyaGunHome.planGirisi and vardiyaGunHome.denklestirmeAyDurum}">
+						<ui:fragment rendered="#{vardiyaGunHome.denklestirmeAyDurum}">
 							<td></td>
 						</ui:fragment>
 						<td></td>
 						<td></td>
 						<td></td>
-						<ui:fragment rendered="#{vardiyaGunHome.ekSaha4Tanim!=null and vardiyaGunHome.aramaSecenekleri.ekSaha4Id lt 0}">
+						<ui:fragment rendered="#{vardiyaGunHome.ekSaha4Tanim != null and vardiyaGunHome.aramaSecenekleri.ekSaha4Id lt 0}">
 							<td></td>
 						</ui:fragment>
 						<ui:fragment rendered="#{vardiyaGunHome.modelGoster}">
 							<td></td>
 						</ui:fragment>
-						<ui:fragment rendered="#{vardiyaGunHome.planGirisi}">
+
+						<td></td>
+						<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiOde}">
 							<td></td>
-							<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiOde}">
-								<td></td>
-							</ui:fragment>
-							<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiIzinKullan}">
-								<td></td>
-							</ui:fragment>
 						</ui:fragment>
+						<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiIzinKullan}">
+							<td></td>
+						</ui:fragment>
+
 						<ui:fragment rendered="#{vardiyaGunHome.gebeGoster}">
 							<td></td>
 						</ui:fragment>
 						<ui:fragment rendered="#{vardiyaGunHome.sutIzniGoster}">
 							<td></td>
 						</ui:fragment>
+						<ui:fragment rendered="#{vardiyaGunHome.isAramaGoster}">
+							<td></td>
+						</ui:fragment>
 						<ui:fragment rendered="#{vardiyaGunHome.partTimeGoster}">
 							<td></td>
 						</ui:fragment>
 
-
-
-
-
+ 
 
 						<ui:repeat value="#{vardiyaGunHome.aylikPuantajDefault.ayinVardiyalari}" var="vardiya">
 							<td class="#{vardiya.headerClass}" id="tatilFooter#{vardiya.vardiyaDateStr}"
 								style="width: 20px; font-family: Arial, Verdana, sans-serif; font-size: 11px; font-weight: bold; text-align: center;"><h:outputText
 									value="#{authenticatedUser.getTarihFormatla(vardiya.vardiyaDate, 'd')}" /> <bR /> <h:outputText
 									value="#{authenticatedUser.getTarihFormatla(vardiya.vardiyaDate, 'EEE')}" /> <ui:fragment
-									rendered="#{vardiyaGunHome.denklestirmeAyDurum and vardiyaGunHome.planGirisi  and authenticatedUser.departman.admin}">
+									rendered="#{vardiyaGunHome.denklestirmeAyDurum and authenticatedUser.departman.admin}">
 
-								</ui:fragment> <ui:fragment rendered="#{vardiya.tatil!=null}">
+								</ui:fragment> <ui:fragment rendered="#{vardiya.tatil != null}">
 									<rich:toolTip for="tatilFooter#{vardiya.vardiyaDateStr}">
 										<SPAN style="color: green; font-size: 12px;"><B>#{vardiya.tatil.ad}</B></SPAN>
 									</rich:toolTip>
@@ -738,61 +790,88 @@
 					<a4j:repeat value="#{vardiyaGunHome.aylikVardiyaOzetList}" var="vardiyaGun">
 						<tr>
 
-							<ui:fragment rendered="#{vardiyaGunHome.planGirisi and vardiyaGunHome.denklestirmeAyDurum}">
+							<ui:fragment rendered="#{vardiyaGunHome.denklestirmeAyDurum}">
 								<td></td>
 							</ui:fragment>
 
-							<ui:fragment rendered="#{vardiyaGunHome.ekSaha4Tanim!=null and vardiyaGunHome.aramaSecenekleri.ekSaha4Id lt 0}">
+							<ui:fragment rendered="#{vardiyaGunHome.ekSaha4Tanim != null and vardiyaGunHome.aramaSecenekleri.ekSaha4Id lt 0}">
 								<td></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.modelGoster}">
 								<td></td>
 							</ui:fragment>
-							<ui:fragment rendered="#{vardiyaGunHome.planGirisi}">
+
+						
+							<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiOde}">
 								<td></td>
-								<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiOde}">
-									<td></td>
-								</ui:fragment>
-								<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiIzinKullan}">
-									<td></td>
-								</ui:fragment>
 							</ui:fragment>
+							<ui:fragment rendered="#{vardiyaGunHome.fazlaMesaiIzinKullan}">
+								<td></td>
+							</ui:fragment>
+
 							<ui:fragment rendered="#{vardiyaGunHome.gebeGoster}">
 								<td></td>
 							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.sutIzniGoster}">
 								<td></td>
 							</ui:fragment>
+							<ui:fragment rendered="#{vardiyaGunHome.isAramaGoster}">
+								<td></td>
+							</ui:fragment>
 							<ui:fragment rendered="#{vardiyaGunHome.partTimeGoster}">
 								<td></td>
 							</ui:fragment>
 
-							<td colspan="2"><b> #{vardiyaGun.personel.planGrup2.aciklama}</b></td>
+							<td colspan="3"><SPAN id="gorev#{vardiyaGun.personel.planGrup2.id}_#{vardiyaGun.vardiya.id}"><b>#{vardiyaGun.personel.planGrup2.aciklama}</b></SPAN>
+
+								<rich:toolTip for="gorev#{vardiyaGun.personel.planGrup2.id}_#{vardiyaGun.vardiya.id}">
+									<rich:dataTable rowClasses="acik,koyu" value="#{vardiyaGunHome.getGorevPersonelList(vardiyaGun.personel.planGrup2)}" var="personel" rows="50"
+										rowKeyVar="row" id="sirketTable">
+										<f:facet name="header">
+											<h:outputText value="#{vardiyaGun.personel.planGrup2.aciklama} Personeller" />
+										</f:facet>
+										<rich:column style="text-align:center">
+											<f:facet name="header">
+												<h:outputText value="#{ortakIslemler.personelNoAciklama()}" />
+											</f:facet>
+											<h:outputText value="#{personel.pdksSicilNo}" />
+										</rich:column>
+										<rich:column style="text-align:left">
+											<f:facet name="header">
+												<h:outputText value="Adı Soyadı" />
+											</f:facet>
+											<h:outputText value="#{personel.adSoyad}" />
+										</rich:column>
+										<f:facet name="footer">
+											<rich:datascroller renderIfSinglePage="false" maxPages="5" />
+										</f:facet>
+									</rich:dataTable>
+								</rich:toolTip></td>
 							<td title="#{vardiyaGun.vardiya.vardiyaAciklama}"><b> #{vardiyaGun.vardiya.kisaAciklama}</b></td>
 							<a4j:repeat value="#{vardiyaGun.vardiya.gunlukList}" var="gun">
 								<td align="center" style="border-left: 0px !important; border: 1px solid #dedede; background-color: yellow;"><h:outputText value="#{gun}"
-										rendered="#{gun!=0}" /> <h:outputText value="." rendered="#{gun==0}" /></td>
+										rendered="#{gun != 0}" /> <h:outputText value="." rendered="#{gun == 0}" /></td>
 
 							</a4j:repeat>
 						</tr>
 					</a4j:repeat>
 				</tbody>
 			</table>
-			<ui:fragment rendered="#{vardiyaGunHome.denklestirmeAyDurum and vardiyaGunHome.planGirisi }">
+			<ui:fragment rendered="#{vardiyaGunHome.denklestirmeAyDurum}">
 
 				<table align="center">
 					<tr>
-						<ui:fragment rendered="#{vardiyaGunHome.kullaniciPersonel==false}">
+						<ui:fragment rendered="#{vardiyaGunHome.kullaniciPersonel == false}">
 							<td valign="top"><a4j:commandButton status="ajaxStatus" value="Onayla" action="#{vardiyaGunHome.planOnayla()}" reRender="vardiyaPanel" /></td>
 						</ui:fragment>
 
 						<ui:fragment rendered="#{vardiyaGunHome.calismaPlanKilit.kilitDurum and vardiyaGunHome.calismaPlanKilit.talepKontrol}">
 
-							<ui:fragment rendered="#{vardiyaGunHome.calismaPlanKilit.talep.id==null or vardiyaGunHome.calismaPlanKilit.talep.onayDurum==null}">
+							<ui:fragment rendered="#{vardiyaGunHome.calismaPlanKilit.talep.id == null or vardiyaGunHome.calismaPlanKilit.talep.onayDurum == null}">
 								<td>
 									<DIV id="planKilit#{kilit.id}">
 										<a4j:commandLink status="ajaxStatus" reRender="vardiyaKilitPanel" onclick="#{rich:component('wait')}.show()"
-											oncomplete="#{rich:component('wait')}.hide();if (#{vardiyaGunHome.calismaPlanKilit.talep.id==null}) #{rich:component('vardiyaKilitPanel')}.show(); ">
+											oncomplete="#{rich:component('wait')}.hide();if (#{vardiyaGunHome.calismaPlanKilit.talep.id == null}) #{rich:component('vardiyaKilitPanel')}.show(); ">
 											<h:graphicImage value="/img/lock-94.png" height="48" style="border:0" />
 											<a4j:support event="onclick" status="ajaxStatus" action="#{vardiyaGunHome.planKilitTalepKontrol(vardiyaGunHome.calismaPlanKilit)}" />
 										</a4j:commandLink>

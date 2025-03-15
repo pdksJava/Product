@@ -25,13 +25,15 @@ public class IzinERPDB implements Serializable, Cloneable {
 	 */
 	private static final long serialVersionUID = 6307241769198780131L;
 	
-	public static final String VIEW_NAME = "Z_NOT_USED_IZIN_ERP_DB";
+	public static final String VIEW_NAME = "IZIN_ERP_VIEW";
 	public static final String FORMAT_DATE_TIME = "yyyy-MM-dd HH:mm";
 	public static final String COLUMN_NAME_BAS_TARIHI = "BASLANGIC_ZAMANI";
 	public static final String COLUMN_NAME_BIT_TARIHI = "BITIS_ZAMANI";
 	public static final String COLUMN_NAME_REFERANS_NO = "REFERANS_ID";
 	public static final String COLUMN_NAME_GUNCELLEME_TARIHI = "GUNCELLEME_TARIHI";
+	public static final String COLUMN_NAME_IZIN_SURESI = "IZIN_SURESI";
 	public static final String COLUMN_NAME_PERSONEL_NO = "PERSONEL_NO";
+	
 	public static final String COLUMN_NAME_DURUM = "DURUM";
 
 	static Logger logger = Logger.getLogger(IzinERPDB.class);
@@ -105,7 +107,7 @@ public class IzinERPDB implements Serializable, Cloneable {
 		this.bitZaman = bitZaman;
 	}
 
-	@Column(name = "IZIN_SURESI")
+	@Column(name = COLUMN_NAME_IZIN_SURESI)
 	public Double getIzinSuresi() {
 		return izinSuresi;
 	}

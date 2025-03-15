@@ -1,5 +1,6 @@
 package org.pdks.genel.model;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -8,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Serializable;
 import java.io.StringWriter;
@@ -59,6 +61,8 @@ import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.json.XML;
+import org.pdks.entity.Tanim;
+import org.pdks.security.entity.User;
 import org.w3c.dom.Node;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
@@ -70,7 +74,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import org.pdks.entity.Tanim;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.QNameMap;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
@@ -105,6 +108,36 @@ public class PdksUtil implements Serializable {
 
 	private static String sqlDateFormat = "yyyy-MM-dd", dateFormat = "dd/MM/yyyy", saatFormat = "H:mm", dateTimeFormat;
 
+	/**
+	 * @param user
+	 */
+	public static void setUserYetki(User user) {
+
+	}
+
+	/**
+	 * @param cmd
+	 * @param bekle
+	 * @return
+	 */
+	public static List<String> executeCommand(String cmd, boolean bekle) {
+		Process p = null;
+		List<String> temps = new ArrayList<String>();
+		if (bekle)
+			System.out.println(cmd);
+		try {
+			p = Runtime.getRuntime().exec(cmd);
+			if (bekle)
+				p.waitFor();
+			BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			String s = "";
+			while ((s = stdInput.readLine()) != null)
+				temps.add(s);
+		} catch (Exception e) {
+			logger.error(e);
+		}
+		return temps;
+	}
 
 	/**
 	 * @param orjinalName
@@ -122,7 +155,7 @@ public class PdksUtil implements Serializable {
 
 		return hostName;
 	}
-	
+
 	/**
 	 * @return
 	 */
@@ -616,19 +649,28 @@ public class PdksUtil implements Serializable {
 	 * @return
 	 */
 	public static String StringToByInputStream(InputStream in) {
-		String str = null;
+		String read = null;
 		try {
 			if (in != null) {
-				str = IOUtils.toString(in, "utf-8");
-				if (str != null && hasStringValue(str) == false)
-					str = null;
+				read = IOUtils.toString(in, "utf-8");
+				if (read != null && hasStringValue(read) == false)
+					read = null;
+				// StringBuilder sb = new StringBuilder();
+				// BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+				// while ((read = br.readLine()) != null)
+				// sb.append(read);
+				//
+				// br.close();
+				// read = sb.toString();
+				// sb = null;
+
 			}
 
 		} catch (Exception e) {
 			logger.error(e);
 		}
 
-		return str;
+		return read;
 	}
 
 	/**
@@ -1545,13 +1587,14 @@ public class PdksUtil implements Serializable {
 	 * @param object
 	 * @param method
 	 * @param parametre
+	 * @param bos
 	 */
-	public static void runMethodObject(Object object, String method, Object[] parametre) {
+	public static void runMethodObjectNull(Object object, String method, Object[] parametre, Class[] bos) {
 		Class[] classes = null;
 		if (parametre != null) {
 			classes = new Class[parametre.length];
 			for (int i = 0; i < classes.length; i++)
-				classes[i] = parametre[i].getClass();
+				classes[i] = parametre[i] != null ? parametre[i].getClass() : bos[i];
 		}
 		try {
 			Method run = object.getClass().getMethod(method, classes);
@@ -1562,6 +1605,17 @@ public class PdksUtil implements Serializable {
 			logger.error("PDKS hata out : " + e.getMessage());
 
 		}
+	}
+
+	/**
+	 * @param object
+	 * @param method
+	 * @param parametre
+	 */
+	public static void runMethodObject(Object object, String method, Object[] parametre) {
+		Class[] bos = null;
+		runMethodObjectNull(object, method, parametre, bos);
+
 	}
 
 	public static List sortObjectStringAlanList(List list, String method, Object[] parametre) {

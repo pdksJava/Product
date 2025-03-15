@@ -2,6 +2,7 @@ package org.pdks.security.action;
 
 import java.io.File;
 import java.io.Serializable;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -13,7 +14,10 @@ import java.util.List;
 import java.util.Map;
 
 import javax.faces.FacesException;
+import javax.faces.context.FacesContext;
 import javax.persistence.EntityManager;
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpSession;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
@@ -39,6 +43,7 @@ import org.pdks.entity.DepartmanMailGrubu;
 import org.pdks.entity.IzinHakedisHakki;
 import org.pdks.entity.IzinTipiBirlesikHaric;
 import org.pdks.entity.IzinTipiMailAdres;
+import org.pdks.entity.KatSayi;
 import org.pdks.entity.LDAPDomain;
 import org.pdks.entity.MailUser;
 import org.pdks.entity.MenuIliski;
@@ -48,7 +53,9 @@ import org.pdks.entity.Notice;
 import org.pdks.entity.Parameter;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
+import org.pdks.entity.PersonelDinamikAlan;
 import org.pdks.entity.PersonelIzin;
+import org.pdks.entity.PersonelIzinDetay;
 import org.pdks.entity.ServiceData;
 import org.pdks.entity.Sirket;
 import org.pdks.entity.SkinBean;
@@ -62,10 +69,11 @@ import org.pdks.entity.VardiyaYemekIzin;
 import org.pdks.entity.YemekKartsiz;
 import org.pdks.erp.action.SapRfcManager;
 import org.pdks.erp.entity.SAPSunucu;
+import org.pdks.security.entity.KullaniciSession;
 import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.User;
+import org.pdks.security.entity.UserDigerOrganizasyon;
 import org.pdks.security.entity.UserRoles;
-import org.pdks.security.entity.UserTesis;
 import org.pdks.session.ExcelUtil;
 import org.pdks.session.LDAPUserManager;
 import org.pdks.session.OrtakIslemler;
@@ -203,23 +211,20 @@ public class StartupAction implements Serializable {
 		if (session == null)
 			session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		fillAccountPermission(session, null);
-		HashMap parametreMap = new HashMap();
-		parametreMap.put(PdksEntityController.MAP_KEY_ORDER, "orderNo");
-		parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<MenuItem> menuItemList = pdksEntityController.getObjectByInnerObjectList(parametreMap, MenuItem.class);
+
+		List<MenuItem> menuItemList = pdksEntityController.getSQLParamByFieldList(MenuItem.TABLE_NAME, null, null, MenuItem.class, session);
+		if (menuItemList.size() > 1)
+			menuItemList = PdksUtil.sortListByAlanAdi(menuItemList, "orderNo", false);
 		HashMap<String, MenuItem> menuItemMapYeni = new HashMap<String, MenuItem>();
 		for (MenuItem menuItem : menuItemList)
 			menuItemMapYeni.put(menuItem.getName(), menuItem);
 
 		setMenuItemMap(menuItemMapYeni);
 		setMenuItemList(menuItemList);
-		parametreMap.clear();
-		parametreMap.put("status", Boolean.TRUE);
-		parametreMap.put(PdksEntityController.MAP_KEY_ORDER, "orderNo");
-		parametreMap.put("topMenu", Boolean.TRUE);
-		parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 		try {
-			List<MenuItem> allTreeMenuItemList = pdksEntityController.getObjectByInnerObjectList(parametreMap, MenuItem.class);
+			List<MenuItem> allTreeMenuItemList = pdksEntityController.getSQLParamByAktifFieldList(MenuItem.TABLE_NAME, MenuItem.COLUMN_NAME_TOP_MENU, Boolean.TRUE, MenuItem.class, session);
+			if (allTreeMenuItemList.size() > 1)
+				allTreeMenuItemList = PdksUtil.sortListByAlanAdi(allTreeMenuItemList, "orderNo", false);
 			for (MenuItem menuItem : allTreeMenuItemList)
 				topActiveMenuItemMap.put(menuItem.getName(), menuItem);
 
@@ -247,27 +252,29 @@ public class StartupAction implements Serializable {
 		long toplamAdet = 0L;
 		try {
 			list.add(AccountPermission.class);
-			list.add(CalismaModeliGun.class);
 			list.add(ArifeVardiyaDonem.class);
+			list.add(CalismaModeliGun.class);
 			list.add(CalismaModeliVardiya.class);
 			list.add(DepartmanMailGrubu.class);
-			list.add(IzinTipiBirlesikHaric.class);
 			list.add(IzinHakedisHakki.class);
+			list.add(IzinTipiBirlesikHaric.class);
 			list.add(IzinTipiMailAdres.class);
+			list.add(KatSayi.class);
 			list.add(MailUser.class);
 			list.add(MenuIliski.class);
 			list.add(Notice.class);
 			list.add(Parameter.class);
+			list.add(PersonelDinamikAlan.class);
 			list.add(SAPSunucu.class);
+			list.add(ServiceData.class);
 			list.add(Tatil.class);
+			list.add(UserDigerOrganizasyon.class);
 			list.add(UserRoles.class);
-			list.add(UserTesis.class);
 			list.add(VardiyaGorev.class);
 			list.add(VardiyaHafta.class);
-			// list.add(VardiyaIzin.class);
 			list.add(VardiyaYemekIzin.class);
 			list.add(YemekKartsiz.class);
-			list.add(ServiceData.class);
+
 			// pdksEntityController.savePrepareTableID(ServisData.class, entityManager, session);
 
 			for (Class class1 : list) {
@@ -294,7 +301,7 @@ public class StartupAction implements Serializable {
 		if (cal.get(Calendar.HOUR_OF_DAY) < 7)
 			savePrepareAllTableID(session);
 		viewRefresh(session);
-		fillStartMethod(null, session);
+		fillStartMethod(null, false, session);
 	}
 
 	/**
@@ -321,25 +328,21 @@ public class StartupAction implements Serializable {
 
 	/**
 	 * @param user
+	 * @param lockVar
 	 * @param session
 	 */
-	public void fillStartMethod(User user, Session session) {
+	public void fillStartMethod(User user, boolean lockVar, Session session) {
 		if (session == null) {
 			session = user != null ? user.getSessionSQL() : null;
 			if (session == null)
 				session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		}
 		logger.info("Sistem verileri yukleniyor in " + PdksUtil.getCurrentTimeStampStr());
-
-		HashMap parametreMap = new HashMap();
-		if (session != null)
-			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+		fillParameter(session, lockVar);
 		try {
-			parametreMap.put("name", NoteTipi.ANA_SAYFA.value());
-			parametreMap.put("active", Boolean.TRUE);
-			List<Notice> noticeList = pdksEntityController.getObjectByInnerObjectList(parametreMap, Notice.class);
+			List<Notice> noticeList = pdksEntityController.getSQLParamByAktifFieldList(Notice.TABLE_NAME, Notice.COLUMN_NAME_ADI, NoteTipi.ANA_SAYFA.value(), Notice.class, session);
 			Notice notice = null;
-			if (!noticeList.isEmpty()) {
+			if (noticeList != null && !noticeList.isEmpty()) {
 				if (noticeList.size() == 1)
 					notice = (Notice) noticeList.get(0).clone();
 				else {
@@ -370,14 +373,9 @@ public class StartupAction implements Serializable {
 			logger.error("PDKS hata out : " + e.getMessage());
 			logger.error(e);
 		}
-		HashMap map1 = new HashMap();
-		map1.put("durum", SAPSunucu.DURUM_AKTIF);
-		if (session != null)
-			map1.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<SAPSunucu> sapSunucular = pdksEntityController.getObjectByInnerObjectList(map1, SAPSunucu.class);
-		SapRfcManager.setSapSunucular(sapSunucular);
 
-		fillParameter(session);
+		List<SAPSunucu> sapSunucular = pdksEntityController.getSQLParamByFieldList(SAPSunucu.TABLE_NAME, SAPSunucu.COLUMN_NAME_DURUM, Boolean.TRUE, SAPSunucu.class, session);
+		SapRfcManager.setSapSunucular(sapSunucular);
 
 		fillAccountPermission(session, user);
 
@@ -392,13 +390,12 @@ public class StartupAction implements Serializable {
 	 */
 	public void fillSirketList(Session session) {
 		pdksSirketleri.clear();
-		HashMap fields = new HashMap();
+
 		List<Sirket> list = null;
 		try {
-			fields.put("durum", Boolean.TRUE);
-			if (session != null)
-				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-			list = pdksEntityController.getObjectByInnerObjectList(fields, Sirket.class);
+
+			list = pdksEntityController.getSQLParamByFieldList(Sirket.TABLE_NAME, Sirket.COLUMN_NAME_DURUM, Boolean.TRUE, Sirket.class, session);
+
 		} catch (Exception e) {
 			logger.error("PDKS hata out : " + e.getMessage());
 			list = new ArrayList<Sirket>();
@@ -406,29 +403,29 @@ public class StartupAction implements Serializable {
 		if (list != null)
 			pdksSirketleri.addAll(list);
 		list = null;
-		fields = null;
+
 	}
 
-	/**
-	 * @param session
-	 */
-	public void fillParameter(Session session) {
+	public void fillParameter(Session session, boolean lockVar) {
 		HashMap fields = new HashMap();
 		List<Parameter> parameterList = null;
-		parameterMap.clear();
 		try {
-
 			StringBuffer sb = new StringBuffer();
-			sb.append("SELECT   T.* FROM " + Parameter.TABLE_NAME + " T WITH(nolock) ");
-
+			sb.append("select * from " + Parameter.TABLE_NAME + (lockVar ? " " + PdksEntityController.getSelectLOCK() : ""));
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			parameterList = pdksEntityController.getObjectBySQLList(sb, fields, Parameter.class);
-
 		} catch (Exception e) {
-			logger.error("PDKS hata out : " + e.getMessage());
-			parameterList = new ArrayList<Parameter>();
+			try {
+				if (session != null)
+					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+				parameterList = pdksEntityController.getObjectByInnerObjectList(fields, Parameter.class);
+			} catch (Exception e2) {
+				logger.error("PDKS hata out : " + e2.getMessage());
+				e2.printStackTrace();
+			}
 		}
+		parameterMap.clear();
 		List<String> helpDeskList = new ArrayList<String>();
 		HashMap<String, Parameter> pmMap = new HashMap<String, Parameter>();
 		for (Parameter parameter : parameterList) {
@@ -521,7 +518,10 @@ public class StartupAction implements Serializable {
 				MailManager.setHeaderRenk(deger);
 		}
 		String fontSize = "22px";
-
+		boolean izinHakedisGuncelle = false;
+		if (parameterMap.containsKey("izinHakedisGuncelle"))
+			izinHakedisGuncelle = parameterMap.get("izinHakedisGuncelle").equals("1");
+		PersonelIzinDetay.setIzinHakedisGuncelle(izinHakedisGuncelle);
 		projeURL = null;
 		if (parameterMap.containsKey("projeURL")) {
 			projeURL = parameterMap.get("projeURL");
@@ -716,6 +716,7 @@ public class StartupAction implements Serializable {
 		if (!parameterList.isEmpty())
 			try {
 				// Setting up LDAP attributes..
+				PdksEntityController.setReadUnCommitted(parameterMap.containsKey("readUnCommitted") && parameterMap.get("readUnCommitted").equals("1"));
 				PdksEntityController.setShowSQL(parameterMap.containsKey("showSql") && parameterMap.get("showSql").equals("1"));
 				VardiyaGun.setHaftaTatilDurum(parameterMap.containsKey("haftaTatilDurum") && parameterMap.get("haftaTatilDurum").equals("1"));
 				if (parameterMap.containsKey("sicilNoUzunluk")) {
@@ -758,6 +759,33 @@ public class StartupAction implements Serializable {
 				logger.error("PDKS hata out : " + e.getMessage());
 			}
 		PdksUtil.setSicilNoUzunluk(sicilNoUzunluk);
+		SecurityEvents.setSifreUnuttum(parameterMap.containsKey("sifreUnuttum"));
+		if (parameterMap.containsKey("serverTimeUpdateFromDB")) {
+			if (PdksUtil.getTestSunucuDurum() || PdksUtil.getCanliSunucuDurum()) {
+				try {
+					List<String> strList = PdksUtil.getListByString(parameterMap.get("serverTimeUpdateFromDB"), "|");
+					StringBuffer sb = new StringBuffer();
+					sb.append(strList.get(0));
+					fields.clear();
+					if (session != null)
+						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+					List list = pdksEntityController.getObjectBySQLList(sb, fields, null);
+					if (!list.isEmpty()) {
+						Timestamp tarih = (Timestamp) list.get(0);
+						String replace = PdksUtil.convertToDateString(new Date(tarih.getTime()), "yyyy-MM-dd HH:mm:ss");
+						String cmd = strList.size() == 2 ? PdksUtil.replaceAllManuel(strList.get(1), "$tarih", replace) : "date -s '" + replace + "'";
+						List<String> cmdList = PdksUtil.executeCommand(cmd, true);
+						for (String string : cmdList) {
+							logger.info(string);
+						}
+					}
+					list = null;
+					strList = null;
+				} catch (Exception e) {
+				}
+
+			}
+		}
 		fillSirketList(session);
 		setHelpDeskParametre(session, pmMap);
 		pmMap = null;
@@ -1042,7 +1070,7 @@ public class StartupAction implements Serializable {
 			session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		HashMap fields = new HashMap();
 		fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List ldapUserList = pdksEntityController.getObjectByInnerObjectListInLogic(fields, LDAPDomain.class);
+		List ldapUserList = pdksEntityController.getSQLParamByFieldList(LDAPDomain.TABLE_NAME, null, null, LDAPDomain.class, session);
 		LDAPDomain ldapUser = LDAPUserManager.getDefaultLDAPUser();
 		LDAPDomain ldapUserAna = null;
 		if (!ldapUserList.isEmpty()) {
@@ -1103,11 +1131,8 @@ public class StartupAction implements Serializable {
 			if (session == null)
 				session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		}
-		HashMap parametreMap = new HashMap();
-		parametreMap.put("status", Boolean.TRUE);
-		if (session != null)
-			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<AccountPermission> permissionList = (ArrayList<AccountPermission>) pdksEntityController.getObjectByInnerObjectList(parametreMap, AccountPermission.class);
+
+		List<AccountPermission> permissionList = (ArrayList<AccountPermission>) pdksEntityController.getSQLParamByFieldList(AccountPermission.TABLE_NAME, AccountPermission.COLUMN_NAME_DURUM, Boolean.TRUE, AccountPermission.class, session);
 		String key = "";
 		accountPermissionMap = new HashMap<String, AccountPermission>();
 		for (AccountPermission accountPermission : permissionList) {
@@ -1115,11 +1140,7 @@ public class StartupAction implements Serializable {
 			accountPermissionMap.put(key, accountPermission);
 		}
 		if (user != null) {
-			parametreMap.clear();
-			parametreMap.put("status", Boolean.FALSE);
-			if (session != null)
-				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			List<AccountPermission> deletePermissionList = (ArrayList<AccountPermission>) pdksEntityController.getObjectByInnerObjectList(parametreMap, AccountPermission.class);
+			List<AccountPermission> deletePermissionList = (ArrayList<AccountPermission>) pdksEntityController.getSQLParamByFieldList(AccountPermission.TABLE_NAME, AccountPermission.COLUMN_NAME_DURUM, Boolean.FALSE, AccountPermission.class, session);
 			if (!deletePermissionList.isEmpty()) {
 				for (Iterator iterator = deletePermissionList.iterator(); iterator.hasNext();) {
 					AccountPermission accountPermission = (AccountPermission) iterator.next();
@@ -1127,6 +1148,32 @@ public class StartupAction implements Serializable {
 				}
 				entityManager.flush();
 			}
+		}
+		try {
+			ServletContext servletContext = (ServletContext) FacesContext.getCurrentInstance().getExternalContext().getContext();
+			if (servletContext != null) {
+				List<HttpSession> sessionList = new ArrayList(SessionListener.getSessionList(servletContext));
+				if (sessionList != null) {
+					Calendar cal = Calendar.getInstance();
+					int zoneFark = cal.get(Calendar.ZONE_OFFSET);
+					Date simdi = new Date();
+					HashMap<String, HttpSession> map = new HashMap<String, HttpSession>();
+					for (HttpSession httpSession : sessionList) {
+						if (!map.containsKey(httpSession.getId())) {
+							KullaniciSession kullaniciSession = new KullaniciSession(httpSession, simdi, zoneFark);
+							if (kullaniciSession.getKullanici() != null) {
+								User kullanici = kullaniciSession.getKullanici();
+								if (kullanici.getMenuYetkiMap() != null)
+									kullanici.getMenuYetkiMap().clear();
+							}
+							map.put(httpSession.getId(), httpSession);
+						}
+					}
+				}
+				sessionList = null;
+			}
+		} catch (Exception e) {
+			// TODO: handle exception
 		}
 
 	}

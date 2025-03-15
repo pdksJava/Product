@@ -51,7 +51,7 @@
 						</rich:column>
 						<rich:column>
 							<f:facet name="header">
-								<h:outputText value="Özel Vardiya Mola" />
+								<h:outputText value="Özel #{ortakIslemler.vardiyaAciklama()} Mola" />
 							</f:facet>
 							<h:outputText value="#{authenticatedUser.getYesNo(yemekIzin.ozelMola)}" />
 						</rich:column>
@@ -101,7 +101,7 @@
 					<h:form>
 						<h:graphicImage value="/img/close.png" id="hidelink" styleClass="hidelink">
 							<a4j:support event="onclick" action="#{yemekIzinHome.instanceRefresh}" reRender="yemekTable"
-								oncomplete="if (#{facesContext.maximumSeverity==null}) #{rich:component('editPanel')}.hide();" ajaxSingle="true" />
+								oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" ajaxSingle="true" />
 						</h:graphicImage>
 					</h:form>
 				</h:panelGroup>
@@ -147,7 +147,7 @@
 									</TABLE>
 								</s:decorate>
 								<s:decorate template="/layout/edit.xhtml">
-									<ui:define name="label">Özel Vardiya Mola</ui:define>
+									<ui:define name="label">Özel #{ortakIslemler.vardiyaAciklama()} Mola</ui:define>
 									<h:selectBooleanCheckbox value="#{yemekIzinHome.instance.ozelMola}">
 										<a4j:support event="onclick" reRender="ozelVardiya" status="ajaxStatus" ajaxSingle="true" />
 
@@ -170,7 +170,7 @@
 										targetCaption="Kayıt edilecek vardiyalar" copyControlLabel="#{messages['listShuttle.etiket.copyControlLabel']}"
 										removeControlLabel="#{messages['listShuttle.etiket.removeControlLabel']}"
 										copyAllControlLabel="#{messages['listShuttle.etiket.copyAllControlLabel']}"
-										removeAllControlLabel="#{messages['listShuttle.etiket.removeAllControlLabel']}" required="true" requiredMessage="Vardiya seçiniz">
+										removeAllControlLabel="#{messages['listShuttle.etiket.removeAllControlLabel']}" required="true" requiredMessage="#{ortakIslemler.vardiyaAciklama()} seçiniz">
 										<h:column>
 											<SPAN style="width: 250" id="vardiya#{vardiya.id}">#{vardiya.vardiyaAdi}</SPAN>
 											<rich:toolTip for="vardiya#{vardiya.id}">
@@ -187,7 +187,7 @@
 					<!--  -->
 
 					<a4j:commandButton status="ajaxStatus" value="Kaydet" action="#{yemekIzinHome.save}" reRender="yemekTable"
-						oncomplete="if (#{facesContext.maximumSeverity==null}) #{rich:component('editPanel')}.hide();" />
+						oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" />
 
 
 

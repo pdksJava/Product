@@ -13,12 +13,14 @@ import java.util.TreeMap;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
+import org.hibernate.Session;
+import org.jboss.seam.annotations.In;
+import org.jboss.seam.annotations.Name;
 import org.pdks.entity.DenklestirmeAy;
 import org.pdks.entity.Departman;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
 import org.pdks.entity.PersonelDenklestirmeTasiyici;
-import org.pdks.entity.PersonelExtra;
 import org.pdks.entity.PersonelIzin;
 import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
@@ -27,9 +29,6 @@ import org.pdks.session.Constants;
 import org.pdks.session.OrtakIslemler;
 import org.pdks.session.PdksEntityController;
 import org.pdks.session.PdksUtil;
-import org.hibernate.Session;
-import org.jboss.seam.annotations.In;
-import org.jboss.seam.annotations.Name;
 
 import com.pdks.webservice.PersonelERP;
 import com.sap.conn.jco.JCoDestination;
@@ -236,7 +235,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 			}
 		} else {
 
-			mesaj = "SAP bağlantısı kurulamadı.";
+			mesaj = "ERP bağlantısı kurulamadı.";
 		}
 
 		return mesaj;
@@ -276,23 +275,16 @@ public class PdksSap3Controller implements ERPController, Serializable {
 					// map.put("pdks=", Boolean.TRUE);
 					TreeMap sirketMap = pdksEntityController.getObjectByInnerObjectMapInLogic(map, Sirket.class, Boolean.FALSE);
 					map.clear();
-					if (session != null)
-						map.put(PdksEntityController.MAP_KEY_SESSION, session);
-					map.put("tipi", Tanim.TIPI_GENEL_TANIM);
-					map.put("kodu", Tanim.TIPI_SAP_MASRAF_YERI);
-					Tanim bagliMasrafYeri = (Tanim) pdksEntityController.getObjectByInnerObject(map, Tanim.class);
-					map.clear();
-					if (session != null)
-						map.put(PdksEntityController.MAP_KEY_SESSION, session);
-					map.put("tipi", Tanim.TIPI_GENEL_TANIM);
-					map.put("kodu", Tanim.TIPI_BORDRO_ALT_BIRIMI);
-					Tanim bagliBodroAltBirimi = (Tanim) pdksEntityController.getObjectByInnerObject(map, Tanim.class);
+
+					Tanim bagliMasrafYeri = (Tanim) ortakIslemler.getSQLTanimByTipErpKodu(Tanim.TIPI_GENEL_TANIM, Tanim.TIPI_ERP_MASRAF_YERI, session);
+
+					Tanim bagliBodroAltBirimi = (Tanim) ortakIslemler.getSQLTanimByTipErpKodu(Tanim.TIPI_GENEL_TANIM, Tanim.TIPI_BORDRO_ALT_BIRIMI, session);
 					if (masrafYeriMap == null) {
 						map.clear();
 						if (session != null)
 							map.put(PdksEntityController.MAP_KEY_SESSION, session);
 						map.put(PdksEntityController.MAP_KEY_MAP, "getKodu");
-						map.put("tipi", Tanim.TIPI_SAP_MASRAF_YERI);
+						map.put("tipi", Tanim.TIPI_ERP_MASRAF_YERI);
 						masrafYeriMap = pdksEntityController.getObjectByInnerObjectMap(map, Tanim.class, Boolean.FALSE);
 
 					}
@@ -317,16 +309,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 							Sirket sirket = null;
 							do {
 								personel = ((Personel) personelMap.get(sonucResultTable.getString("PERNR")));
-								PersonelExtra personelExtra = personel.getPersonelExtra();
-								if (personelExtra == null) {
-									personelExtra = new PersonelExtra();
-									personelExtra.setPersonel(personel);
-									personel.setPersonelExtra(personelExtra);
-								}
-								personelExtra.setCepTelefon(PdksUtil.replaceAll(sonucResultTable.getString("GSMTL"), " ", ""));
-								personelExtra.setIlce(sonucResultTable.getString("ORT02"));
-								personel.setErpSicilNo(sonucResultTable.getString("PERNR"));
-								String sirketKodu = sonucResultTable.getString("BUKRS").trim();
+ 								String sirketKodu = sonucResultTable.getString("BUKRS").trim();
 								if (!personel.getDurum())
 									personel.setDurum(Boolean.TRUE);
 								if (sirketMap.containsKey(sirketKodu))
@@ -334,18 +317,14 @@ public class PdksSap3Controller implements ERPController, Serializable {
 								else {
 									try {
 										boolean durumUpdate = sirketKodu.length() < 4;
-										HashMap fields = new HashMap();
 										if (!durumUpdate) {
-											fields.put("erpKodu", sirketKodu);
-											fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-											sirket = (Sirket) pdksEntityController.getObjectByInnerObject(fields, Sirket.class);
+
+											sirket = (Sirket) pdksEntityController.getSQLParamByFieldObject(Sirket.TABLE_NAME, Sirket.COLUMN_NAME_ERP_KODU, sirketKodu, Sirket.class, session);
 											durumUpdate = sirket != null;
 											if (sirket == null) {
 												if (departman == null) {
-													fields.clear();
-													fields.put("id", 1L);
-													fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-													departman = (Departman) pdksEntityController.getObjectByInnerObject(fields, Departman.class);
+
+													departman = (Departman) pdksEntityController.getSQLParamByFieldObject(Departman.TABLE_NAME, Departman.COLUMN_NAME_ID, 1L, Departman.class, session);
 
 												}
 												if (olusturanUser == null)
@@ -356,6 +335,8 @@ public class PdksSap3Controller implements ERPController, Serializable {
 												sirket.setAciklama(sirketAdi);
 												sirket.setAd(sirketAdi.toUpperCase(Constants.TR_LOCALE));
 												sirket.setDepartman(departman);
+												if (departman != null)
+													sirket.setIsAramaGunlukSaat(departman.getIsAramaGunlukSaat());
 												sirket.setErpDurum(Boolean.TRUE);
 												sirket.setDurum(Boolean.TRUE);
 												sirket.setPdks(Boolean.TRUE);
@@ -395,7 +376,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 								}
 								try {
 									if (sonucResultTable.getString("KOSTL") != null)
-										masrafYeri = getTanim(masrafYeriMap, Tanim.TIPI_SAP_MASRAF_YERI, sonucResultTable.getString("KOSTL"), sonucResultTable.getString("KTEXT"), bagliMasrafYeri);
+										masrafYeri = getTanim(masrafYeriMap, Tanim.TIPI_ERP_MASRAF_YERI, sonucResultTable.getString("KOSTL"), sonucResultTable.getString("KTEXT"), bagliMasrafYeri);
 									if (masrafYeri != null && masrafYeri.isGuncellendi()) {
 										if (yeni)
 											session.clear();
@@ -904,7 +885,7 @@ public class PdksSap3Controller implements ERPController, Serializable {
 	}
 
 	public List<PersonelERP> topluHaldePersonelBilgisiNoSapDBGetir(Session session, List<String> personelList, Date baslangicZamani, Date bitisZamani) throws Exception {
-		// TODO entityRefresh
+
 		return null;
 	}
 }

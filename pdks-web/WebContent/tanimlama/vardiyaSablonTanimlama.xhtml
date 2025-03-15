@@ -11,137 +11,151 @@
 		<h:form>
 			<a4j:region>
 				<rich:panel header="#{ortakIslemler.getMenuUserAdi(vardiyaSablonuHome.session,'vardiyaSablonTanimlama')}">
-					<rich:dataTable rowClasses="acik,koyu" value="#{vardiyaSablonuHome.vardiyaSablonList}" var="vardiyaSablon" rows="20" rowKeyVar="row"
-						id="sablonTable">
-						<f:facet name="header">
-							<h:outputText value="Vardiyalar" />
-						</f:facet>
-						<rich:column>
-							<f:facet name="header">
+					<h:panelGrid columns="1">
+						<c:if test="#{authenticatedUser.admin}">
+							<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.pdksSirketList.size() gt 0}">
+								<ui:define name="label">#{ortakIslemler.sirketAciklama()}</ui:define>
+								<h:selectOneMenu value="#{vardiyaSablonuHome.seciliSirket}">
+									<s:selectItems var="comp" value="#{vardiyaSablonuHome.pdksSirketList}" label="#{comp.ad}" noSelectionLabel="Lütfen seçiniz" />
+									<s:convertEntity />
+									<a4j:support event="onchange" reRender="anaForm" status="ajaxStatus" ajaxSingle="true"
+										action="#{vardiyaSablonuHome.fillPdksVardiyaSablonList()}" />
+								</h:selectOneMenu>
+							</s:decorate>
+						</c:if>
+						<a4j:outputPanel id="anaForm">
+							<rich:dataTable rowClasses="acik,koyu" value="#{vardiyaSablonuHome.vardiyaSablonList}" var="vardiyaSablon" rows="20" rowKeyVar="row"
+								id="sablonTable">
+								<f:facet name="header">
+									<h:outputText value="Vardiyalar" />
+								</f:facet>
+								<rich:column>
+									<f:facet name="header">
                        		 İşlemler
                			 </f:facet>
-							<a4j:commandLink status="ajaxStatus" ajaxSingle="true" id="editlink" action="#{vardiyaSablonuHome.kayitGuncelle()}"
-								oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel">
-								<h:graphicImage value="/img/edit.gif" style="border:0" />
-								<f:setPropertyActionListener value="#{vardiyaSablon}" target="#{vardiyaSablonuHome.instance}">
-									<s:convertEntity />
-								</f:setPropertyActionListener>
-							</a4j:commandLink>
-							<rich:toolTip for="editlink" value="Güncelle" />
-						</rich:column>
-						<rich:column rendered="#{authenticatedUser.admin}">
-							<f:facet name="header">
-								<h:outputText value="Id" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.id}" />
-						</rich:column>
-						<rich:column>
-							<f:facet name="header">
-								<h:outputText value="Vardiya Adı" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.adi}" id="vardiyaAdi" />
-						</rich:column>
-						<rich:column rendered="#{authenticatedUser.admin}">
-							<f:facet name="header">
-								<h:outputText value="PDKS Departman" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.departman.departmanTanim.aciklama}" />
-						</rich:column>
-						<rich:column>
-							<f:facet name="header">
-								<h:outputText value="Gun Sayisi" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.calismaGunSayisi}" id="calismaGunSayisi" />
-						</rich:column>
-						<rich:column>
-							<f:facet name="header">
-								<h:outputText value="Toplam Saat" />
-							</f:facet>
-							<h:outputText value="#{authenticatedUser.sayiFormatliGoster(vardiyaSablon.toplamSaat)}" id="toplamSaat" />
-						</rich:column>
-						<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
-							<f:facet name="header">
-								<h:outputText value="#{ortakIslemler.getGunAdi(1,'EEE')}" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.vardiya1.ozelAdi}" id="vardiya1" />
-						</rich:column>
-						<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
-							<f:facet name="header">
-								<h:outputText value="#{ortakIslemler.getGunAdi(2,'EEE')}" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.vardiya2.ozelAdi}" id="vardiya2" />
-						</rich:column>
-						<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
-							<f:facet name="header">
-								<h:outputText value="#{ortakIslemler.getGunAdi(3,'EEE')}" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.vardiya3.ozelAdi}" id="vardiya3" />
-						</rich:column>
-						<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
-							<f:facet name="header">
-								<h:outputText value="#{ortakIslemler.getGunAdi(4,'EEE')}" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.vardiya4.ozelAdi}" id="vardiya4" />
-						</rich:column>
-						<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
-							<f:facet name="header">
-								<h:outputText value="#{ortakIslemler.getGunAdi(5,'EEE')}" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.vardiya5.ozelAdi}" id="vardiya5" />
-						</rich:column>
-						<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
-							<f:facet name="header">
-								<h:outputText value="#{ortakIslemler.getGunAdi(6,'EEE')}" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.vardiya6.ozelAdi}" id="vardiya6" />
-						</rich:column>
-						<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
-							<f:facet name="header">
-								<h:outputText value="#{ortakIslemler.getGunAdi(7,'EEE')}" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.vardiya7.ozelAdi}" id="vardiya7" />
-						</rich:column>
-						<rich:column>
-							<f:facet name="header">
-								<h:outputText value="#{ortakIslemler.calismaModeliAciklama()}" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.calismaModeli.aciklama}" id="calismaModeli" />
-						</rich:column>
-						<rich:column rendered="#{vardiyaSablonuHome.kurGoster}">
-							<f:facet name="header">
-								<h:outputText value="İşkur" />
-							</f:facet>
-							<h:outputText value="#{authenticatedUser.getYesNo(vardiyaSablon.isKurMu)}" />
-						</rich:column>
-						<rich:column>
-							<f:facet name="header">
-								<h:outputText value="Aktif" />
-							</f:facet>
-							<h:outputText value="#{authenticatedUser.getYesNo(vardiyaSablon.durum)}" id="durum" />
-						</rich:column>
+									<a4j:commandLink status="ajaxStatus" ajaxSingle="true" id="editlink" action="#{vardiyaSablonuHome.kayitGuncelle(vardiyaSablon)}"
+										oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel">
+										<h:graphicImage value="/img/edit.gif" style="border:0" />
 
-						<rich:column>
-							<f:facet name="header">
-								<h:outputText value="Son İşlem Yapan" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.sonIslemYapan.adSoyad}" />
-						</rich:column>
+									</a4j:commandLink>
+									<rich:toolTip for="editlink" value="Güncelle" />
+								</rich:column>
+								<rich:column rendered="#{authenticatedUser.admin}">
+									<f:facet name="header">
+										<h:outputText value="Id" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.id}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.vardiyaAciklama()} Şablon Adı" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.adi}" id="vardiyaAdi" />
+								</rich:column>
+								<rich:column rendered="#{authenticatedUser.admin}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.firmaKaynagiAciklama()}" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.departman.departmanTanim.aciklama}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.sirketAciklama()}" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.sirket.ad}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Gun Sayisi" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.calismaGunSayisi}" id="calismaGunSayisi" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Toplam Saat" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(vardiyaSablon.toplamSaat)}" id="toplamSaat" />
+								</rich:column>
+								<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.getGunAdi(1,'EEE')}" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.vardiya1.ozelAdi}" id="vardiya1" />
+								</rich:column>
+								<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.getGunAdi(2,'EEE')}" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.vardiya2.ozelAdi}" id="vardiya2" />
+								</rich:column>
+								<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.getGunAdi(3,'EEE')}" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.vardiya3.ozelAdi}" id="vardiya3" />
+								</rich:column>
+								<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.getGunAdi(4,'EEE')}" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.vardiya4.ozelAdi}" id="vardiya4" />
+								</rich:column>
+								<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.getGunAdi(5,'EEE')}" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.vardiya5.ozelAdi}" id="vardiya5" />
+								</rich:column>
+								<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.getGunAdi(6,'EEE')}" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.vardiya6.ozelAdi}" id="vardiya6" />
+								</rich:column>
+								<rich:column rendered="#{not empty vardiyaSablonuHome.vardiyaSablonList}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.getGunAdi(7,'EEE')}" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.vardiya7.ozelAdi}" id="vardiya7" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.calismaModeliAciklama()}" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.calismaModeli.aciklama}" id="calismaModeli" />
+								</rich:column>
 
-						<rich:column>
-							<f:facet name="header">
-								<h:outputText value="Son İşlem Tarihi" />
-							</f:facet>
-							<h:outputText value="#{vardiyaSablon.sonIslemTarihiStr}" />
-						</rich:column>
-						<f:facet name="footer">
-							<rich:datascroller renderIfSinglePage="false" maxPages="5" />
-						</f:facet>
-					</rich:dataTable>
-					<a4j:commandButton status="ajaxStatus" value="Vardiya Sablon Ekle" action="#{vardiyaSablonuHome.vardiyaSablonuEkle}"
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Aktif" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(vardiyaSablon.durum)}" id="durum" />
+								</rich:column>
+
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Son İşlem Yapan" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.sonIslemYapan.adSoyad}" />
+								</rich:column>
+
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Son İşlem Tarihi" />
+									</f:facet>
+									<h:outputText value="#{vardiyaSablon.sonIslemTarihiStr}" />
+								</rich:column>
+								<f:facet name="footer">
+									<rich:datascroller renderIfSinglePage="false" maxPages="5" />
+								</f:facet>
+							</rich:dataTable>
+						</a4j:outputPanel>
+
+
+					</h:panelGrid>
+					<a4j:commandButton status="ajaxStatus" value="#{ortakIslemler.vardiyaAciklama()} Sablon Ekle" action="#{vardiyaSablonuHome.kayitGuncelle(null)}"
 						rendered="#{authenticatedUser.admin}" oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel">
-						<f:setPropertyActionListener value="#{vardiya}" target="#{vardiyaSablonuHome.instance}">
-							<s:convertEntity />
-						</f:setPropertyActionListener>
+
 					</a4j:commandButton>
 					<rich:toolTip for="addlink" value="Add" />
 				</rich:panel>
@@ -150,14 +164,14 @@
 
 		<rich:modalPanel id="editPanel" autosized="true" width="650">
 			<f:facet name="header">
-				<h:outputText value="Vardiya Şablon Güncelle" />
+				<h:outputText value="#{ortakIslemler.vardiyaAciklama()} Şablon Güncelle" />
 			</f:facet>
 			<f:facet name="controls">
 				<h:panelGroup>
 					<h:form>
 						<h:graphicImage value="/img/close.png" id="hidelink" styleClass="hidelink">
 							<a4j:support event="onclick" action="#{vardiyaSablonuHome.instanceRefresh}" reRender="sablonTable"
-								oncomplete="if (#{facesContext.maximumSeverity==null}) #{rich:component('editPanel')}.hide();" ajaxSingle="true" />
+								oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" ajaxSingle="true" />
 						</h:graphicImage>
 					</h:form>
 				</h:panelGroup>
@@ -169,121 +183,136 @@
 				<h:panelGrid columns="1">
 
 					<s:decorate template="/layout/edit.xhtml">
-						<ui:define name="label">Şablon adı</ui:define>
-						<h:inputText required="true" value="#{vardiyaSablonuHome.instance.adi}" disabled="#{authenticatedUser.admin==false}" size="35"
+						<ui:define name="label">#{ortakIslemler.vardiyaAciklama()} Şablon adı</ui:define>
+						<h:inputText required="true" value="#{vardiyaSablonuHome.instance.adi}" disabled="#{authenticatedUser.admin == false}" size="35"
 							requiredMessage="Şablon Adı giriniz" />
 					</s:decorate>
 					<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin and vardiyaSablonuHome.departmanList.size()>1}">
-						<ui:define name="label">PDKS Departman</ui:define>
-						<h:selectOneMenu value="#{vardiyaSablonuHome.instance.departman}" disabled="#{authenticatedUser.admin==false}">
+						<ui:define name="label">#{ortakIslemler.firmaKaynagiAciklama()}</ui:define>
+						<h:selectOneMenu value="#{vardiyaSablonuHome.instance.departman}" disabled="#{authenticatedUser.admin == false}">
 							<s:selectItems var="comp" value="#{vardiyaSablonuHome.departmanList}" label="#{comp.departmanTanim.aciklama}" noSelectionLabel="Lütfen seçiniz" />
 							<a4j:support event="onchange" action="#{vardiyaSablonuHome.fillPdksVardiyaList}" reRender="vardiyalar" status="ajaxStatus" ajaxSingle="true" />
 							<s:convertEntity />
 						</h:selectOneMenu>
 					</s:decorate>
-					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.instance.id!=null}">
-						<ui:define name="label">Toplam Vardiya Saati</ui:define>
+					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.instance.id != null}">
+						<ui:define name="label">Toplam #{ortakIslemler.vardiyaAciklama()} Saati</ui:define>
 						<h:outputText value="#{authenticatedUser.sayiFormatliGoster(vardiyaSablonuHome.instance.toplamSaat)}" />
 					</s:decorate>
-					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.instance.id!=null}">
+					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.instance.id != null}">
 						<ui:define name="label">Çalışma Gün Sayısı</ui:define>
 						<h:outputText value="#{vardiyaSablonuHome.instance.calismaGunSayisi}" />
 					</s:decorate>
 
-					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.instance.id==null}">
-						<ui:define name="label">Toplam Vardiya Saati</ui:define>
-						<h:inputText required="true" value="#{vardiyaSablonuHome.instance.toplamSaat}" disabled="#{authenticatedUser.admin==false}" size="6"
+					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.instance.id == null}">
+						<ui:define name="label">Toplam #{ortakIslemler.vardiyaAciklama()} Saati</ui:define>
+						<h:inputText required="true" value="#{vardiyaSablonuHome.instance.toplamSaat}" disabled="#{authenticatedUser.admin == false}" size="6"
 							validatorMessage="Toplam vardiya saati giriniz">
 							<f:validateDoubleRange minimum="15" maximum="72" />
 							<a4j:support event="onchange" action="#{vardiyaSablonuHome.fillPdksVardiyaList}" reRender="vardiyalar" status="ajaxStatus" ajaxSingle="true" />
 						</h:inputText>
 					</s:decorate>
 
-					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.instance.id==null}">
+					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.instance.id == null}">
 						<ui:define name="label">Çalışma Gün Sayısı</ui:define>
 						<h:inputText id="calismaGunSayisi" required="true" value="#{vardiyaSablonuHome.instance.calismaGunSayisi}" size="1"
-							validatorMessage="Çalışma gün sayısı giriniz" disabled="#{authenticatedUser.admin==false}">
+							validatorMessage="Çalışma gün sayısı giriniz" disabled="#{authenticatedUser.admin == false}">
 							<f:validateLongRange minimum="1" maximum="7" />
 							<a4j:support event="onchange" action="#{vardiyaSablonuHome.fillPdksVardiyaList}" reRender="vardiyalar" status="ajaxStatus" ajaxSingle="true" />
 						</h:inputText>
 					</s:decorate>
-					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.modelList!=null}">
+					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.modelList != null}">
 						<ui:define name="label">#{ortakIslemler.calismaModeliAciklama()}</ui:define>
-						<h:selectOneMenu value="#{vardiyaSablonuHome.instance.calismaModeli}" style="text-align : left" disabled="#{authenticatedUser.admin==false}">
+						<h:selectOneMenu value="#{vardiyaSablonuHome.instance.calismaModeli}" style="text-align : left" disabled="#{authenticatedUser.admin == false}">
 							<s:selectItems var="calismaModeli" value="#{vardiyaSablonuHome.modelList}" label="#{calismaModeli.aciklama}" noSelectionLabel="Lütfen seçiniz" />
 							<a4j:support event="onchange" ajaxSingle="true" />
 							<s:convertEntity />
 						</h:selectOneMenu>
 					</s:decorate>
+					<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.sirketList != null}">
+						<ui:define name="label">#{ortakIslemler.sirketAciklama()}</ui:define>
+						<h:selectOneMenu value="#{vardiyaSablonuHome.instance.sirket}">
+							<s:selectItems var="comp" value="#{vardiyaSablonuHome.sirketList}" label="#{comp.ad}" noSelectionLabel="Lütfen seçiniz" />
+							<a4j:support event="onchange" action="#{vardiyaSablonuHome.fillPdksVardiyaList()}" reRender="vardiyalar" status="ajaxStatus" ajaxSingle="true" />
+							<s:convertEntity />
+						</h:selectOneMenu>
 
+					</s:decorate>
 					<a4j:outputPanel id="vardiyalar">
-
-						<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaSablonuHome.kur or  vardiyaSablonuHome.instance.isKurMu}">
-							<ui:define name="label">İşkur</ui:define>
-							<h:selectBooleanCheckbox value="#{vardiyaSablonuHome.instance.isKur}">
-								<a4j:support event="onclick" status="ajaxStatus" ajaxSingle="true" reRender="vardiyalar" action="#{vardiyaSablonuHome.sablonIskurDegisti()}" />
-							</h:selectBooleanCheckbox>
-						</s:decorate>
 
 						<h:panelGrid columns="1" rendered="#{vardiyaSablonuHome.instance.toplamSaat>0 and vardiyaSablonuHome.instance.calismaGunSayisi>0}">
 							<s:decorate template="/layout/edit.xhtml" cellpadding="0" cellspacing="0" style="text-align : left">
-								<ui:define name="label"><h:outputText value="#{ortakIslemler.getGunAdi(1,null)}" /></ui:define>
+								<ui:define name="label">
+									<h:outputText value="#{ortakIslemler.getGunAdi(1,null)}" />
+								</ui:define>
 								<h:selectOneMenu value="#{vardiyaSablonuHome.instance.vardiya1}" required="true" style="text-align : left"
-									disabled="#{authenticatedUser.admin==false}" requiredMessage="Pazartesi vardiyasını seçiniz">
+									disabled="#{authenticatedUser.admin == false}" requiredMessage="Pazartesi vardiyasını seçiniz">
 									<s:selectItems var="vardiya" value="#{vardiyaSablonuHome.vardiyaList}" label="#{vardiya.ozelAdi}" noSelectionLabel="Lütfen seçiniz" />
 									<a4j:support event="onchange" ajaxSingle="true" action="#{vardiyaSablonuHome.vardiyaDegistir(vardiyaSablonuHome.instance.vardiya1)}" />
 									<s:convertEntity />
 								</h:selectOneMenu>
 							</s:decorate>
 							<s:decorate template="/layout/edit.xhtml" cellpadding="0" cellspacing="0" style="text-align : left">
-								<ui:define name="label"><h:outputText value="#{ortakIslemler.getGunAdi(2,null)}" /></ui:define>
+								<ui:define name="label">
+									<h:outputText value="#{ortakIslemler.getGunAdi(2,null)}" />
+								</ui:define>
 								<h:selectOneMenu value="#{vardiyaSablonuHome.instance.vardiya2}" required="true" style="text-align : left"
-									disabled="#{authenticatedUser.admin==false}" requiredMessage="Salı vardiyasını seçiniz">
+									disabled="#{authenticatedUser.admin == false}" requiredMessage="Salı vardiyasını seçiniz">
 									<s:selectItems var="vardiya" value="#{vardiyaSablonuHome.vardiyaList}" label="#{vardiya.ozelAdi}" noSelectionLabel="Lütfen seçiniz" />
 									<a4j:support event="onchange" ajaxSingle="true" action="#{vardiyaSablonuHome.vardiyaDegistir(vardiyaSablonuHome.instance.vardiya2)}" />
 									<s:convertEntity />
 								</h:selectOneMenu>
 							</s:decorate>
 							<s:decorate template="/layout/edit.xhtml" cellpadding="0" cellspacing="0" style="text-align : left">
-								<ui:define name="label"><h:outputText value="#{ortakIslemler.getGunAdi(3,null)}" /></ui:define>
+								<ui:define name="label">
+									<h:outputText value="#{ortakIslemler.getGunAdi(3,null)}" />
+								</ui:define>
 								<h:selectOneMenu value="#{vardiyaSablonuHome.instance.vardiya3}" required="true" style="text-align : left"
-									disabled="#{authenticatedUser.admin==false}" requiredMessage="Çarşamba vardiyasını seçiniz">
+									disabled="#{authenticatedUser.admin == false}" requiredMessage="Çarşamba vardiyasını seçiniz">
 									<s:selectItems var="vardiya" value="#{vardiyaSablonuHome.vardiyaList}" label="#{vardiya.ozelAdi}" noSelectionLabel="Lütfen seçiniz" />
 									<a4j:support event="onchange" ajaxSingle="true" action="#{vardiyaSablonuHome.vardiyaDegistir(vardiyaSablonuHome.instance.vardiya3)}" />
 									<s:convertEntity />
 								</h:selectOneMenu>
 							</s:decorate>
 							<s:decorate template="/layout/edit.xhtml" cellpadding="0" cellspacing="0" style="text-align : left">
-								<ui:define name="label"><h:outputText value="#{ortakIslemler.getGunAdi(4,null)}" /></ui:define>
+								<ui:define name="label">
+									<h:outputText value="#{ortakIslemler.getGunAdi(4,null)}" />
+								</ui:define>
 								<h:selectOneMenu value="#{vardiyaSablonuHome.instance.vardiya4}" required="true" style="text-align : left"
-									disabled="#{authenticatedUser.admin==false}" requiredMessage="Perşembe vardiyasını seçiniz">
+									disabled="#{authenticatedUser.admin == false}" requiredMessage="Perşembe vardiyasını seçiniz">
 									<s:selectItems var="vardiya" value="#{vardiyaSablonuHome.vardiyaList}" label="#{vardiya.ozelAdi}" noSelectionLabel="Lütfen seçiniz" />
 									<a4j:support event="onchange" ajaxSingle="true" action="#{vardiyaSablonuHome.vardiyaDegistir(vardiyaSablonuHome.instance.vardiya4)}" />
 									<s:convertEntity />
 								</h:selectOneMenu>
 							</s:decorate>
 							<s:decorate template="/layout/edit.xhtml" cellpadding="0" cellspacing="0" style="text-align : left" requiredMessage="Cuma vardiyasını seçiniz">
-								<ui:define name="label"><h:outputText value="#{ortakIslemler.getGunAdi(5,null)}" /></ui:define>
+								<ui:define name="label">
+									<h:outputText value="#{ortakIslemler.getGunAdi(5,null)}" />
+								</ui:define>
 								<h:selectOneMenu value="#{vardiyaSablonuHome.instance.vardiya5}" required="true" style="text-align : left"
-									disabled="#{authenticatedUser.admin==false}">
+									disabled="#{authenticatedUser.admin == false}">
 									<s:selectItems var="vardiya" value="#{vardiyaSablonuHome.vardiyaList}" label="#{vardiya.ozelAdi}" noSelectionLabel="Lütfen seçiniz" />
 									<a4j:support event="onchange" ajaxSingle="true" action="#{vardiyaSablonuHome.vardiyaDegistir(vardiyaSablonuHome.instance.vardiya5)}" />
 									<s:convertEntity />
 								</h:selectOneMenu>
 							</s:decorate>
 							<s:decorate template="/layout/edit.xhtml" cellpadding="0" cellspacing="0" style="text-align : left">
-								<ui:define name="label"><h:outputText value="#{ortakIslemler.getGunAdi(6,null)}" /></ui:define>
+								<ui:define name="label">
+									<h:outputText value="#{ortakIslemler.getGunAdi(6,null)}" />
+								</ui:define>
 								<h:selectOneMenu value="#{vardiyaSablonuHome.instance.vardiya6}" required="true" style="text-align : left"
-									disabled="#{authenticatedUser.admin==false}" requiredMessage="Cumartesi vardiyasını seçiniz">
+									disabled="#{authenticatedUser.admin == false}" requiredMessage="Cumartesi vardiyasını seçiniz">
 									<s:selectItems var="vardiya" value="#{vardiyaSablonuHome.vardiyaList}" label="#{vardiya.ozelAdi}" noSelectionLabel="Lütfen seçiniz" />
 									<a4j:support event="onchange" ajaxSingle="true" action="#{vardiyaSablonuHome.vardiyaDegistir(vardiyaSablonuHome.instance.vardiya6)}" />
 									<s:convertEntity />
 								</h:selectOneMenu>
 							</s:decorate>
 							<s:decorate template="/layout/edit.xhtml" cellpadding="0" cellspacing="0" style="text-align : left">
-								<ui:define name="label"><h:outputText value="#{ortakIslemler.getGunAdi(7,null)}" /></ui:define>
+								<ui:define name="label">
+									<h:outputText value="#{ortakIslemler.getGunAdi(7,null)}" />
+								</ui:define>
 								<h:selectOneMenu value="#{vardiyaSablonuHome.instance.vardiya7}" required="true" style="text-align : left"
-									disabled="#{authenticatedUser.admin==false}" requiredMessage="Pazar vardiyasını seçiniz">
+									disabled="#{authenticatedUser.admin == false}" requiredMessage="Pazar vardiyasını seçiniz">
 									<s:selectItems var="vardiya" value="#{vardiyaSablonuHome.vardiyaList}" label="#{vardiya.ozelAdi}" noSelectionLabel="Lütfen seçiniz" />
 									<a4j:support event="onchange" ajaxSingle="true" action="#{vardiyaSablonuHome.vardiyaDegistir(vardiyaSablonuHome.instance.vardiya7)}" />
 									<s:convertEntity />
@@ -293,14 +322,14 @@
 					</a4j:outputPanel>
 					<s:decorate template="/layout/edit.xhtml">
 						<ui:define name="label">Aktif</ui:define>
-						<h:selectBooleanCheckbox value="#{vardiyaSablonuHome.instance.durum}" disabled="#{authenticatedUser.admin==false}" />
+						<h:selectBooleanCheckbox value="#{vardiyaSablonuHome.instance.durum}" disabled="#{authenticatedUser.admin == false}" />
 					</s:decorate>
 
 
 					<!--  -->
 
 					<a4j:commandButton status="ajaxStatus" value="Kaydet" action="#{vardiyaSablonuHome.update}" reRender="sablonTable"
-						rendered="#{authenticatedUser.admin}" oncomplete="if (#{facesContext.maximumSeverity==null}) #{rich:component('editPanel')}.hide();" />
+						rendered="#{authenticatedUser.admin}" oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" />
 
 
 

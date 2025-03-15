@@ -2,7 +2,10 @@ package org.pdks.session;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.Serializable;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -11,13 +14,17 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.faces.context.FacesContext;
 import javax.faces.model.SelectItem;
 import javax.persistence.EntityManager;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 import org.apache.poi.ss.usermodel.Cell;
@@ -51,12 +58,14 @@ import org.pdks.entity.DepartmanDenklestirmeDonemi;
 import org.pdks.entity.FazlaMesaiTalep;
 import org.pdks.entity.HareketKGS;
 import org.pdks.entity.IzinTipi;
+import org.pdks.entity.Parameter;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
 import org.pdks.entity.PersonelDenklestirmeBordro;
 import org.pdks.entity.PersonelDenklestirmeBordroDetay;
 import org.pdks.entity.PersonelDenklestirmeDinamikAlan;
 import org.pdks.entity.PersonelDenklestirmeTasiyici;
+import org.pdks.entity.PersonelDinamikAlan;
 import org.pdks.entity.PersonelIzin;
 import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
@@ -66,9 +75,25 @@ import org.pdks.entity.VardiyaGun;
 import org.pdks.entity.VardiyaHafta;
 import org.pdks.entity.VardiyaSaat;
 import org.pdks.entity.YemekIzin;
+import org.pdks.pdf.action.PDFITextUtils;
 import org.pdks.security.action.UserHome;
 import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.User;
+
+import com.itextpdf.text.BaseColor;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.Image;
+import com.itextpdf.text.PageSize;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.BaseFont;
+import com.itextpdf.text.pdf.PdfContentByte;
+import com.itextpdf.text.pdf.PdfCopy;
+import com.itextpdf.text.pdf.PdfImportedPage;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.PdfWriter;
 
 @Name("fazlaMesaiOzetRaporHome")
 public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDonemi> implements Serializable {
@@ -109,7 +134,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 
 	private List<SelectItem> bolumDepartmanlari, gorevYeriList, tesisList;
 
-	private List<AylikPuantaj> aylikPuantajList;
+	private List<AylikPuantaj> aylikPuantajList, onayList;
 
 	private List<DepartmanDenklestirmeDonemi> denklestirmeDonemiList;
 
@@ -117,7 +142,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 
 	private HashMap<String, List<Tanim>> ekSahaListMap;
 
-	private List<Tanim> denklestirmeDinamikAlanlar;
+	private List<Tanim> denklestirmeDinamikAlanlar, personelDinamikAlanlar;
 
 	private VardiyaGun vardiyaGun;
 
@@ -126,16 +151,17 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 	private DenklestirmeAy denklestirmeAy;
 
 	private TreeMap<String, Tatil> tatilGunleriMap;
+	private TreeMap<String, PersonelDinamikAlan> personelDinamikAlanMap;
 
 	private Boolean hataYok, fazlaMesaiIzinKullan = Boolean.FALSE, fazlaMesaiOde = Boolean.FALSE, yetkili = Boolean.FALSE, resmiTatilVar = Boolean.FALSE, haftaTatilVar = Boolean.FALSE, kaydetDurum = Boolean.FALSE;
-	private Boolean onayla, hastaneSuperVisor = Boolean.FALSE, sirketIzinGirisDurum = Boolean.FALSE, hataliPuantajVar = Boolean.FALSE;
+	private Boolean onayla, hastaneSuperVisor = Boolean.FALSE, sirketIzinGirisDurum = Boolean.FALSE, hataliPuantajVar = Boolean.FALSE, secimDurum;
 	private Boolean kimlikGoster = Boolean.FALSE, aksamGun = Boolean.FALSE, maasKesintiGoster = Boolean.FALSE, aksamSaat = Boolean.FALSE, hataliPuantajGoster = Boolean.FALSE, stajerSirket, departmanBolumAyni = Boolean.FALSE;
 	private Boolean modelGoster = Boolean.FALSE, kullaniciPersonel = Boolean.FALSE, sirketGoster = Boolean.FALSE, denklestirmeAyDurum = Boolean.FALSE, yoneticiERP1Kontrol = Boolean.FALSE, yasalFazlaCalismaAsanSaat = Boolean.FALSE;
-	private boolean adminRole, ikRole, bordroPuantajEkranindaGoster = false, fazlaMesaiVar = false, saatlikMesaiVar = false, aylikMesaiVar = false;
-	private Boolean gerceklesenMesaiKod = Boolean.FALSE, devredenBakiyeKod = Boolean.FALSE, normalCalismaSaatKod = Boolean.FALSE, haftaTatilCalismaSaatKod = Boolean.FALSE, resmiTatilCalismaSaatKod = Boolean.FALSE, izinSureSaatKod = Boolean.FALSE;
+	private boolean adminRole, ikRole, bordroPuantajEkranindaGoster = false, vardiyaPlanTopluAdet = false, fazlaMesaiVar = false, saatlikMesaiVar = false, aylikMesaiVar = false;
+	private Boolean gerceklesenMesaiKod = Boolean.FALSE, isAramaDurum = Boolean.FALSE, devredenBakiyeKod = Boolean.FALSE, normalCalismaSaatKod = Boolean.FALSE, haftaTatilCalismaSaatKod = Boolean.FALSE, resmiTatilCalismaSaatKod = Boolean.FALSE, izinSureSaatKod = Boolean.FALSE;
 	private Boolean normalCalismaGunKod = Boolean.FALSE, haftaTatilCalismaGunKod = Boolean.FALSE, resmiTatilCalismaGunKod = Boolean.FALSE, izinSureGunKod = Boolean.FALSE, ucretliIzinGunKod = Boolean.FALSE, ucretsizIzinGunKod = Boolean.FALSE, hastalikIzinGunKod = Boolean.FALSE;
 	private Boolean normalGunKod = Boolean.FALSE, haftaTatilGunKod = Boolean.FALSE, resmiTatilGunKod = Boolean.FALSE, artikGunKod = Boolean.FALSE, bordroToplamGunKod = Boolean.FALSE, devredenMesaiKod = Boolean.FALSE, ucretiOdenenKod = Boolean.FALSE;
-	private Boolean suaDurum = Boolean.FALSE, sutIzniDurum = Boolean.FALSE, gebeDurum = Boolean.FALSE, partTime = Boolean.FALSE;
+	private Boolean suaDurum = Boolean.FALSE, sutIzniDurum = Boolean.FALSE, gebeDurum = Boolean.FALSE, partTime = Boolean.FALSE, pdfTopluAktarDurum = Boolean.FALSE;
 	private Long vardiyaAdet;
 	private List<VardiyaGun> tumVardiyaList;
 
@@ -208,11 +234,23 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		ikRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIK();
 	}
 
+	private void aylikPuantajListClear() {
+		if (aylikPuantajList != null)
+			aylikPuantajList.clear();
+		else
+			aylikPuantajList = ortakIslemler.getSelectItemList("aylikPuantaj", authenticatedUser);
+	}
+
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		aylikPuantajListClear();
+		if (personelDinamikAlanMap == null)
+			personelDinamikAlanMap = new TreeMap<String, PersonelDinamikAlan>();
+		else
+			personelDinamikAlanMap.clear();
 		boolean ayniSayfa = authenticatedUser.getCalistigiSayfa() != null && authenticatedUser.getCalistigiSayfa().equals(sayfaURL);
 		if (!ayniSayfa)
 			authenticatedUser.setCalistigiSayfa(sayfaURL);
@@ -222,10 +260,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			baslikMap = new TreeMap<String, Boolean>();
 		else
 			baslikMap.clear();
-		if (duzeltTipleri == null)
-			duzeltTipleri = new ArrayList<SelectItem>();
-		else
-			duzeltTipleri.clear();
+		duzeltTipleri = ortakIslemler.getSelectItemList("duzeltTip", authenticatedUser);
 		duzeltTipleri.add(new SelectItem("T", "Tam çalışmış"));
 		duzeltTipleri.add(new SelectItem("S", "Süre sayma"));
 		duzeltTipi = (String) duzeltTipleri.get(0).getValue();
@@ -247,7 +282,8 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			suaDurum = false;
 			sutIzniDurum = Boolean.FALSE;
 			partTime = Boolean.FALSE;
-			gebeDurum = false;
+			gebeDurum = Boolean.FALSE;
+			isAramaDurum = Boolean.FALSE;
 			modelGoster = Boolean.FALSE;
 			departmanBolumAyni = Boolean.FALSE;
 			bakiyeGuncelle = null;
@@ -269,7 +305,6 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			ay = cal.get(Calendar.MONTH) + 1;
 			yil = cal.get(Calendar.YEAR);
 			maxYil = yil + 1;
-			aylikPuantajList = new ArrayList<AylikPuantaj>();
 
 			setInstance(new DepartmanDenklestirmeDonemi());
 			// setSirket(null);
@@ -313,12 +348,18 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 					tanimMap = null;
 					list = null;
 				} else {
-					fields.put("parentTanim.kodu", "ekSaha3");
-					fields.put("parentTanim.tipi", Tanim.TIPI_PERSONEL_EK_SAHA);
-					fields.put("durum", Boolean.TRUE);
-					if (session != null)
-						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-					statuTanimList = pdksEntityController.getObjectByInnerObjectList(fields, Tanim.class);
+					Tanim parent = ortakIslemler.getSQLTanimByTipKodu(Tanim.TIPI_PERSONEL_EK_SAHA, "ekSaha3", session);
+					if (parent != null) {
+						StringBuffer sb = new StringBuffer();
+						fields = new HashMap();
+						sb.append("select  * from " + Tanim.TABLE_NAME + "  " + PdksEntityController.getSelectLOCK() + " ");
+						sb.append(" where " + Tanim.COLUMN_NAME_PARENT_ID + " = :t and " + Tanim.COLUMN_NAME_DURUM + " = 1 ");
+						fields.put("t", parent.getId());
+						if (session != null)
+							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+						statuTanimList = pdksEntityController.getObjectBySQLList(sb, fields, Tanim.class);
+					}
+
 				}
 
 				if (statuTanimList != null && !statuTanimList.isEmpty()) {
@@ -364,11 +405,9 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			}
 			if (linkAdresKey != null || (ayStr != null && yilStr != null)) {
 				if (linkAdresKey != null) {
-					HashMap fields = new HashMap();
-					fields.put("id", Long.parseLong(linkAdresKey));
-					if (session != null)
-						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-					PersonelDenklestirme pd = (PersonelDenklestirme) pdksEntityController.getObjectByInnerObject(fields, PersonelDenklestirme.class);
+
+					PersonelDenklestirme pd = (PersonelDenklestirme) pdksEntityController.getSQLParamByFieldObject(PersonelDenklestirme.TABLE_NAME, PersonelDenklestirme.COLUMN_NAME_ID, Long.parseLong(linkAdresKey), PersonelDenklestirme.class, session);
+
 					if (pd != null) {
 						DenklestirmeAy da = pd.getDenklestirmeAy();
 						yilStr = String.valueOf(da.getYil());
@@ -397,12 +436,9 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 							if (!sirket.getId().equals(sirketId))
 								sirket = null;
 						}
-						HashMap parametreMap = new HashMap();
 
-						parametreMap.put("id", sirketId);
-						if (session != null)
-							parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-						sirket = (Sirket) pdksEntityController.getObjectByInnerObject(parametreMap, Sirket.class);
+						sirket = (Sirket) pdksEntityController.getSQLParamByFieldObject(Sirket.TABLE_NAME, Sirket.COLUMN_NAME_ID, sirketId, Sirket.class, session);
+
 						if (sirket != null) {
 							departmanId = sirket.getDepartman().getId();
 							fillSirketList();
@@ -431,12 +467,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 				sirketId = sirket.getId();
 			}
 
-			HashMap parametreMap = new HashMap();
-			if (departmanId != null)
-				parametreMap.put("id", departmanId);
-			if (session != null)
-				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			setDepartman(departmanId != null ? (Departman) pdksEntityController.getObjectByInnerObject(parametreMap, Departman.class) : null);
+			setDepartman(departmanId != null ? (Departman) pdksEntityController.getSQLParamByFieldObject(Departman.TABLE_NAME, Departman.COLUMN_NAME_ID, departmanId, Departman.class, session) : null);
 			if (tesisIdStr != null) {
 				if (!tesisList.isEmpty())
 					setTesisId(Long.parseLong(tesisIdStr));
@@ -469,36 +500,231 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		fillEkSahaTanim();
 		yilDegisti();
 		linkAdresKey = (String) req.getParameter("linkAdresKey");
+		pdfTopluAktarDurum = false;
 		if (linkAdresKey != null)
 			fillFazlaMesaiOzetRaporList();
 		return "";
 	}
 
 	/**
+	 * @param veriMap
+	 * @param icerikList
+	 * @return
+	 * @throws Exception
+	 */
+	private LinkedHashMap<Long, byte[]> getOnayPdf(HashMap<Long, AylikPuantaj> veriMap, List<String> icerikList) throws Exception {
+		LinkedHashMap<Long, byte[]> map = null;
+		BaseFont baseFont = BaseFont.createFont("ARIAL.TTF", BaseFont.IDENTITY_H, true);
+		Font fontH = new Font(baseFont, 10f, Font.BOLD, BaseColor.BLACK);
+		Font fontBaslik = new Font(baseFont, 14f, Font.BOLD, BaseColor.BLACK);
+		Font font = new Font(baseFont, 10f, Font.NORMAL, BaseColor.BLACK);
+		Image image = ortakIslemler.getProjeImage();
+		PdfPTable tableImage = null;
+		if (image != null) {
+			tableImage = new PdfPTable(1);
+			com.itextpdf.text.pdf.PdfPCell cellImage = new com.itextpdf.text.pdf.PdfPCell(image);
+			cellImage.setBorder(com.itextpdf.text.Rectangle.NO_BORDER);
+			tableImage.addCell(cellImage);
+		}
+		Parameter pm = ortakIslemler.getParameter(session, "mesaiDenklestirmeBelge");
+		Locale locale = FacesContext.getCurrentInstance().getViewRoot().getLocale();
+		NumberFormat nf = DecimalFormat.getNumberInstance(locale);
+		String tarih = authenticatedUser.dateFormatla(new Date());
+		LinkedHashMap<String, String> changeMap = new LinkedHashMap<String, String>();
+		for (Long key : veriMap.keySet()) {
+			AylikPuantaj ap = veriMap.get(key);
+			ByteArrayOutputStream baosPDF = new ByteArrayOutputStream();
+			Document doc = new Document(PageSize.A4.rotate(), 60, 60, 100, 60);
+			PdfWriter.getInstance(doc, baosPDF);
+			doc.open();
+			Personel personel = ap.getPdksPersonel();
+			try {
+				if (map == null)
+					map = new LinkedHashMap<Long, byte[]>();
+				if (tableImage != null)
+					doc.add(tableImage);
+				Sirket sirket = personel.getSirket();
+				Tanim tesis = sirket.getTesisDurum() ? personel.getTesis() : null;
+				String kimlikNo = personel.getPersonelKGS() != null ? personel.getPersonelKGS().getKimlikNo() : null;
+				doc.add(PDFITextUtils.getParagraph(pm.getDescription(), fontBaslik, Element.ALIGN_CENTER));
+				Paragraph bos = PDFITextUtils.getParagraph("", fontBaslik, Element.ALIGN_CENTER);
+				bos.setSpacingAfter(10);
+				doc.add(bos);
+				doc.add(bos);
+				doc.add(bos);
+				changeMap.clear();
+				changeMap.put("$adSoyad$", personel.getAdSoyad());
+				changeMap.put("$mesai$", nf.format(ap.getAylikFazlaMesai()));
+				changeMap.put("$kimlikNo$", PdksUtil.hasStringValue(kimlikNo) ? kimlikNo : "");
+
+				for (String string : icerikList) {
+					if (string.equals("$tarih$")) {
+						doc.add(PDFITextUtils.getParagraph(tarih, font, Element.ALIGN_RIGHT));
+					} else if (string.equals("$sirket$"))
+						doc.add(PDFITextUtils.getParagraph(sirket.getAd(), fontH, Element.ALIGN_CENTER));
+					else if (string.equals("$tesis$") && tesis != null)
+						doc.add(PDFITextUtils.getParagraph(tesis.getAciklama(), fontH, Element.ALIGN_CENTER));
+					else {
+						for (String oldStr : changeMap.keySet()) {
+							if (string.indexOf(oldStr) >= 0)
+								string = PdksUtil.replaceAllManuel(string, oldStr, changeMap.get(oldStr));
+						}
+						if (PdksUtil.hasStringValue(string))
+							doc.add(PDFITextUtils.getParagraph(string, font, Element.ALIGN_LEFT));
+						else {
+							bos = PDFITextUtils.getParagraph("", fontBaslik, Element.ALIGN_CENTER);
+							bos.setSpacingAfter(20);
+							doc.add(bos);
+						}
+
+					}
+
+				}
+
+				doc.newPage();
+			} catch (Exception e) {
+				logger.error("Pdks hata in : \n");
+				e.printStackTrace();
+				logger.error("Pdks hata out : " + e.getMessage());
+
+			}
+			doc.close();
+			baosPDF.close();
+			if (map != null)
+				map.put(key, baosPDF.toByteArray());
+		}
+		changeMap = null;
+		return map;
+
+	}
+
+	public String topluSec() {
+		for (AylikPuantaj ap : aylikPuantajList) {
+			ap.setSecili(secimDurum);
+		}
+		return "";
+	}
+
+	public String pdfKontrol() {
+		boolean islemYap = false;
+		String fileName = ortakIslemler.getParameterKey("mesaiDenklestirmeBelge");
+		File file = null;
+		if (onayList == null)
+			onayList = new ArrayList<AylikPuantaj>();
+		else
+			onayList.clear();
+		if (PdksUtil.hasStringValue(fileName)) {
+			file = new File("/opt/pdks/" + fileName);
+			if (file.exists()) {
+				boolean renk = true;
+				for (AylikPuantaj ap : aylikPuantajList)
+					if (ap.isSecili()) {
+						ap.setTrClass(renk ? VardiyaGun.STYLE_CLASS_ODD : VardiyaGun.STYLE_CLASS_EVEN);
+						onayList.add(ap);
+						renk = !renk;
+					}
+				islemYap = onayList.isEmpty() == false;
+				if (islemYap == false)
+					PdksUtil.addMessageWarn("İşlem yapılacak seçili kayıt yok!");
+			} else if (islemYap == false)
+				PdksUtil.addMessageWarn("İşlem yapılacak dosya örneği yok!");
+		}
+
+		return "";
+	}
+
+	/**
+	 * @param tempIzin
+	 * @return
+	 * @throws Exception
+	 */
+	public String pdfTopluAktar(boolean zip) throws Exception {
+		String sayfa = "";
+		HashMap<Long, AylikPuantaj> veriMap = new HashMap<Long, AylikPuantaj>();
+		for (AylikPuantaj ap : onayList)
+			veriMap.put(ap.getPdksPersonel().getId(), ap);
+		String fileName = ortakIslemler.getParameterKey("mesaiDenklestirmeBelge");
+		File file = new File("/opt/pdks/" + fileName);
+		List<String> list = PdksUtil.getStringListFromFile(file);
+		LinkedHashMap<Long, byte[]> map1 = getOnayPdf(veriMap, new ArrayList<String>(list));
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		if (zip) {
+			String path = "/tmp/";
+			File tmp = new File(path);
+			if (!tmp.exists())
+				tmp.mkdir();
+			ZipOutputStream zos = new ZipOutputStream(outputStream);
+			for (Long key : map1.keySet()) {
+				byte[] bytes = map1.get(key);
+				Personel personel = veriMap.get(key).getPdksPersonel();
+				String zipDosyaAdi = (personel.getEkSaha3() != null ? personel.getEkSaha3().getAciklama() + "/" : "") + personel.getAdSoyad() + "_" + personel.getPdksSicilNo() + ".pdf";
+				ZipEntry zipEntry = new ZipEntry(zipDosyaAdi);
+				zos.putNextEntry(zipEntry);
+				int length = bytes.length;
+				zos.write(bytes, 0, length);
+				zos.closeEntry();
+			}
+			zos.close();
+		} else {
+			Document document = new Document(PageSize.A4.rotate());
+			PdfCopy copy = new PdfCopy(document, outputStream);
+			document.open();
+			PdfContentByte pageContentByte = copy.getDirectContent();
+			for (Long key : map1.keySet()) {
+				byte[] data = map1.get(key);
+				PdfReader reader = new PdfReader(data);
+				for (int i = 1; i <= reader.getNumberOfPages(); i++) {
+					document.newPage();
+					// import the page from source pdf
+					PdfImportedPage page = copy.getImportedPage(reader, i);
+					pageContentByte.addTemplate(page, 0, 0);
+					copy.addPage(page);
+				}
+
+			}
+			document.close();
+		}
+		outputStream.flush();
+		outputStream.close();
+		String characterEncoding = "ISO-8859-9";
+		String contentType = "application/" + (zip ? "zip" : "pdf") + ";charset=" + characterEncoding;
+		String disposition = zip || map1.size() > 1 ? "attachment" : "inline";
+		HttpServletResponse response = (HttpServletResponse) FacesContext.getCurrentInstance().getExternalContext().getResponse();
+		response.setContentType(contentType);
+		response.setCharacterEncoding(characterEncoding);
+		String dosyaAdi = fileName.substring(0, fileName.lastIndexOf(".")) + (zip ? ".zip" : ".pdf");
+		String fileNameURL = PdksUtil.encoderURL(dosyaAdi, characterEncoding);
+		response.setHeader("Content-Disposition", disposition + ";filename=" + fileNameURL);
+		PdksUtil.writeByteArrayOutputStream(response, outputStream);
+		file = new File(dosyaAdi);
+		if (file != null && file.exists())
+			file.delete();
+		sayfa = null;
+		map1 = null;
+		list = null;
+		veriMap = null;
+		return sayfa;
+	}
+
+	/**
 	 * 
 	 */
 	private void setSeciliDenklestirmeAy() {
-		if (aylikPuantajList != null)
-			aylikPuantajList.clear();
+		aylikPuantajList.clear();
 		if (denklestirmeAy == null && ay > 0) {
 			HashMap fields = new HashMap();
-			fields.put("ay", ay);
-			fields.put("yil", yil);
-			if (aylikPuantajList != null)
-				aylikPuantajList.clear();
-			if (session != null)
-				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-			denklestirmeAy = (DenklestirmeAy) pdksEntityController.getObjectByInnerObject(fields, DenklestirmeAy.class);
+
+			denklestirmeAy = ortakIslemler.getSQLDenklestirmeAy(yil, ay, session);
 			if (denklestirmeAy != null) {
 				if (denklestirmeAy.getFazlaMesaiMaxSure() == null)
 					fazlaMesaiOrtakIslemler.setFazlaMesaiMaxSure(denklestirmeAy, session);
-				fields.clear();
-				fields.put(PdksEntityController.MAP_KEY_SELECT, "id");
-				fields.put("denklestirmeAy.id", denklestirmeAy.getId());
-				fields.put("denklestirme", Boolean.TRUE);
+				StringBuffer sb = new StringBuffer();
+				sb.append("select " + PersonelDenklestirme.COLUMN_NAME_ID + "  from " + PersonelDenklestirme.TABLE_NAME + "  " + PdksEntityController.getSelectLOCK());
+				sb.append(" where " + PersonelDenklestirme.COLUMN_NAME_DONEM + " = :t and " + PersonelDenklestirme.COLUMN_NAME_DENKLESTIRME_DURUM + " = 1");
+				fields.put("t", denklestirmeAy.getId());
 				if (session != null)
 					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				List<Long> idList = pdksEntityController.getObjectByInnerObjectList(fields, PersonelDenklestirme.class);
+				List idList = pdksEntityController.getObjectBySQLList(sb, fields, null);
 				if (idList.isEmpty()) {
 					denklestirmeAy = null;
 					PdksUtil.addMessageAvailableWarn((ay > 0 ? yil + " " + (aylar.get(ay - 1).getLabel()) : "") + " döneme ait denkleştirme verisi tanımlanmamıştır!");
@@ -530,8 +756,8 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 	}
 
 	private void yilDegisti() {
-		if (aylar == null)
-			aylar = new ArrayList<SelectItem>();
+
+		aylar = ortakIslemler.getSelectItemList("ay", authenticatedUser);
 		ay = fazlaMesaiOrtakIslemler.aylariDoldur(yil, ay, aylar, session);
 	}
 
@@ -605,11 +831,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			e.printStackTrace();
 		}
 		if (departmanId != null) {
-			HashMap parametreMap = new HashMap();
-			parametreMap.put("id", departmanId);
-			if (session != null)
-				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			setDepartman((Departman) pdksEntityController.getObjectByInnerObject(parametreMap, Departman.class));
+			setDepartman((Departman) pdksEntityController.getSQLParamByFieldObject(Departman.TABLE_NAME, Departman.COLUMN_NAME_ID, departmanId, Departman.class, session));
 
 		} else
 			setDepartman(null);
@@ -633,11 +855,8 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 					}
 				}
 				if (sirketId != null) {
-					HashMap map = new HashMap();
-					map.put("id", sirketId);
-					if (session != null)
-						map.put(PdksEntityController.MAP_KEY_SESSION, session);
-					sirket = (Sirket) pdksEntityController.getObjectByInnerObject(map, Sirket.class);
+					sirket = (Sirket) pdksEntityController.getSQLParamByFieldObject(Sirket.TABLE_NAME, Sirket.COLUMN_NAME_ID, sirketId, Sirket.class, session);
+
 				}
 			}
 			setPdksSirketList(sirketler);
@@ -646,10 +865,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		}
 		ekSaha4Tanim = ortakIslemler.getEkSaha4(sirket, sirketId, session);
 
-		if (aylikPuantajList == null)
-			aylikPuantajList = new ArrayList<AylikPuantaj>();
-		else
-			aylikPuantajList.clear();
+		aylikPuantajList.clear();
 		setPersonelDenklestirmeList(new ArrayList<PersonelDenklestirme>());
 
 	}
@@ -696,9 +912,10 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 
 		lastMap.put("sicilNo", seciliPersonel.getPdksSicilNo());
 		String sayfa = MenuItemConstant.fazlaMesaiHesapla;
-		if (personelDenklestirme.getDurum().equals(Boolean.TRUE) || personelDenklestirme.isOnaylandi())
+		if (personelDenklestirme.getDurum().equals(Boolean.TRUE) || personelDenklestirme.isOnaylandi()) {
+			lastMap.put("calistir", Boolean.TRUE);
 			lastMap.put("sayfaURL", FazlaMesaiHesaplaHome.sayfaURL);
-		else {
+		} else {
 			lastMap.put("sayfaURL", VardiyaGunHome.sayfaURL);
 			sayfa = MenuItemConstant.vardiyaPlani;
 		}
@@ -714,6 +931,8 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 
 	@Transactional
 	public String fillFazlaMesaiOzetRaporList() {
+		pdfTopluAktarDurum = false;
+
 		bordroAdres = null;
 		aksamGun = Boolean.FALSE;
 		aksamSaat = Boolean.FALSE;
@@ -726,14 +945,11 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		session.clear();
 		// fillSirketList();
-		HashMap fields = new HashMap();
-		fields.put("ay", ay);
-		fields.put("yil", yil);
+
 		personelDenklestirmeList.clear();
 		ayrikHareketVar = false;
-		if (session != null)
-			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		denklestirmeAy = (DenklestirmeAy) pdksEntityController.getObjectByInnerObject(fields, DenklestirmeAy.class);
+
+		denklestirmeAy = ortakIslemler.getSQLDenklestirmeAy(yil, ay, session);
 		denklestirmeAyDurum = denklestirmeAy != null && denklestirmeAy.getDurum();
 		if (denklestirmeAy != null) {
 			try {
@@ -796,7 +1012,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		else
 			vardiyaZamanMap.clear();
 		vardiyaAdetMap = null;
-		if (seciliEkSaha3Id != null || ortakIslemler.getParameterKey("vardiyaPlanTopluAdet").equals("1"))
+		if (seciliEkSaha3Id != null && vardiyaPlanTopluAdet)
 			vardiyaAdetMap = new HashMap<String, Long>();
 
 		bordroPuantajEkranindaGoster = ortakIslemler.getParameterKey("bordroPuantajEkranindaGoster").equals("1");
@@ -818,10 +1034,11 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		hataliPuantajVar = Boolean.FALSE;
 		fazlaMesaiOde = Boolean.FALSE;
 		sirketIzinGirisDurum = Boolean.FALSE;
-		suaDurum = false;
+		suaDurum = Boolean.FALSE;
 		sutIzniDurum = Boolean.FALSE;
 		partTime = Boolean.FALSE;
-		gebeDurum = false;
+		gebeDurum = Boolean.FALSE;
+		isAramaDurum = Boolean.FALSE;
 		LinkedHashMap<String, Object> lastMap = new LinkedHashMap<String, Object>();
 		if (fmtMap == null)
 			fmtMap = new TreeMap<Long, List<FazlaMesaiTalep>>();
@@ -875,16 +1092,13 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			setVardiyaGun(null);
 			HashMap map = new HashMap();
 
-			HashMap fields = new HashMap();
 			Sirket sirket = null;
 			if (sirketId != null && sirketId > 0) {
-				fields.put("id", sirketId);
-				if (session != null)
-					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				sirket = (Sirket) pdksEntityController.getObjectByInnerObject(fields, Sirket.class);
-				fields.clear();
+				sirket = (Sirket) pdksEntityController.getSQLParamByFieldObject(Sirket.TABLE_NAME, Sirket.COLUMN_NAME_ID, sirketId, Sirket.class, session);
+
 			}
 			List<Personel> donemPerList = fazlaMesaiOrtakIslemler.getFazlaMesaiPersonelList(sirket, tesisId != null ? String.valueOf(tesisId) : null, seciliEkSaha3Id, null, denklestirmeAy != null ? aylikPuantajSablon : null, true, session);
+
 			List<Long> perIdList = new ArrayList<Long>();
 
 			for (Personel personel : donemPerList) {
@@ -906,6 +1120,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 				PdksUtil.addMessageWarn("Çalışma planı kaydı bulunmadı!");
 
 			}
+			donemPerList.clear();
 			for (Iterator iterator = personelDenklestirmeler.iterator(); iterator.hasNext();) {
 				PersonelDenklestirme personelDenklestirme = (PersonelDenklestirme) iterator.next();
 				if (personelDenklestirme == null || personelDenklestirme.getPersonel() == null) {
@@ -916,7 +1131,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 				personelDenklestirme.setGuncellendi(personelDenklestirme.getId() == null);
 				if (personelDenklestirme.isDenklestirmeDurum()) {
 					personelDenklestirmeMap.put(personelDenklestirme.getPersonelId(), personelDenklestirme);
-
+					donemPerList.add(personelDenklestirme.getPdksPersonel());
 				} else
 					iterator.remove();
 
@@ -927,7 +1142,19 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			}
 			HashMap<Long, Double> sureMap = new HashMap<Long, Double>();
 			Date bugun = new Date(), sonCikisZamani = null, sonCalismaGunu = aylikPuantajSablon.getIlkGun();
-
+			personelDinamikAlanlar = PdksUtil.getAktifList(ortakIslemler.getSQLTanimListByTipKodu(Tanim.TIPI_PERSONEL_DINAMIK_TANIM, null, session));
+			personelDinamikAlanMap = ortakIslemler.getPersonelDinamikAlanMap(donemPerList, personelDinamikAlanlar, session);
+			TreeMap<Long, Tanim> tanimMap = new TreeMap<Long, Tanim>();
+			personelDinamikAlanlar.clear();
+			for (String key : personelDinamikAlanMap.keySet()) {
+				PersonelDinamikAlan personelDinamikAlan = personelDinamikAlanMap.get(key);
+				if (personelDinamikAlan.getId() != null && !tanimMap.containsKey(personelDinamikAlan.getAlan().getId()))
+					tanimMap.put(personelDinamikAlan.getAlan().getId(), personelDinamikAlan.getAlan());
+			}
+			if (!tanimMap.isEmpty()) {
+				personelDinamikAlanlar.addAll(PdksUtil.sortTanimList(null, new ArrayList(tanimMap.values())));
+			}
+			tanimMap = null;
 			Calendar cal = Calendar.getInstance();
 			for (VardiyaGun vardiyaGun : aylikPuantajSablon.getVardiyalar()) {
 				cal.setTime(vardiyaGun.getVardiyaDate());
@@ -940,13 +1167,17 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			if (!personelDenklestirmeler.isEmpty()) {
 				if (sirket != null && denklestirmeAyDurum && userHome.hasPermission("personelIzinGirisi", "view")) {
 					map.clear();
-					map.put("departman.id=", sirket.getDepartman().getId());
-					map.put("durum=", Boolean.TRUE);
-					map.put("personelGirisTipi<>", IzinTipi.GIRIS_TIPI_YOK);
-					map.put("bakiyeIzinTipi=", null);
+					StringBuffer sb = new StringBuffer();
+					sb.append("select * from " + IzinTipi.TABLE_NAME + " " + PdksEntityController.getSelectLOCK());
+					sb.append(" where " + IzinTipi.COLUMN_NAME_DEPARTMAN + " = :d and " + IzinTipi.COLUMN_NAME_GIRIS_TIPI + " <> :g ");
+					sb.append(" and " + IzinTipi.COLUMN_NAME_DURUM + " = 1 and " + IzinTipi.COLUMN_NAME_BAKIYE_IZIN_TIPI + " is null ");
+					map.put("d", sirket.getDepartman().getId());
+					map.put("g", IzinTipi.GIRIS_TIPI_YOK);
+					// map.put("durum=", Boolean.TRUE);
+					// map.put("bakiyeIzinTipi=", null);
 					if (session != null)
 						map.put(PdksEntityController.MAP_KEY_SESSION, session);
-					List<IzinTipi> izinTipiList = pdksEntityController.getObjectByInnerObjectListInLogic(map, IzinTipi.class);
+					List<IzinTipi> izinTipiList = pdksEntityController.getObjectBySQLList(sb, map, IzinTipi.class);
 					sirketIzinGirisDurum = !izinTipiList.isEmpty();
 				}
 				fazlaMesaiMap = ortakIslemler.getFazlaMesaiMap(session);
@@ -960,13 +1191,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 					sabahVardiyalar = Arrays.asList(new String[] { "S", "Sİ", "SI" });
 				String gunduzVardiyaVar = ortakIslemler.getParameterKey("gunduzVardiyaVar");
 				if (gunduzVardiyaVar.equals("1")) {
-					map.clear();
-					map.put("kisaAdi", sabahVardiyalar);
-					map.put("departman.id", departmanId);
-					map.put("durum", Boolean.TRUE);
-					if (session != null)
-						map.put(PdksEntityController.MAP_KEY_SESSION, session);
-					sabahVardiya = (Vardiya) pdksEntityController.getObjectByInnerObject(map, Vardiya.class);
+					sabahVardiya = ortakIslemler.getSabahVardiya(sabahVardiyalar, departmanId, session);
 				} else
 					sabahVardiya = null;
 
@@ -1073,6 +1298,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 				HashMap<String, String> vardiyaZamanMap = new HashMap<String, String>();
 				aylikPuantajSablon.setGebeDurum(false);
 				aylikPuantajSablon.setSuaDurum(false);
+				aylikPuantajSablon.setIsAramaDurum(false);
 				for (Iterator iterator1 = list.iterator(); iterator1.hasNext();) {
 					PersonelDenklestirmeTasiyici denklestirmeTasiyici = (PersonelDenklestirmeTasiyici) iterator1.next();
 					Personel personel = denklestirmeTasiyici.getPersonel();
@@ -1127,6 +1353,15 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 								continue;
 							}
 							if (vardiyaGun.getId() != null) {
+								if (puantaj.isGebeDurum() == false && (vardiyaGun.isGebeMi() || vardiyaGun.isGebePersonelDonemselDurum())) {
+									gebeDurum = true;
+									puantaj.setGebeDurum(true);
+								}
+								if (puantaj.isSuaDurum() == false && (vardiyaGun.isSutIzniVar() || vardiyaGun.isSutIzniPersonelDonemselDurum())) {
+									sutIzniDurum = true;
+									puantaj.setSutIzniDurumu(true);
+								}
+
 								++sayac;
 								Vardiya islemVardiya = vardiyaGun.getIslemVardiya();
 								String keyStr = String.valueOf(islemVardiya.getId());
@@ -1221,7 +1456,6 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 				if (aksamCalismaSaati == null)
 					aksamCalismaSaati = 4.0d;
 				double fazlaMesaiMaxSure = ortakIslemler.getFazlaMesaiMaxSure(denklestirmeAy);
-				boolean sirketFazlaMesaiIzinKullan = sirket.getFazlaMesaiIzinKullan() != null && sirket.getFazlaMesaiIzinKullan();
 				boolean sirketFazlaMesaiOde = sirket.getFazlaMesaiOde() != null && sirket.getFazlaMesaiOde();
 				for (Iterator iterator1 = puantajDenklestirmeList.iterator(); iterator1.hasNext();) {
 					AylikPuantaj puantaj = (AylikPuantaj) iterator1.next();
@@ -1403,7 +1637,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 							if (vardiyaGun.getIzin() == null && vardiyaGun.isZamanGelmedi()) {
 								toplamSure = vardiyaGun.getCalismaSuresi();
 							}
-							if (toplamSure - vardiyaGun.getResmiTatilSure() > fazlaMesaiMaxSure)
+							if (vardiyaGun.isFcsDahil() && toplamSure - vardiyaGun.getResmiTatilSure() > fazlaMesaiMaxSure)
 								puantajUcretiOdenenSure += toplamSure - fazlaMesaiMaxSure - vardiyaGun.getResmiTatilSure();
 							puantajSaatToplami += toplamSure;
 							puantajResmiTatil += vardiyaGun.getResmiTatilSure();
@@ -1429,6 +1663,9 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 							ayBitti = bugun.after(vardiyaGunSon.getIslemVardiya().getVardiyaTelorans1BitZaman());
 
 					}
+					if (!isAramaDurum)
+						isAramaDurum = personelDenklestirme != null && (personelDenklestirme.getIsAramaPersonelDonemselDurum() != null && personelDenklestirme.getIsAramaPersonelDonemselDurum().getIsAramaIzni());
+
 					if (sayac == 0) {
 						iterator1.remove();
 						continue;
@@ -1454,8 +1691,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 
 					PersonelDenklestirme hesaplananDenklestirmeHesaplanan = null;
 					double ucretiOdenenMesaiSure = 0.0d;
-					boolean gunMaxCalismaOdenir = puantaj.getCalismaModeli().isFazlaMesaiVarMi() && personelDenklestirme.getCalismaModeliAy().isGunMaxCalismaOdenir();
-
+					boolean gunMaxCalismaOdenir = puantaj.getCalismaModeli().isFazlaMesaiVarMi() && personelDenklestirme.getCalismaModeliAy().isGunMaxCalismaOdenir() && personelDenklestirme.isFazlaMesaiIzinKullanacak() == false;
 					vgMap = puantaj.getVgMap();
 					for (Iterator iterator = puantaj.getVardiyalar().iterator(); iterator.hasNext();) {
 						VardiyaGun vardiyaGun = (VardiyaGun) iterator.next();
@@ -1524,7 +1760,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
-					if (sirketFazlaMesaiIzinKullan && !fazlaMesaiIzinKullan)
+					if (!fazlaMesaiIzinKullan)
 						fazlaMesaiIzinKullan = personelDenklestirme.getFazlaMesaiIzinKullan() != null && personelDenklestirme.getFazlaMesaiIzinKullan();
 					if (!fazlaMesaiOde)
 						fazlaMesaiOde = personelDenklestirme.getFazlaMesaiOde() != null && !personelDenklestirme.getFazlaMesaiOde().equals(sirketFazlaMesaiOde);
@@ -1679,6 +1915,13 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		denklestirmeDinamikAlanlar = ortakIslemler.setDenklestirmeDinamikDurum(puantajList, session);
 		ortakIslemler.sortAylikPuantajList(puantajList, true);
 		setAylikPuantajList(puantajList);
+		if (puantajList.isEmpty() == false) {
+			String fileName = ortakIslemler.getParameterKey("mesaiDenklestirmeBelge");
+			if (PdksUtil.hasStringValue(fileName)) {
+				File file = new File("/opt/pdks/" + fileName);
+				pdfTopluAktarDurum = file.exists();
+			}
+		}
 		if (gecenAy != null && gecenAy.getDurum().equals(Boolean.TRUE) && (authenticatedUser.isAdmin() || authenticatedUser.isIK())) {
 			hataYok = false;
 			PdksUtil.addMessageAvailableError(gecenAy.getAyAdi() + " " + gecenAy.getYil() + " dönemi açıktır!");
@@ -1940,15 +2183,15 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		String fieldName = "p";
 		HashMap fields = new HashMap();
 		StringBuffer sb = new StringBuffer();
-		sb.append("SELECT S.* from " + PersonelDenklestirme.TABLE_NAME + " S WITH(nolock) ");
-		// sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON P." + Personel.COLUMN_NAME_ID + " = S." + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
-		// sb.append(" AND P." + Personel.getIseGirisTarihiColumn() + " IS NOT NULL AND P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " IS NOT NULL ");
-		sb.append(" WHERE S." + PersonelDenklestirme.COLUMN_NAME_DONEM + " = " + denklestirmeAy.getId() + " AND S." + PersonelDenklestirme.COLUMN_NAME_PERSONEL + " :" + fieldName);
+		sb.append("select S.* from " + PersonelDenklestirme.TABLE_NAME + " S " + PdksEntityController.getSelectLOCK() + " ");
+		// sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksEntityController.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_ID + " = S." + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
+		// sb.append(" and P." + Personel.getIseGirisTarihiColumn() + " is not null and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " is not null ");
+		sb.append(" where S." + PersonelDenklestirme.COLUMN_NAME_DONEM + " = " + denklestirmeAy.getId() + " and S." + PersonelDenklestirme.COLUMN_NAME_PERSONEL + " :" + fieldName);
 		fields.put(fieldName, idList);
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 		// List<PersonelDenklestirme> list = pdksEntityController.getObjectBySQLList(sb, fields, PersonelDenklestirme.class);
-		List<PersonelDenklestirme> list = ortakIslemler.getSQLParamList(idList, sb, fieldName, fields, PersonelDenklestirme.class, session);
+		List<PersonelDenklestirme> list = pdksEntityController.getSQLParamList(idList, sb, fieldName, fields, PersonelDenklestirme.class, session);
 		for (Iterator iterator = list.iterator(); iterator.hasNext();) {
 			PersonelDenklestirme personelDenklestirme = (PersonelDenklestirme) iterator.next();
 			if (!personelDenklestirme.isDenklestirmeDurum())
@@ -2131,6 +2374,9 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ekSaha1.getAciklama());
 
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Görevi");
+		for (Tanim alan : personelDinamikAlanlar) {
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(alan.getAciklama());
+		}
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İşe Giriş Tarihi");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İşten Ayrılma Tarihi");
 		if (modelGoster)
@@ -2138,7 +2384,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		if (fazlaMesaiOde)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("FM Ödeme");
 		if (fazlaMesaiIzinKullan)
-			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("FM İzin Kullansın");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.fmIzinKullanAciklama());
 		if (suaDurum)
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Şua");
 		if (gebeDurum)
@@ -2194,10 +2440,10 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			ExcelUtil.baslikCell(cell, anchor, helper, drawing, ortakIslemler.devredenMesaiKod(), "Devreden Mesai: Çalisanin önceki listelerden devreden eksi/fazla mesaisi");
 
 		}
-		if (fazlaMesaiVar) {
-			cell = ExcelUtil.getCell(sheet, row, col++, header);
-			ExcelUtil.baslikCell(cell, anchor, helper, drawing, "ÜÖM", "Çalışanın bu listenin sonunda ücret olarak ödediğimiz fazla mesai saati");
-		}
+
+		cell = ExcelUtil.getCell(sheet, row, col++, header);
+		ExcelUtil.baslikCell(cell, anchor, helper, drawing, "ÜÖM", "Çalışanın bu listenin sonunda ücret olarak ödediğimiz fazla mesai saati");
+
 		if (kismiOdemeGoster) {
 			cell = ExcelUtil.getCell(sheet, row, col++, header);
 			ExcelUtil.baslikCell(cell, anchor, helper, drawing, "KÖM", "Çalışanın bu listenin sonunda ücret olarak kısmi ödediğimiz fazla mesai saati ");
@@ -2387,7 +2633,10 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 					if (ekSaha1 != null)
 						ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getEkSaha1() != null ? personel.getEkSaha1().getAciklama() : "");
 					ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(personel.getGorevTipi() != null ? personel.getGorevTipi().getAciklama() : "");
-
+					for (Tanim alan : personelDinamikAlanlar) {
+						Tanim deger = ortakIslemler.getTanimDeger(personel, alan, personelDinamikAlanMap);
+						ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(deger != null ? deger.getAciklama() : "");
+					}
 					if (personel.getIseBaslamaTarihi() != null)
 						ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(authenticatedUser.dateFormatla(personel.getIseBaslamaTarihi()));
 					else
@@ -2416,7 +2665,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 					if (gebeDurum)
 						ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(authenticatedUser.getYesNo(aylikPuantaj.isGebeDurum()));
 					if (sutIzniDurum)
-						ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(authenticatedUser.getYesNo(personelDenklestirme.getSutIzniDurum()));
+						ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(authenticatedUser.getYesNo(aylikPuantaj.isSutIzniDurumu()));
 					if (partTime)
 						ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(authenticatedUser.getYesNo(personelDenklestirme.isPartTimeDurumu()));
 
@@ -2427,7 +2676,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 						Vardiya vardiya = vardiyaGun.getVardiya();
 						String styleText = vardiyaGun.getAylikClassAdi(aylikPuantaj.getTrClass());
 						Double sure = vardiyaGun.getCalismaSuresi();
-						boolean maxSureGecti = sure != null && sure.doubleValue() > maxSure;
+						boolean maxSureGecti = vardiyaGun.isFcsDahil() && sure != null && sure.doubleValue() > maxSure;
 						styleDay = styleStrDay;
 						if (maxSureGecti)
 							styleDay = row % 2 != 0 ? styleCenterOddDayRed : styleCenterEvenDayRed;
@@ -2489,7 +2738,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 						if (aylikPuantaj.getUcretiOdenenMesaiSure() > 0)
 							setCell(sheet, row, col++, styleTutar, aylikPuantaj.getUcretiOdenenMesaiSure());
 						else
-							ExcelUtil.getCell(sheet, row, col++, styleTutar).setCellValue("");
+							ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue("");
 					}
 					if (gerceklesenMesaiKod)
 						setCell(sheet, row, col++, styleTutar, aylikPuantaj.getAylikNetFazlaMesai());
@@ -2506,18 +2755,18 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 					}
 					boolean olustur = false;
 					Comment commentGuncelleyen = null;
-					if (fazlaMesaiVar) {
-						if (aylikPuantaj.isFazlaMesaiHesapla()) {
-							Cell fazlaMesaiSureCell = setCell(sheet, row, col++, styleTutar, aylikPuantaj.getFazlaMesaiSure());
-							if (aylikPuantaj.getFazlaMesaiSure() != 0.0d) {
-								if (personelDenklestirme.getGuncelleyenUser() != null && personelDenklestirme.getGuncellemeTarihi() != null)
-									commentGuncelleyen = fazlaMesaiOrtakIslemler.getCommentGuncelleyen(anchor, helper, drawing, personelDenklestirme);
-								fazlaMesaiSureCell.setCellComment(commentGuncelleyen);
-								olustur = true;
-							}
-						} else
-							ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue("");
-					}
+
+					if (aylikPuantaj.isFazlaMesaiHesapla()) {
+						Cell fazlaMesaiSureCell = setCell(sheet, row, col++, styleTutar, aylikPuantaj.getFazlaMesaiSure());
+						if (aylikPuantaj.getFazlaMesaiSure() != 0.0d) {
+							if (personelDenklestirme.getGuncelleyenUser() != null && personelDenklestirme.getGuncellemeTarihi() != null)
+								commentGuncelleyen = fazlaMesaiOrtakIslemler.getCommentGuncelleyen(anchor, helper, drawing, personelDenklestirme);
+							fazlaMesaiSureCell.setCellComment(commentGuncelleyen);
+							olustur = true;
+						}
+					} else
+						ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue("");
+
 					if (kismiOdemeGoster) {
 						if (personelDenklestirme.getKismiOdemeSure() != null && personelDenklestirme.getKismiOdemeSure().doubleValue() > 0.0d)
 							setCell(sheet, row, col++, styleTutar, personelDenklestirme.getKismiOdemeSure());
@@ -2545,28 +2794,11 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 						setCell(sheet, row, col++, styleTutar, new Double(aylikPuantaj.getAksamVardiyaSayisi()));
 					if (aksamSaat)
 						setCell(sheet, row, col++, styleTutar, new Double(aylikPuantaj.getAksamVardiyaSaatSayisi()));
-
 					if (denklestirmeDinamikAlanlar != null && !denklestirmeDinamikAlanlar.isEmpty()) {
 						for (Tanim alan : denklestirmeDinamikAlanlar) {
 							PersonelDenklestirmeDinamikAlan denklestirmeDinamikAlan = aylikPuantaj.getDinamikAlan(alan.getId());
-							if (denklestirmeDinamikAlan == null)
-								ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue("");
-							else {
-								if (denklestirmeDinamikAlan.isDevamlilikPrimi())
-									ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(denklestirmeDinamikAlan.getIslemDurum() ? "+" : "-");
-								else {
-									String str = authenticatedUser.getYesNo(denklestirmeDinamikAlan.getIslemDurum());
-									if (denklestirmeDinamikAlan.getSayisalDeger() != null && denklestirmeDinamikAlan.getSayisalDeger().doubleValue() > 0.0d) {
-										String deger = authenticatedUser.sayiFormatliGoster(denklestirmeDinamikAlan.getSayisalDeger());
-										if (denklestirmeDinamikAlan.isIzinDurum())
-											str += "\nSüre : " + deger;
-										else
-											str += "\n " + deger;
-										ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(str);
-									}
-								}
-							}
-
+							String alanStr = denklestirmeDinamikAlan == null ? "" : denklestirmeDinamikAlan.getPersonelDenklestirmeDinamikAlanStr(authenticatedUser);
+							ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue(alanStr);
 						}
 					}
 					if (bordroPuantajEkranindaGoster) {
@@ -2613,6 +2845,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 							setCell(sheet, row, col++, styleGenel, denklestirmeBordro.getBordroToplamGunAdet());
 
 					}
+
 					if (hataliPuantajVar) {
 						String hataAciklama = "";
 						if (!aylikPuantaj.isFazlaMesaiHesapla()) {
@@ -2730,11 +2963,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			setTesisList(new ArrayList<SelectItem>());
 		else {
 			if (sirketId != null) {
-				HashMap fields = new HashMap();
-				fields.put("id", sirketId);
-				if (session != null)
-					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				sirket = (Sirket) pdksEntityController.getObjectByInnerObject(fields, Sirket.class);
+				sirket = (Sirket) pdksEntityController.getSQLParamByFieldObject(Sirket.TABLE_NAME, Sirket.COLUMN_NAME_ID, sirketId, Sirket.class, session);
 				if (!sirket.isTesisDurumu())
 					tesisId = null;
 			}
@@ -2776,14 +3005,11 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		if (pdksSirketList == null || pdksSirketList.isEmpty())
 			setGorevYeriList(new ArrayList<SelectItem>());
 		else {
-			HashMap fields = new HashMap();
-			fields.put("ay", ay);
-			fields.put("yil", yil);
+
 			if (personelDenklestirmeList != null)
 				personelDenklestirmeList.clear();
-			if (session != null)
-				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-			denklestirmeAy = (DenklestirmeAy) pdksEntityController.getObjectByInnerObject(fields, DenklestirmeAy.class);
+
+			denklestirmeAy = ortakIslemler.getSQLDenklestirmeAy(yil, ay, session);
 			if (authenticatedUser.getSuperVisorHemsirePersonelNoList() != null) {
 				if (hastaneSuperVisor == null) {
 					String calistigiSayfa = authenticatedUser.getCalistigiSayfa();
@@ -2794,17 +3020,9 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 
 			} else
 				hastaneSuperVisor = Boolean.FALSE;
-			if (aylikPuantajList == null)
-				aylikPuantajList = new ArrayList<AylikPuantaj>();
-			else
-				aylikPuantajList.clear();
 			Sirket sirket = null;
 			if (sirketId != null) {
-				HashMap parametreMap = new HashMap();
-				parametreMap.put("id", sirketId);
-				if (session != null)
-					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-				sirket = (Sirket) pdksEntityController.getObjectByInnerObject(parametreMap, Sirket.class);
+				sirket = (Sirket) pdksEntityController.getSQLParamByFieldObject(Sirket.TABLE_NAME, Sirket.COLUMN_NAME_ID, sirketId, Sirket.class, session);
 			}
 			setSirket(sirket);
 
@@ -3892,5 +4110,61 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 
 	public static void setSayfaURL(String sayfaURL) {
 		FazlaMesaiOzetRaporHome.sayfaURL = sayfaURL;
+	}
+
+	public List<Tanim> getPersonelDinamikAlanlar() {
+		return personelDinamikAlanlar;
+	}
+
+	public void setPersonelDinamikAlanlar(List<Tanim> personelDinamikAlanlar) {
+		this.personelDinamikAlanlar = personelDinamikAlanlar;
+	}
+
+	public TreeMap<String, PersonelDinamikAlan> getPersonelDinamikAlanMap() {
+		return personelDinamikAlanMap;
+	}
+
+	public void setPersonelDinamikAlanMap(TreeMap<String, PersonelDinamikAlan> personelDinamikAlanMap) {
+		this.personelDinamikAlanMap = personelDinamikAlanMap;
+	}
+
+	public Boolean getIsAramaDurum() {
+		return isAramaDurum;
+	}
+
+	public void setIsAramaDurum(Boolean isAramaDurum) {
+		this.isAramaDurum = isAramaDurum;
+	}
+
+	public boolean isVardiyaPlanTopluAdet() {
+		return vardiyaPlanTopluAdet;
+	}
+
+	public void setVardiyaPlanTopluAdet(boolean vardiyaPlanTopluAdet) {
+		this.vardiyaPlanTopluAdet = vardiyaPlanTopluAdet;
+	}
+
+	public Boolean getPdfTopluAktarDurum() {
+		return pdfTopluAktarDurum;
+	}
+
+	public void setPdfTopluAktarDurum(Boolean pdfTopluAktarDurum) {
+		this.pdfTopluAktarDurum = pdfTopluAktarDurum;
+	}
+
+	public Boolean getSecimDurum() {
+		return secimDurum;
+	}
+
+	public void setSecimDurum(Boolean secimDurum) {
+		this.secimDurum = secimDurum;
+	}
+
+	public List<AylikPuantaj> getOnayList() {
+		return onayList;
+	}
+
+	public void setOnayList(List<AylikPuantaj> onayList) {
+		this.onayList = onayList;
 	}
 }

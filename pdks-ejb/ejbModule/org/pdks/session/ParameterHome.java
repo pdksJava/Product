@@ -97,7 +97,7 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 		session.flush();
 		session.clear();
 		fillParameterList();
-		startupAction.fillStartMethod(authenticatedUser, session);
+		startupAction.fillStartMethod(authenticatedUser, true, session);
 		return "persisted";
 	}
 
@@ -122,7 +122,7 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 		session.flush();
 		session.clear();
 		fillParameterList();
-		startupAction.fillStartMethod(authenticatedUser, session);// fill all list fillParameter();
+		startupAction.fillStartMethod(authenticatedUser, true, session);// fill all list fillParameter();
 		return "persisted";
 
 	}
@@ -202,10 +202,9 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 
 		List<Tanim> skinTanimlar = ortakIslemler.getTanimList(Tanim.TIPI_SKIN, session);
 		skinKodu = SkinBean.getSkinKodu();
-		if (skinList == null)
-			skinList = new ArrayList<SelectItem>();
-		else
-			skinList.clear();
+
+		skinList = ortakIslemler.getSelectItemList("skin", authenticatedUser);
+
 		for (Tanim skin : skinTanimlar) {
 			skinList.add(new SelectItem(skin.getKodu(), skin.getAciklama()));
 			if (skinKodu == null && skin.getAciklama().equals(SkinBean.getSkinAdi()))
@@ -226,9 +225,9 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 		// List<Parameter> list = pdksEntityController.getObjectByInnerObjectList(parametreMap, Parameter.class);
 		//
 		StringBuffer sb = new StringBuffer();
-		sb.append("SELECT   T.* FROM " + Parameter.TABLE_NAME + " T WITH(nolock) ");
+		sb.append("select T.* from " + Parameter.TABLE_NAME + " T " + PdksEntityController.getSelectLOCK() + " ");
 		if (!authenticatedUser.isAdmin()) {
-			sb.append(" WHERE T." + Parameter.COLUMN_NAME_GUNCELLE + " = 1 AND T." + Parameter.COLUMN_NAME_HELP_DESK + " = 0 ");
+			sb.append(" where T." + Parameter.COLUMN_NAME_GUNCELLE + " = 1 and T." + Parameter.COLUMN_NAME_HELP_DESK + " = 0 ");
 
 		}
 

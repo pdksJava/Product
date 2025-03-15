@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -66,9 +67,11 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 
 	private UserMenuItemTime menuItemTime;
 
-	private List<Role> yetkiliRollerim, yetkiliRoller;
+	private List<Role> yetkiliRollerim, yetkiliRoller, bagliRoller;
 
-	private List<Tanim> yetkiliTesisler;
+	private HashMap<String, List> selectItemMap = null;
+
+	private List<Tanim> yetkiliTesisler, yetkiliBolumler;
 
 	private Personel pdksPersonel;
 
@@ -79,9 +82,9 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 	private boolean durum = Boolean.TRUE, yeniSifre = Boolean.FALSE, admin = Boolean.FALSE, IK = Boolean.FALSE, IKSirket = Boolean.FALSE, IK_Tesis = Boolean.FALSE;
 	private boolean sistemYoneticisi = Boolean.FALSE, yonetici = Boolean.FALSE, anahtarKullanici = Boolean.FALSE, yoneticiKontratli = Boolean.FALSE, genelMudur = Boolean.FALSE, sekreter = Boolean.FALSE;
 	private boolean projeMuduru = Boolean.FALSE, mudur = Boolean.FALSE, superVisor = Boolean.FALSE, IKDirektor = Boolean.FALSE, personel = Boolean.FALSE;
-	private boolean operatorSSK = Boolean.FALSE, yetkiSet = Boolean.FALSE, direktorSuperVisor = Boolean.FALSE, taseronAdmin = Boolean.FALSE;
+	private boolean operatorSSK = Boolean.FALSE, yetkiSet = Boolean.FALSE, tesisSuperVisor = Boolean.FALSE, direktorSuperVisor = Boolean.FALSE, taseronAdmin = Boolean.FALSE;
 	private boolean browserIE, izinGirebilir = Boolean.FALSE, izinSSKGirebilir = Boolean.FALSE, izinOnaylayabilir = Boolean.FALSE, testLogin = Boolean.FALSE;
-	private boolean tesisYonetici, raporKullanici = Boolean.FALSE;
+	private boolean sirketSuperVisor = Boolean.FALSE, raporKullanici = Boolean.FALSE;
 	private ArrayList<User> userVekaletList;
 
 	private List<Personel> yetkiliPersoneller, ikinciYoneticiPersonel;
@@ -91,6 +94,8 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 	private User seciliSuperVisor;
 
 	private Boolean vardiyaDuzeltYetki = Boolean.FALSE, secili = Boolean.FALSE, login = Boolean.FALSE;
+
+	private HashMap<String, Boolean> menuYetkiMap;
 
 	private HttpSession session;
 
@@ -318,17 +323,6 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 
 	public void setProjeMuduru(Boolean projeMuduru) {
 		this.projeMuduru = projeMuduru;
-	}
-
-	@Transient
-	public boolean isTesisYonetici() {
-		if (!yetkiSet)
-			PdksUtil.setUserYetki(this);
-		return tesisYonetici;
-	}
-
-	public void setTesisYonetici(Boolean tesisYonetici) {
-		this.tesisYonetici = tesisYonetici;
 	}
 
 	@Transient
@@ -785,7 +779,6 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 
 	@Transient
 	public List<Role> getYetkiliRollerim() {
-
 		return yetkiliRollerim;
 	}
 
@@ -998,6 +991,8 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 
 	@Transient
 	public boolean isSistemYoneticisi() {
+		if (!yetkiSet)
+			PdksUtil.setUserYetki(this);
 		return sistemYoneticisi;
 	}
 
@@ -1073,6 +1068,42 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 	}
 
 	@Transient
+	public boolean isIKSirket() {
+		if (!yetkiSet)
+			PdksUtil.setUserYetki(this);
+		return IKSirket;
+	}
+
+	public void setIKSirket(boolean iKSirket) {
+		IKSirket = iKSirket;
+	}
+
+	/**
+	 * @return
+	 */
+	@Transient
+	public boolean isTesisSuperVisor() {
+		if (!yetkiSet)
+			PdksUtil.setUserYetki(this);
+		return tesisSuperVisor;
+	}
+
+	public void setTesisSuperVisor(boolean tesisSuperVisor) {
+		this.tesisSuperVisor = tesisSuperVisor;
+	}
+
+	@Transient
+	public boolean isSirketSuperVisor() {
+		if (!yetkiSet)
+			PdksUtil.setUserYetki(this);
+		return sirketSuperVisor;
+	}
+
+	public void setSirketSuperVisor(boolean sirketSuperVisor) {
+		this.sirketSuperVisor = sirketSuperVisor;
+	}
+
+	@Transient
 	public String getParametreJSON() {
 		return parametreJSON;
 	}
@@ -1082,16 +1113,42 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 	}
 
 	@Transient
-	public boolean isIKSirket() {
-		return IKSirket;
+	public List<Role> getBagliRoller() {
+		return bagliRoller;
 	}
 
-	public void setIKSirket(boolean iKSirket) {
-		IKSirket = iKSirket;
+	public void setBagliRoller(List<Role> bagliRoller) {
+		this.bagliRoller = bagliRoller;
+	}
+
+	@Transient
+	public HashMap<String, Boolean> getMenuYetkiMap() {
+		return menuYetkiMap;
+	}
+
+	public void setMenuYetkiMap(HashMap<String, Boolean> menuYetkiMap) {
+		this.menuYetkiMap = menuYetkiMap;
+	}
+
+	@Transient
+	public HashMap<String, List> getSelectItemMap() {
+		return selectItemMap;
+	}
+
+	public void setSelectItemMap(HashMap<String, List> selectItemMap) {
+		this.selectItemMap = selectItemMap;
+	}
+
+	@Transient
+	public List<Tanim> getYetkiliBolumler() {
+		return yetkiliBolumler;
+	}
+
+	public void setYetkiliBolumler(List<Tanim> yetkiliBolumler) {
+		this.yetkiliBolumler = yetkiliBolumler;
 	}
 
 	public void entityRefresh() {
-		// TODO entityRefresh
 
 	}
 

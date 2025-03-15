@@ -6,14 +6,8 @@
  */
 package org.pdks.dao.impl;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -21,14 +15,12 @@ import java.util.List;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 
-import org.hibernate.Query;
 import org.hibernate.SQLQuery;
 import org.hibernate.Session;
-import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
-
 import org.pdks.dao.BaseDAO;
 import org.pdks.genel.model.Liste;
 import org.pdks.genel.model.PdksUtil;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
 
 /**
  * @author Hasan Sayar
@@ -48,13 +40,11 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 	public static final String MAP_KEY_SP_NAME = "SP_NAME";
 	public static final String MAP_KEY_SESSION = "session";
 	public static final String SELECT_KARAKTER = "t";
-	public static final String WHERE = " where ";
+	public static final String where = " where ";
+	public static final String TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED = "read uncommitted";
+	public static final String TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED = "read committed";
+	private static boolean readUnCommitted = false;
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.abh.eig.dao.BaseDAO#getObject(String, java.lang.Class)
-	 */
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -276,7 +266,7 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see org.pdks.dao.BaseDAO#getObjectByInnerObjectMapInLogic(java.util.HashMap , java.lang.Class)
+	 * @see org.pdks.dao.BaseDAO#getObjectByInnerObjectMapInLogic(java.util.HashMap, java.lang.Class)
 	 */
 	public TreeMap getObjectByInnerObjectMapInLogic(HashMap map, Class class1, boolean uzerineYaz) {
 		TreeMap treeMap = new TreeMap();
@@ -447,7 +437,6 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 	}
 
 	protected List getObjectByInnerObjectList(HashMap fieldsOrj, Class class1, String esit) {
-
 		List objectList = null;
 		List listKey = null;
 		HashMap ozelMap = new HashMap();
@@ -504,6 +493,13 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 			esit = "";
 		Object fieldValue;
 		List list = null;
+		SQLQuery queryReadUnCommitted = null;
+		Session session = null;
+		if (readUnCommitted) {
+			session = getHibernateCurrentSession();
+			queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
+			queryReadUnCommitted.executeUpdate();
+		}
 		if (class1 != null) {
 			ArrayList parametreList = new ArrayList();
 			String query = "";
@@ -577,28 +573,26 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 				}
 			}
 			query = tesisKoduKontrol(class1, select.trim() + " from " + class1.getName() + " " + SELECT_KARAKTER + " " + query.trim(), or, parametreList);
-			logger.debug("Baris -> 562 sql: " + query);
 			if (query.indexOf(" and ") > 0 && or != null)
 				query = PdksUtil.replaceAll(query, " and ", or);
 			if (parametreList.isEmpty()) {
-				logger.debug("Baris -> 566 sql: " + query);
 				list = getHibernateTemplate().find(query);
 			} else {
 
 				if (parametreList.size() == 1) {
-					logger.debug("Baris -> 570 sql: " + query);
-					logger.debug("Baris -> 571 params: " + parametreList.get(0));
 					list = getHibernateTemplate().find(query, parametreList.get(0));
 				} else {
 					Object[] objectValue = new Object[parametreList.size()];
 					for (int i = 0; i < objectValue.length; i++)
 						objectValue[i] = parametreList.get(i);
-					logger.debug("Baris -> 577 sql: " + query);
-					logger.debug("Baris -> 577 params: " + objectValue);
 					list = getHibernateTemplate().find(query, objectValue);
 				}
 
 			}
+		}
+		if (queryReadUnCommitted != null) {
+			queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
+			queryReadUnCommitted.executeUpdate();
 		}
 		return list;
 	}
@@ -628,6 +622,11 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 	public List getNativeSQLList(HashMap fields, StringBuffer sb, Class class1) {
 		List list = null;
 		Session session = getHibernateCurrentSession();
+		SQLQuery queryReadUnCommitted = null;
+		if (readUnCommitted) {
+			queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
+			queryReadUnCommitted.executeUpdate();
+		}
 		String sql = sb.toString();
 		TreeMap fieldsOther = new TreeMap();
 		sb = null;
@@ -675,7 +674,12 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 				logger.error(sql + "\n" + e);
 				list = null;
 			}
+
 			fieldsOther = null;
+		}
+		if (queryReadUnCommitted != null) {
+			queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
+			queryReadUnCommitted.executeUpdate();
 		}
 		// session.close();
 		return list;
@@ -697,7 +701,7 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 			maxSize = 900;
 		// maxSize = maxSize / 2;
 		String parametreKey = ":" + key;
-
+		SQLQuery queryReadUnCommitted = null;
 		while (!veriler.isEmpty()) {
 			LinkedHashMap fieldsOther = new LinkedHashMap();
 			StringBuffer strArray = new StringBuffer();
@@ -717,6 +721,10 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 			strArray = null;
 			String sql = PdksUtil.replaceAll(sqlSTR, parametreKey, parametreler.indexOf(",") > 0 ? " IN ( " + parametreler + " ) " : " = " + parametreler);
 			session.clear();
+			if (readUnCommitted) {
+				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
+				queryReadUnCommitted.executeUpdate();
+			}
 			SQLQuery query = session.createSQLQuery(sql);
 			if (class1 != null)
 				query.addEntity(class1);
@@ -727,7 +735,6 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 
 			try {
 				List listNew = query.list();
-
 				logger.debug(veriler.size() + " " + fieldsOther.size() + " : " + listNew.size());
 				if (!listNew.isEmpty())
 					listAll.addAll(listNew);
@@ -743,23 +750,53 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 			query = null;
 
 		}
-
+		if (queryReadUnCommitted != null) {
+			queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
+			queryReadUnCommitted.executeUpdate();
+		}
 		veriler = null;
 		return listAll;
 	}
 
+	public List execSPList(LinkedHashMap<String, Object> veriMap, Class class1) throws Exception {
+		List liste = null;
+		if (veriMap.containsKey(BaseDAOHibernate.MAP_KEY_SELECT)) {
+
+			SQLQuery query = prepareProcedure(veriMap);
+			if (query != null) {
+				if (class1 != null)
+					query.addEntity(class1);
+				liste = query.list();
+			}
+		}
+
+		return liste;
+	}
+
+	/**
+	 * @param fields
+	 * @return
+	 */
+	public void execSP(LinkedHashMap<String, Object> veriMap) {
+
+		if (veriMap.containsKey(BaseDAOHibernate.MAP_KEY_SELECT)) {
+			SQLQuery query = prepareProcedure(veriMap);
+			if (query != null)
+				query.executeUpdate();
+		}
+
+	}
+
 	/**
 	 * @param veriMap
-	 * 
+	 * @param sp
 	 * @return
 	 */
 	private SQLQuery prepareProcedure(LinkedHashMap<String, Object> veriMap) {
-		String qname = (String) veriMap.get(BaseDAOHibernate.MAP_KEY_SELECT);
+		String sp = (String) veriMap.get(BaseDAOHibernate.MAP_KEY_SELECT);
 		veriMap.remove(BaseDAOHibernate.MAP_KEY_SELECT);
-		String queryStr = "exec " + qname;
+		String queryStr = "exec " + sp;
 		Session session = getHibernateCurrentSession();
-		if (veriMap.containsKey(MAP_KEY_SESSION))
-			veriMap.remove(MAP_KEY_SESSION);
 		for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
 			String string = (String) iterator.next();
 			if (string != null) {
@@ -781,86 +818,13 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 		return query;
 	}
 
-	public List execSPList(LinkedHashMap<String, Object> veriMap, Class class1) throws Exception {
-		List liste = null;
-		if (veriMap.containsKey(BaseDAOHibernate.MAP_KEY_SELECT)) {
-			SQLQuery query = prepareProcedure(veriMap);
-			if (query != null) {
-				if (class1 != null)
-					query.addEntity(class1);
-				liste = query.list();
-			}
-
-		}
-		return liste;
-	}
-
 	/**
-	 * @param fields
+	 * @param level
 	 * @return
 	 */
-	public void execSP(LinkedHashMap<String, Object> fields) {
-		if (fields.containsKey(BaseDAOHibernate.MAP_KEY_SELECT)) {
-			SQLQuery query = prepareProcedure(fields);
-			if (query != null)
-				query.executeUpdate();
-		}
-	}
-
-	/**
-	 * @param fields
-	 * @return
-	 */
-	public List getSPList(HashMap fields) {
-		List liste = null;
-		if (fields.containsKey(BaseDAOHibernate.MAP_KEY_SELECT)) {
-			String qname = (String) fields.get(BaseDAOHibernate.MAP_KEY_SELECT);
-			fields.remove(BaseDAOHibernate.MAP_KEY_SELECT);
-			Session session = getHibernateCurrentSession();
-			Query queryObj = session.getNamedQuery(qname);
-			for (Iterator iterator = fields.keySet().iterator(); iterator.hasNext();) {
-				Object keyDeger = (Object) iterator.next();
-				Object object = fields.get(keyDeger);
-				if (keyDeger instanceof String) {
-					String key = (String) keyDeger;
-					if (object instanceof String)
-						queryObj.setString(key, (String) object);
-					else if (object instanceof Calendar)
-						queryObj.setCalendar(key, (Calendar) object);
-					else if (object instanceof Date)
-						queryObj.setDate(key, (Date) object);
-					else if (object instanceof Integer)
-						queryObj.setInteger(key, ((Integer) object).intValue());
-					else if (object instanceof Long)
-						queryObj.setLong(key, ((Long) object).longValue());
-					else if (object instanceof Short)
-						queryObj.setShort(key, ((Short) object).shortValue());
-					else if (object instanceof Time)
-						queryObj.setTime(key, (Time) object);
-					else if (object instanceof Timestamp)
-						queryObj.setTimestamp(key, (Timestamp) object);
-					else if (object instanceof Float)
-						queryObj.setFloat(key, ((Float) object).floatValue());
-					else if (object instanceof Double)
-						queryObj.setDouble(key, ((Double) object).doubleValue());
-					else if (object instanceof Character)
-						queryObj.setCharacter(key, ((Character) object).charValue());
-					else if (object instanceof BigDecimal)
-						queryObj.setBoolean(key, ((Boolean) object).booleanValue());
-					else if (object instanceof BigDecimal)
-						queryObj.setBigDecimal(key, (BigDecimal) object);
-					else if (object instanceof BigInteger)
-						queryObj.setBigInteger(key, (BigInteger) object);
-				} else if (keyDeger instanceof Integer)
-					queryObj.setParameter(((Integer) keyDeger).intValue(), object);
-
-			}
-			queryObj.executeUpdate();
-			liste = queryObj.list();
-			// session.close();
-		}
-
-		return liste;
+	private String setTransactionIsolationLevel(String level) {
+		String levelStr = "set transaction isolation level " + level;
+		return levelStr;
 	}
 
 	/**
@@ -870,13 +834,17 @@ public class BaseDAOHibernate extends HibernateDaoSupport implements BaseDAO {
 	 * @return
 	 */
 	private String tesisKoduKontrol(Class class1, String query, String or, List list) {
-
-		if (query.indexOf(" and ") > 0 && or != null) {
+		if (query.indexOf(" and ") > 0 && or != null)
 			query = PdksUtil.replaceAll(query, " and ", or);
-
-		}
-
 		return query;
+	}
+
+	public static boolean isReadUnCommitted() {
+		return readUnCommitted;
+	}
+
+	public static void setReadUnCommitted(boolean readUnCommitted) {
+		BaseDAOHibernate.readUnCommitted = readUnCommitted;
 	}
 
 }

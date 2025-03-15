@@ -25,8 +25,6 @@ import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.pdks.session.PdksUtil;
 
-import com.pdks.notUse.IsKurVardiyaGun;
-
 @Entity(name = VardiyaGun.TABLE_NAME)
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = { VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI, VardiyaGun.COLUMN_NAME_PERSONEL }) })
 public class VardiyaGun extends BaseObject {
@@ -63,12 +61,11 @@ public class VardiyaGun extends BaseObject {
 	private Date vardiyaDate;
 	private VardiyaGorev vardiyaGorev;
 	private VardiyaSaat vardiyaSaat, vardiyaSaatDB;
-	private ArrayList<HareketKGS> hareketler, girisHareketleri, cikisHareketleri, yemekHareketleri;
+	private ArrayList<HareketKGS> hareketler, girisHareketleri, cikisHareketleri, yemekHareketleri, gecersizHareketler;
 	private ArrayList<PersonelIzin> izinler;
 	private ArrayList<PersonelFazlaMesai> fazlaMesailer;
 	private ArrayList<Vardiya> vardiyalar;
 	private VardiyaGun oncekiVardiyaGun, sonrakiVardiyaGun;
-	private IsKurVardiyaGun isKurVardiya;
 	private int beklemeSuresi = 6;
 	private Double calismaSuaSaati = PersonelDenklestirme.getCalismaSaatiSua();
 	private Boolean izinHaftaTatilDurum;
@@ -89,11 +86,13 @@ public class VardiyaGun extends BaseObject {
 	private List<String> linkAdresler;
 	private HashMap<String, Personel> gorevliPersonelMap;
 	private CalismaModeli calismaModeli = null;
-
 	private Boolean fazlaMesaiOnayla;
 	private Integer version = 0;
 	private List<FazlaMesaiTalep> fazlaMesaiTalepler;
 	private List<YemekIzin> yemekList;
+	private HashMap<PersonelDurumTipi, PersonelDonemselDurum> donemselDurumMap = new HashMap<PersonelDurumTipi, PersonelDonemselDurum>();
+
+	// private PersonelDonemselDurum sutIzniPersonelDonemselDurum, gebePersonelDonemselDurum, isAramaPersonelDonemselDurum;
 
 	public VardiyaGun() {
 		super();
@@ -149,8 +148,7 @@ public class VardiyaGun extends BaseObject {
 		Long oldId = eskiVardiya != null && eskiVardiya.getId() != null ? eskiVardiya.getId() : 0l;
 		if (value != null && value.getId() != null)
 			value.setIslemVardiyaGun(this);
-		if (isKurVardiya != null)
-			isKurVardiya.setVardiya(value);
+
 		if (this.isGuncellendi() == false) {
 			Long newId = value != null && value.getId() != null ? value.getId() : 0l;
 			this.guncellendi = PdksUtil.isLongDegisti(oldId, newId);
@@ -393,7 +391,7 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	public void setCalismaSuresi(double value) {
-		if (this.getVardiyaDateStr().equals("20211028") && value != 0.0d)
+		if (this.getVardiyaDateStr().endsWith("1231") && value != 0.0d)
 			logger.debug(value);
 		this.calismaSuresi = value;
 	}
@@ -401,7 +399,7 @@ public class VardiyaGun extends BaseObject {
 	@Transient
 	public void addCalismaSuresi(double value) {
 		if (value != 0.0d) {
-			if (this.getVardiyaDateStr().equals("20230420"))
+			if (this.getVardiyaDateStr().endsWith("1231"))
 				logger.debug(value);
 		}
 
@@ -549,11 +547,8 @@ public class VardiyaGun extends BaseObject {
 			kapi = null;
 		}
 		boolean durum = Boolean.TRUE;
-		// if (this.getVardiyaDateStr().equals("20160409")) {
-		// if (hareket.getId().equals("A10823"))
-		// logger.info(hareket.getId() + " " + this.getVardiyaDateStr() + " " + hareket.getZaman() + " " + this.getIslemVardiya().getVardiyaFazlaMesaiBasZaman() + " " + this.getIslemVardiya().getVardiyaFazlaMesaiBitZaman());
-		// }
-		if (hareket != null && (kapi.isGirisKapi() || kapi.isCikisKapi())) {
+
+		if (kapi != null && hareket != null && (kapi.isGirisKapi() || kapi.isCikisKapi())) {
 			if (hareketler == null) {
 				hareketler = new ArrayList<HareketKGS>();
 				setHareketHatali(kapi.isCikisKapi());
@@ -567,19 +562,22 @@ public class VardiyaGun extends BaseObject {
 				HareketKGS oncekiHareket = hareketler.get(indexSon);
 				Double fark = PdksUtil.getDakikaFarki(hareket.getZaman(), oncekiHareket.getZaman());
 				if (kapi.isGirisKapi()) {
-					if (oncekiHareket.getKapiView().getKapi().isGirisKapi() && fark < beklemeSuresi) {
-						boolean duzelt = false;
-						KapiSirket oncekiKapiSirket = oncekiHareket.getKapiView().getKapiKGS() != null ? oncekiHareket.getKapiView().getKapiKGS().getKapiSirket() : null;
-						if (oncekiKapiSirket != null && kapiSirket != null) {
-							duzelt = oncekiKapiSirket.getId().equals(kapiSirket.getId()) || hareket.getZaman().getTime() <= kapiSirket.getBitTarih().getTime();
-						} else
-							duzelt = true;
+					if (oncekiHareket.getKapiView().getKapi().isGirisKapi()) {
+						if (fark < beklemeSuresi) {
+							boolean duzelt = false;
+							KapiSirket oncekiKapiSirket = oncekiHareket.getKapiView().getKapiKGS() != null ? oncekiHareket.getKapiView().getKapiKGS().getKapiSirket() : null;
+							if (oncekiKapiSirket != null && kapiSirket != null) {
+								duzelt = oncekiKapiSirket.getId().equals(kapiSirket.getId()) || hareket.getZaman().getTime() <= kapiSirket.getBitTarih().getTime();
+							} else
+								duzelt = true;
 
-						if (duzelt) {
-							hareketler.set(indexSon, hareket);
-
+							if (duzelt) {
+								// String pattern = PdksUtil.getDateTimeLongFormat();
+								// logger.info(hareket.getId() + " " + PdksUtil.convertToDateString(hareket.getOrjinalZaman(), pattern) + "\n" + oncekiHareket.getId() + " " + PdksUtil.convertToDateString(oncekiHareket.getOrjinalZaman(), pattern));
+								addGecersizHareketler(hareket);
+							}
+							ekle = Boolean.FALSE;
 						}
-						ekle = Boolean.FALSE;
 					}
 
 				} else if (oncekiHareket.getKapiView().getKapi().isCikisKapi()) {
@@ -604,8 +602,12 @@ public class VardiyaGun extends BaseObject {
 							indexSon = cikisHareketleri.size() - 1;
 							cikisHareketleri.set(indexSon, yeniHareket);
 							indexSon = hareketler.size() - 1;
+							addGecersizHareketler(oncekiHareket);
 							hareketler.set(indexSon, yeniHareket);
 						}
+
+					} else {
+						hareket.setDurum(HareketKGS.DURUM_BLOKE);
 
 					}
 
@@ -793,7 +795,7 @@ public class VardiyaGun extends BaseObject {
 	public boolean isIzinli() {
 		boolean izinli = izin != null;
 		if (!izinli)
-			izinli = vardiya != null && vardiya.isIzin();
+			izinli = vardiya != null && vardiya.isIzinVardiya();
 		return izinli;
 	}
 
@@ -804,7 +806,7 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	public void setIzin(PersonelIzin value) {
-		if (vardiyaDateStr.equals("20240821")) {
+		if (vardiyaDateStr.equals("20241124")) {
 			if (value != null)
 				logger.debug(vardiyaDateStr + " " + value.getId() + " " + value.getAciklama());
 			else
@@ -1286,7 +1288,7 @@ public class VardiyaGun extends BaseObject {
 			if (PdksUtil.hasStringValue(anaClasss) && (personel == null || personel.isCalisiyorGun(vardiyaDate) == false))
 				classAd = STYLE_CLASS_OFF;
 		}
-		if (ayinGunu && version < 0 && this.isIzinli() == false && fiiliHesapla == false)
+		if (ayinGunu && this.isIzinli() == false && fiiliHesapla == false && (version < 0 || hataliDurum))
 			classAd = STYLE_CLASS_HATA;
 		return classAd;
 
@@ -1587,7 +1589,7 @@ public class VardiyaGun extends BaseObject {
 	public String getOzelAciklama(boolean durum) {
 		String aciklama = "";
 		boolean istifa = vardiya != null && vardiyaGorev != null && vardiyaGorev.isIstifa();
-		if (vardiyaDateStr.equals("20230904"))
+		if (vardiyaDateStr.equals("20241117"))
 			logger.debug("");
 		if (vardiya == null || istifa) {
 			if (isAyinGunu() && (istifa || isCalismayiBirakti()))
@@ -1602,7 +1604,7 @@ public class VardiyaGun extends BaseObject {
 					else if (izinTipi.isTakvimGunuMu() == false && izinTipi.isHTDahil() == false)
 						haftaTatilDurum = true;
 				}
-				if (haftaTatilDurum) {
+				if (haftaTatilDurum && izinTipi.isHTDahil() == false) {
 					aciklama = ".";
 				} else
 					try {
@@ -1663,10 +1665,8 @@ public class VardiyaGun extends BaseObject {
 		String aciklama = "";
 		if (vardiya != null) {
 			aciklama = ".";
-			if (haftaTatilDurum || vardiya.isFMI()) {
-				if (!vardiya.isOff())
-					aciklama = vardiya.getKisaAdi();
-			}
+			if (!vardiya.isOff())
+				aciklama = vardiya.getKisaAdi();
 		}
 		return aciklama;
 	}
@@ -1773,7 +1773,7 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	public void setGecenAyResmiTatilSure(double value) {
-		if (value > 0.0d)
+		if (value != 0.0d || vardiyaDateStr.endsWith("0101"))
 			logger.debug(value);
 		this.gecenAyResmiTatilSure = value;
 	}
@@ -2071,15 +2071,6 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	@Transient
-	public IsKurVardiyaGun getIsKurVardiya() {
-		return isKurVardiya;
-	}
-
-	public void setIsKurVardiya(IsKurVardiyaGun isKurVardiya) {
-		this.isKurVardiya = isKurVardiya;
-	}
-
-	@Transient
 	public Double getCalismaSuaSaati() {
 		return calismaSuaSaati;
 	}
@@ -2319,7 +2310,17 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	public void setYasalMaxSure(double yasalMaxSure) {
-		this.yasalMaxSure = yasalMaxSure;
+		if (this.isFcsDahil())
+			this.yasalMaxSure = yasalMaxSure;
+	}
+
+	@Transient
+	public boolean isFcsDahil() {
+		boolean fcsDahil = false;
+		if (vardiya != null)
+			fcsDahil = vardiya.getFcsHaric() == null || vardiya.getFcsHaric().booleanValue() == false;
+
+		return fcsDahil;
 	}
 
 	@Transient
@@ -2349,8 +2350,86 @@ public class VardiyaGun extends BaseObject {
 		this.sutIzniVar = sutIzniVar;
 	}
 
+	@Transient
+	public PersonelDonemselDurum getSutIzniPersonelDonemselDurum() {
+		PersonelDonemselDurum sutIzniPersonelDonemselDurum = donemselDurumMap.containsKey(PersonelDurumTipi.SUT_IZNI) ? donemselDurumMap.get(PersonelDurumTipi.SUT_IZNI) : null;
+		return sutIzniPersonelDonemselDurum;
+	}
+
+	public void setSutIzniPersonelDonemselDurum(PersonelDonemselDurum value) {
+		donemselDurumMap.put(PersonelDurumTipi.SUT_IZNI, value);
+	}
+
+	@Transient
+	public boolean isSutIzniPersonelDonemselDurum() {
+		PersonelDonemselDurum sutIzniPersonelDonemselDurum = donemselDurumMap.containsKey(PersonelDurumTipi.SUT_IZNI) ? donemselDurumMap.get(PersonelDurumTipi.SUT_IZNI) : null;
+		return sutIzniPersonelDonemselDurum != null && sutIzniPersonelDonemselDurum.isSutIzni();
+	}
+
+	@Transient
+	public Boolean getIsAramaIzmiPersonelDonemselDurum() {
+		PersonelDonemselDurum isAramaPersonelDonemselDurum = donemselDurumMap.containsKey(PersonelDurumTipi.IS_ARAMA_IZNI) ? donemselDurumMap.get(PersonelDurumTipi.IS_ARAMA_IZNI) : null;
+		return isAramaPersonelDonemselDurum != null && isAramaPersonelDonemselDurum.getIsAramaIzni();
+	}
+
+	@Transient
+	public PersonelDonemselDurum getGebePersonelDonemselDurum() {
+		PersonelDonemselDurum gebePersonelDonemselDurum = donemselDurumMap.containsKey(PersonelDurumTipi.GEBE) ? donemselDurumMap.get(PersonelDurumTipi.GEBE) : null;
+		return gebePersonelDonemselDurum;
+	}
+
+	public void setGebePersonelDonemselDurum(PersonelDonemselDurum value) {
+		donemselDurumMap.put(PersonelDurumTipi.GEBE, value);
+	}
+
+	@Transient
+	public PersonelDonemselDurum getIsAramaPersonelDonemselDurum() {
+		PersonelDonemselDurum isAramaPersonelDonemselDurum = donemselDurumMap.containsKey(PersonelDurumTipi.IS_ARAMA_IZNI) ? donemselDurumMap.get(PersonelDurumTipi.IS_ARAMA_IZNI) : null;
+		return isAramaPersonelDonemselDurum;
+	}
+
+	public void setIsAramaPersonelDonemselDurum(PersonelDonemselDurum value) {
+		if (this.getVardiyaDateStr().endsWith("1231") && value != null)
+			logger.debug(value);
+		donemselDurumMap.put(PersonelDurumTipi.IS_ARAMA_IZNI, value);
+	}
+
+	@Transient
+	public boolean isGebePersonelDonemselDurum() {
+		PersonelDonemselDurum gebePersonelDonemselDurum = donemselDurumMap.containsKey(PersonelDurumTipi.GEBE) ? donemselDurumMap.get(PersonelDurumTipi.GEBE) : null;
+		return gebePersonelDonemselDurum != null && gebePersonelDonemselDurum.isGebe();
+	}
+
+	@Transient
+	public HashMap<PersonelDurumTipi, PersonelDonemselDurum> getDonemselDurumMap() {
+		return donemselDurumMap;
+	}
+
+	public void setDonemselDurumMap(HashMap<PersonelDurumTipi, PersonelDonemselDurum> donemselDurumMap) {
+		this.donemselDurumMap = donemselDurumMap;
+	}
+
 	public void entityRefresh() {
-		// TODO entityRefresh
+
+	}
+
+	@Transient
+	public ArrayList<HareketKGS> getGecersizHareketler() {
+		return gecersizHareketler;
+	}
+
+	public void setGecersizHareketler(ArrayList<HareketKGS> gecersizHareketler) {
+		this.gecersizHareketler = gecersizHareketler;
+	}
+
+	public void addGecersizHareketler(HareketKGS hareketKGS) {
+		if (ayinGunu && hareketKGS.getId() != null && hareketKGS.getId().startsWith(HareketKGS.GIRIS_ISLEM_YAPAN_SIRKET_KGS)) {
+			if (gecersizHareketler == null)
+				gecersizHareketler = new ArrayList<HareketKGS>();
+			hareketKGS.setDurum(HareketKGS.DURUM_BLOKE);
+			gecersizHareketler.add(hareketKGS);
+			logger.debug(this.getVardiyaKeyStr() + " " + hareketKGS.getId() + " " + gecersizHareketler.size());
+		}
 
 	}
 }

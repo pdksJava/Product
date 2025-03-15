@@ -28,6 +28,7 @@ import org.jboss.seam.framework.EntityHome;
 import org.jboss.seam.persistence.PersistenceProvider;
 import org.jboss.seam.security.Identity;
 import org.pdks.entity.AccountPermission;
+import org.pdks.entity.PersonelIzinDetay;
 import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.Role;
 import org.pdks.security.entity.User;
@@ -36,9 +37,6 @@ import org.pdks.session.PdksEntityController;
 import org.pdks.session.PdksUtil;
 
 import com.Ostermiller.util.RandPass;
-import com.pdks.webservice.MailObject;
-import com.pdks.webservice.MailPersonel;
-import com.pdks.webservice.MailStatu;
 
 @Name("userHome")
 public class UserHome extends EntityHome<User> implements Serializable {
@@ -74,7 +72,6 @@ public class UserHome extends EntityHome<User> implements Serializable {
 	private String newPassword1, newPassword2, passwordHash, oldUserName;
 	private String changeUserName = "";
 	private List<User> allUserList = new ArrayList<User>();
-	private List ikYetkiliRoller = Arrays.asList(new String[] { Role.TIPI_ANAHTAR_KULLANICI, Role.TIPI_IK_Tesis, Role.TIPI_IK_SIRKET, Role.TIPI_IK_DIREKTOR, Role.TIPI_SISTEM_YONETICI, Role.TIPI_GENEL_MUDUR });
 	private Session session;
 
 	@Override
@@ -175,10 +172,7 @@ public class UserHome extends EntityHome<User> implements Serializable {
 	}
 
 	public void changeUser() {
-		// HashMap parametreMap = new HashMap();
-		// parametreMap.put("username", getChangeUserName());
-		// User user = (User)
-		// pdksEntityController.getObjectByInnerObject(parametreMap, User.class);
+
 	}
 
 	public boolean isWired() {
@@ -220,63 +214,7 @@ public class UserHome extends EntityHome<User> implements Serializable {
 		String str = MenuItemConstant.login;
 		HttpServletRequest req = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
 		String username = (String) req.getParameter("username");
-		if (PdksUtil.hasStringValue(username)) {
-
-			if (username.indexOf("@") > 1)
-				username = PdksUtil.getInternetAdres(username);
-			HashMap fields = new HashMap();
-			fields.put("username", username);
-			if (session != null)
-				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-			User user = (User) pdksEntityController.getObjectByInnerObject(fields, User.class);
-			if (user != null) {
-				if (user.isDurum()) {
-					if (user.getPdksPersonel().isCalisiyor()) {
-
-						MailObject mailObject = new MailObject();
-						MailPersonel mp = new MailPersonel();
-						mp.setAdiSoyadi(user.getAdSoyad());
-						mp.setEPosta(user.getEmail());
-						mailObject.setSubject("Şifre güncelleme");
-						mailObject.getToList().add(mp);
-						MailStatu ms = null;
-						Exception ex = null;
-						StringBuffer body = new StringBuffer();
-						Map<String, String> map = null;
-						try {
-							map = FacesContext.getCurrentInstance().getExternalContext().getRequestHeaderMap();
-
-						} catch (Exception e) {
-						}
-						String id = ortakIslemler.getEncodeStringByBase64("&userId=" + user.getId() + "&tarih=" + new Date().getTime());
-						String donusAdres = map.containsKey("host") ? map.get("host") : "";
-						body.append("<p><TABLE style=\"width: 270px;\"><TR>");
-						body.append("<td width=\"90px\"><a style=\"font-size: 16px;\" href=\"http://" + donusAdres + "/sifreDegistirme?id=" + id + "\"><b>Şifre güncellemek için tıklayınız.</b></a></td>");
-						body.append("</TR></TABLE></p>");
-						mailObject.setBody(body.toString());
-						try {
-							ms = ortakIslemler.mailSoapServisGonder(true, mailObject, null, "/email/fazlaMesaiTalepMail.xhtml", session);
-
-						} catch (Exception e) {
-							ex = e;
-						}
-						if (ms != null) {
-							if (ms.getDurum())
-								PdksUtil.addMessageAvailableInfo("Şifre güncellemek için " + user.getEmail() + " mail kutunuzu kontrol ediniz.");
-							else
-								PdksUtil.addMessageAvailableError(ms.getHataMesai());
-						} else if (ex != null)
-							PdksUtil.addMessageAvailableError(ex.getMessage());
-
-					} else
-						PdksUtil.addMessageAvailableWarn("Kullanıcı çalışmıyor!");
-				} else
-					PdksUtil.addMessageAvailableWarn("Kullanıcı aktif değildir!");
-
-			} else
-				PdksUtil.addMessageAvailableWarn("Hatalı kullanıcı adı giriniz!");
-		} else
-			PdksUtil.addMessageAvailableError("Kullanıcı adı giriniz!");
+		str = ortakIslemler.sifremiUnuttum(null, username, session);
 		return str;
 	}
 
@@ -327,13 +265,9 @@ public class UserHome extends EntityHome<User> implements Serializable {
 					dakika = 5;
 				if (tarih == null || PdksUtil.addTarih(tarih, Calendar.MINUTE, dakika).before(new Date())) {
 					PdksUtil.addMessageAvailableWarn("Link geçersizdir");
-					sayfa = MenuItemConstant.login;
+					// sayfa = MenuItemConstant.login;
 				} else if (param.containsKey("userId")) {
-					HashMap fields = new HashMap();
-					fields.put("id", new Long(param.get("userId")));
-					if (session != null)
-						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-					user = (User) pdksEntityController.getObjectByInnerObject(fields, User.class);
+					user = (User) pdksEntityController.getSQLParamByFieldObject(User.TABLE_NAME, User.COLUMN_NAME_ID, new Long(param.get("userId")), User.class, session);
 				}
 			} else
 				sayfa = MenuItemConstant.login;
@@ -368,49 +302,71 @@ public class UserHome extends EntityHome<User> implements Serializable {
 		getInstance().setYetkiliRollerim(roller);
 	}
 
+	/**
+	 * @param target
+	 * @param action
+	 * @return
+	 */
 	public boolean hasPermission(Object target, String action) {
 		boolean sonuc = Boolean.FALSE;
 		try {
 			if (identity != null && identity.isLoggedIn() && authenticatedUser != null) {
-				String key = action + "-" + target + "-" + authenticatedUser.getUsername() + "-" + AccountPermission.DISCRIMINATOR_USER;
-				boolean adminRole = authenticatedUser.isAdmin();
-				if (accountPermissionMap.containsKey(key)) {
-					sonuc = getSonuc(target);
+				HashMap<String, Boolean> menuYetkiMap = authenticatedUser.getMenuYetkiMap();
+				if (menuYetkiMap == null) {
+					menuYetkiMap = new HashMap<String, Boolean>();
+					authenticatedUser.setMenuYetkiMap(menuYetkiMap);
+				}
+				String startKey = action + "-" + target;
+				String key = startKey + authenticatedUser.getUsername() + "-" + AccountPermission.DISCRIMINATOR_USER;
+				if (menuYetkiMap.containsKey(startKey)) {
+					sonuc = menuYetkiMap.get(startKey);
 				} else {
-					if (session == null)
-						session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-					ortakIslemler.setUserRoller(authenticatedUser, session);
-					if (adminRole)
+					boolean adminRole = authenticatedUser.isAdmin();
+					if (accountPermissionMap.containsKey(key)) {
 						sonuc = getSonuc(target);
-					else if (authenticatedUser.getYetkiliRollerim() != null) {
-						for (Object obj : authenticatedUser.getYetkiliRollerim().toArray()) {
-							Role role = (Role) obj;
-							String roleName = role.getRolename();
-							if (ikYetkiliRoller.contains(roleName)) {
-								key = action + "-" + target + "-" + AccountPermission.IK_ROLE + "-" + AccountPermission.DISCRIMINATOR_ROLE;
+					} else {
+						List<Role> yetkiliRollerim = new ArrayList<Role>();
+						if (session == null)
+							session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+						if (authenticatedUser.getYetkiliRollerim() == null || authenticatedUser.getYetkiliRollerim().isEmpty())
+							ortakIslemler.setUserRoller(authenticatedUser, session);
+						if (authenticatedUser.getYetkiliRollerim() != null)
+							yetkiliRollerim.addAll(authenticatedUser.getYetkiliRollerim());
+
+						if (authenticatedUser.getBagliRoller() == null) {
+							List<Role> bagliRoller = PdksUtil.setUserYetki(authenticatedUser);
+							authenticatedUser.setBagliRoller(bagliRoller);
+						}
+						List<Role> digerRoller = authenticatedUser.getBagliRoller();
+						if (digerRoller != null && !digerRoller.isEmpty())
+							yetkiliRollerim.addAll(digerRoller);
+
+						if (adminRole)
+							sonuc = getSonuc(target);
+						else if (yetkiliRollerim != null) {
+							for (Role role : yetkiliRollerim) {
+								String roleName = role.getRolename();
+								if (roleName.equals(AccountPermission.ADMIN_ROLE)) {// admin
+									// herşeye
+									// yetkilidir
+									sonuc = getSonuc(target);
+									break;
+								}
+								key = startKey + "-" + roleName + "-" + AccountPermission.DISCRIMINATOR_ROLE;
 								if (accountPermissionMap.containsKey(key)) {
 									sonuc = getSonuc(target);
 									break;
 								}
-							} else if (roleName.equals(AccountPermission.ADMIN_ROLE)) {// admin
-								// herşeye
-								// yetkilidir
-								sonuc = getSonuc(target);
-								break;
-							}
-							key = action + "-" + target + "-" + roleName + "-" + AccountPermission.DISCRIMINATOR_ROLE;
-							if (accountPermissionMap.containsKey(key)) {
-								sonuc = getSonuc(target);
-								break;
 							}
 						}
+						yetkiliRollerim = null;
 					}
-
-				}
-				if (sonuc && adminRole == false && menuKapali) {
-					String menuKapaliStr = ortakIslemler.getParameterKey("menuKapali");
-					if (!(menuKapaliStr.equalsIgnoreCase("ik") && (authenticatedUser.isIK() || authenticatedUser.isSistemYoneticisi())))
-						sonuc = !menuKapali;
+					if (sonuc && adminRole == false && menuKapali) {
+						String menuKapaliStr = ortakIslemler.getParameterKey("menuKapali");
+						if (!(menuKapaliStr.equalsIgnoreCase("ik") && (authenticatedUser.isIK() || authenticatedUser.isSistemYoneticisi())))
+							sonuc = !menuKapali;
+					}
+					menuYetkiMap.put(startKey, sonuc);
 				}
 
 			}
@@ -432,7 +388,11 @@ public class UserHome extends EntityHome<User> implements Serializable {
 			boolean sistemYoneticisi = authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin() || authenticatedUser.isSistemYoneticisi();
 			if (izinRaporlari.contains(target) || izinIslemler.contains(target)) {
 				sonuc = authenticatedUser.isIzinGirebilir();
-				if (target.equals("onayimaGelenIzinler") || target.equals("izinIslemleri"))
+				if (target.equals("personelKalanIzin") || target.equals("izinRaporlari")) {
+					sonuc = authenticatedUser.isIzinGirebilir() || ortakIslemler.getParameterKeyHasStringValue(ortakIslemler.getParametreIzinERPTableView());
+				} else if (target.equals("holdingKalanIzin") || target.equals("izinRaporlari")) {
+					sonuc = authenticatedUser.isIzinGirebilir() || PersonelIzinDetay.isIzinHakedisGuncelle();
+				} else if (target.equals("onayimaGelenIzinler") || target.equals("izinIslemleri"))
 					sonuc = authenticatedUser.isIzinOnaylayabilir() || (target.equals("izinIslemleri") && sistemYoneticisi);
 				else {
 					if (target.equals("sskIzinGirisi"))

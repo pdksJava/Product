@@ -72,7 +72,7 @@ public class FazlaMesaiIzinRaporuHome extends EntityHome<VardiyaGun> implements 
 
 	List<HareketKGS> hareketList = new ArrayList<HareketKGS>();
 	private List<VardiyaGun> izinVardiyaGunList = new ArrayList<VardiyaGun>();
-	private List<AylikPuantaj> puantajList = new ArrayList<AylikPuantaj>();
+	private List<AylikPuantaj> puantajList;
 	private AramaSecenekleri aramaSecenekleri = null;
 	private List<Vardiya> vardiyaList = new ArrayList<Vardiya>();
 	private HashMap<String, List<Tanim>> ekSahaListMap;
@@ -99,11 +99,19 @@ public class FazlaMesaiIzinRaporuHome extends EntityHome<VardiyaGun> implements 
 		super.create();
 	}
 
+	private void aylikPuantajListClear() {
+		if (puantajList != null)
+			puantajList.clear();
+		else
+			puantajList = ortakIslemler.getSelectItemList("aylikPuantaj", authenticatedUser);
+	}
+
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		clearVardiyaList();
 		if (aramaSecenekleri == null)
 			aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
 		fillEkSahaTanim();
@@ -118,9 +126,8 @@ public class FazlaMesaiIzinRaporuHome extends EntityHome<VardiyaGun> implements 
 	}
 
 	private void clearVardiyaList() {
+		aylikPuantajListClear();
 		izinVardiyaGunList.clear();
-
-		puantajList.clear();
 		vardiyaList.clear();
 	}
 
@@ -130,6 +137,7 @@ public class FazlaMesaiIzinRaporuHome extends EntityHome<VardiyaGun> implements 
 		HashMap map = new HashMap();
 		map.put(PdksEntityController.MAP_KEY_MAP, "getId");
 		map.put(PdksEntityController.MAP_KEY_SELECT, "sirket");
+		ortakIslemler.addIKSirketTesisKriterleri(map);
 		map.put("pdks=", Boolean.TRUE);
 		map.put("durum=", Boolean.TRUE);
 		map.put("sskCikisTarihi>=", bugun);
@@ -153,7 +161,8 @@ public class FazlaMesaiIzinRaporuHome extends EntityHome<VardiyaGun> implements 
 
 					aramaSecenekleri.getSirketIdList().add(new SelectItem(sirket.getId(), sirket.getAd()));
 				}
-
+				if (aramaSecenekleri.getSirketIdList().size() == 1)
+					sirketId = (Long) aramaSecenekleri.getSirketIdList().get(0).getValue();
 			}
 			aramaSecenekleri.setSirketId(sirketId);
 			fillTesisList();
@@ -262,12 +271,12 @@ public class FazlaMesaiIzinRaporuHome extends EntityHome<VardiyaGun> implements 
 			String fieldName = "p";
 			HashMap fields = new HashMap();
 			StringBuffer sb = new StringBuffer();
-			sb.append("SELECT DISTINCT P.* FROM " + VardiyaGun.TABLE_NAME + " VG WITH(nolock) ");
-			sb.append(" INNER JOIN " + Vardiya.TABLE_NAME + " V WITH(nolock) ON VG." + VardiyaGun.COLUMN_NAME_VARDIYA + " = V." + Vardiya.COLUMN_NAME_ID);
-			sb.append(" AND V." + Vardiya.COLUMN_NAME_VARDIYA_TIPI + " = :vt");
-			sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON VG." + VardiyaGun.COLUMN_NAME_PERSONEL + " = P." + Personel.COLUMN_NAME_ID);
-			sb.append("	WHERE VG." + VardiyaGun.COLUMN_NAME_PERSONEL + " :" + fieldName);
-			sb.append("	AND VG." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >=:b1 AND VG." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " <=:b2 ");
+			sb.append("select distinct P.* from " + VardiyaGun.TABLE_NAME + " VG " + PdksEntityController.getSelectLOCK() + " ");
+			sb.append(" inner join " + Vardiya.TABLE_NAME + " V " + PdksEntityController.getJoinLOCK() + " on VG." + VardiyaGun.COLUMN_NAME_VARDIYA + " = V." + Vardiya.COLUMN_NAME_ID);
+			sb.append(" and V." + Vardiya.COLUMN_NAME_VARDIYA_TIPI + " = :vt");
+			sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksEntityController.getJoinLOCK() + " on VG." + VardiyaGun.COLUMN_NAME_PERSONEL + " = P." + Personel.COLUMN_NAME_ID);
+			sb.append("	where VG." + VardiyaGun.COLUMN_NAME_PERSONEL + " :" + fieldName);
+			sb.append("	AND VG." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >= :b1 and VG." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + "  <= :b2 ");
 			fields.put("vt", Vardiya.TIPI_FMI);
 			fields.put("b1", basTarih);
 			fields.put("b2", bitTarih);
@@ -275,17 +284,17 @@ public class FazlaMesaiIzinRaporuHome extends EntityHome<VardiyaGun> implements 
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			// tumPersoneller = (ArrayList<Personel>) pdksEntityController.getObjectBySQLList(sb, fields, Personel.class);
-			tumPersoneller = (ArrayList<Personel>) ortakIslemler.getSQLParamList(idler, sb, fieldName, fields, Personel.class, session);
+			tumPersoneller = (ArrayList<Personel>) pdksEntityController.getSQLParamList(idler, sb, fieldName, fields, Personel.class, session);
 
 			fields.clear();
 			sb = new StringBuffer();
-			sb.append("SELECT DISTINCT P.* FROM " + PersonelIzin.TABLE_NAME + " I WITH(nolock) ");
-			sb.append(" INNER JOIN " + IzinTipi.TABLE_NAME + " IT WITH(nolock) ON I." + PersonelIzin.COLUMN_NAME_IZIN_TIPI + " = IT." + IzinTipi.COLUMN_NAME_ID);
-			sb.append(" INNER JOIN " + Tanim.TABLE_NAME + " T WITH(nolock) ON IT." + IzinTipi.COLUMN_NAME_IZIN_TIPI + " = T." + Tanim.COLUMN_NAME_ID);
-			sb.append(" AND T." + Tanim.COLUMN_NAME_KODU + " = :k");
-			sb.append(" INNER JOIN " + Personel.TABLE_NAME + " P WITH(nolock) ON I." + PersonelIzin.COLUMN_NAME_PERSONEL + " = P." + Personel.COLUMN_NAME_ID);
-			sb.append("	WHERE I." + PersonelIzin.COLUMN_NAME_PERSONEL + " :" + fieldName);
-			sb.append("	AND I." + PersonelIzin.COLUMN_NAME_BITIS_ZAMANI + " >=:b1 AND I." + PersonelIzin.COLUMN_NAME_BASLANGIC_ZAMANI + " <=:b2 ");
+			sb.append("select distinct P.* from " + PersonelIzin.TABLE_NAME + " I " + PdksEntityController.getSelectLOCK() + " ");
+			sb.append(" inner join " + IzinTipi.TABLE_NAME + " IT " + PdksEntityController.getJoinLOCK() + " on I." + PersonelIzin.COLUMN_NAME_IZIN_TIPI + " = IT." + IzinTipi.COLUMN_NAME_ID);
+			sb.append(" inner join " + Tanim.TABLE_NAME + " T " + PdksEntityController.getJoinLOCK() + " on IT." + IzinTipi.COLUMN_NAME_IZIN_TIPI + " = T." + Tanim.COLUMN_NAME_ID);
+			sb.append(" and T." + Tanim.COLUMN_NAME_KODU + " = :k");
+			sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksEntityController.getJoinLOCK() + " on I." + PersonelIzin.COLUMN_NAME_PERSONEL + " = P." + Personel.COLUMN_NAME_ID);
+			sb.append("	where I." + PersonelIzin.COLUMN_NAME_PERSONEL + " :" + fieldName);
+			sb.append("	AND I." + PersonelIzin.COLUMN_NAME_BITIS_ZAMANI + " >= :b1 and I." + PersonelIzin.COLUMN_NAME_BASLANGIC_ZAMANI + "  <= :b2 ");
 			fields.put("k", IzinTipi.FAZLA_MESAI);
 			fields.put("b1", basTarih);
 			fields.put("b2", bitTarih);
@@ -293,7 +302,7 @@ public class FazlaMesaiIzinRaporuHome extends EntityHome<VardiyaGun> implements 
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			// List<Personel> tumPersonelIzinler = (ArrayList<Personel>) pdksEntityController.getObjectBySQLList(sb, fields, Personel.class);
-			List<Personel> tumPersonelIzinler = (ArrayList<Personel>) ortakIslemler.getSQLParamList(idler, sb, fieldName, fields, Personel.class, session);
+			List<Personel> tumPersonelIzinler = (ArrayList<Personel>) pdksEntityController.getSQLParamList(idler, sb, fieldName, fields, Personel.class, session);
 			for (Iterator iterator = tumPersonelIzinler.iterator(); iterator.hasNext();) {
 				Personel personel = (Personel) iterator.next();
 				for (Personel personel1 : tumPersoneller) {

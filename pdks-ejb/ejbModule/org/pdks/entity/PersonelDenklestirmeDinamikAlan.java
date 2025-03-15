@@ -14,9 +14,10 @@ import javax.persistence.UniqueConstraint;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.pdks.security.entity.User;
 
 @Entity(name = PersonelDenklestirmeDinamikAlan.TABLE_NAME)
-@Table(uniqueConstraints = { @UniqueConstraint(columnNames = { PersonelDenklestirmeDinamikAlan.COLUMN_NAME_PERSONEL_DENKLESTIRME, PersonelDenklestirmeDinamikAlan.COLUMN_NAME_DENKLESTIRME_ALAN_DURUM }) })
+@Table(uniqueConstraints = { @UniqueConstraint(columnNames = { PersonelDenklestirmeDinamikAlan.COLUMN_NAME_PERSONEL_DENKLESTIRME, PersonelDenklestirmeDinamikAlan.COLUMN_NAME_ALAN }) })
 public class PersonelDenklestirmeDinamikAlan extends BasePDKSObject implements Serializable {
 
 	/**
@@ -34,6 +35,7 @@ public class PersonelDenklestirmeDinamikAlan extends BasePDKSObject implements S
 	public static final String COLUMN_NAME_DENKLESTIRME_ISLEM_DURUM = "ISLEM_DURUM";
 	public static final String COLUMN_NAME_SAYISAL_DEGER = "SAYISAL_DEGER";
 	public static final String TIPI_DEVAMLILIK_PRIMI = "devamlikDurum";
+	public static final String TIPI_BAKIYE_SIFIRLA = "bakiyeSifirlaDurum";
 
 	private Integer version = 0;
 
@@ -191,9 +193,27 @@ public class PersonelDenklestirmeDinamikAlan extends BasePDKSObject implements S
 		return tip;
 	}
 
+	@Transient
+	public String getPersonelDenklestirmeDinamikAlanStr(User user) {
+		String alanStr = "";
+		if (this.isDevamlilikPrimi())
+			alanStr = this.getIslemDurum() ? "+" : "-";
+		else {
+			String str = user.getYesNo(this.getIslemDurum());
+			if (this.getSayisalDeger() != null && this.getSayisalDeger().doubleValue() > 0.0d) {
+				String deger = user.sayiFormatliGoster(this.getSayisalDeger());
+				if (this.isIzinDurum())
+					str += "\nSüre : " + deger;
+				else
+					str += "\n " + deger;
+			}
+			alanStr = str;
+		}
+		return alanStr;
+	}
+
 	public void entityRefresh() {
-		// TODO entityRefresh
-		
+
 	}
 
 }

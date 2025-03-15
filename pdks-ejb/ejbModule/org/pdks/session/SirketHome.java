@@ -7,6 +7,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.TreeMap;
 
@@ -54,12 +55,12 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 	User authenticatedUser;
 	@In(required = false, create = true)
 	StartupAction startupAction;
-	
+
 	public static String sayfaURL = "sirketTanimlama";
 	private List<Departman> departmanList = new ArrayList<Departman>();
 	private List<Sirket> sirketList = new ArrayList<Sirket>();
 	private List<PersonelView> personelList;
-	private Boolean istenAyrilanlariEkle, sirketEklenebilir, sirketGrupGoster;
+	private Boolean istenAyrilanlariEkle, sirketEklenebilir, sirketGrupGoster, erpDatabaseDurum;
 	private HashMap<String, List<Tanim>> ekSahaListMap;
 	private TreeMap<String, Tanim> ekSahaTanimMap;
 	private String bolumAciklama;
@@ -85,7 +86,8 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 	public String excelAktar() {
 		try {
 			Sirket sirket = getInstance();
-			ByteArrayOutputStream baosDosya = ortakIslemler.personelExcelDevam(sirket.isLdap(), personelList, ekSahaTanimMap, authenticatedUser, null, session);
+			boolean bakiyeTakipEdiliyor = ortakIslemler.getBakiyeTakipEdiliyor(session);
+			ByteArrayOutputStream baosDosya = ortakIslemler.personelExcelDevam(sirket.isLdap(), personelList, ekSahaTanimMap, authenticatedUser, null, bakiyeTakipEdiliyor, session);
 			if (baosDosya != null)
 				PdksUtil.setExcelHttpServletResponse(baosDosya, "personelListesi.xlsx");
 
@@ -101,7 +103,7 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 
 	public String guncelle(Sirket sirket) {
 		fillBagliOlduguDepartmanTanimList();
-		sirketGrupList = ortakIslemler.getTanimSelectItem(ortakIslemler.getTanimList(Tanim.TIPI_SIRKET_GRUP, session));
+		sirketGrupList = ortakIslemler.getTanimSelectItem("sirketGrup", ortakIslemler.getTanimList(Tanim.TIPI_SIRKET_GRUP, session));
 		if (sirket == null) {
 			for (Iterator iterator = departmanList.iterator(); iterator.hasNext();) {
 				Departman departman = (Departman) iterator.next();
@@ -117,9 +119,10 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 			Departman departman = sirket.getDepartman();
 			if (departman != null) {
 				sirket.setFazlaMesaiTalepGirilebilir(departman.isFazlaMesaiTalepGirer());
+				sirket.setIsAramaGunlukSaat(departman.getIsAramaGunlukSaat());
 			}
-
 		}
+		sirket.setDegisti(sirket.getId() == null);
 		if (personelList != null)
 			personelList.clear();
 		else
@@ -133,9 +136,9 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 		Sirket sirket = seciliSirket;
 
 		try {
-			if (sirket.getId() == null)
+			if (sirket.getId() == null) {
 				sirket.setOlusturanUser(authenticatedUser);
-			else {
+			} else {
 				sirket.setGuncelleyenUser(authenticatedUser);
 				sirket.setGuncellemeTarihi(new Date());
 			}
@@ -144,7 +147,27 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 			if (!sirket.getFazlaMesai()) {
 				sirket.setFazlaMesaiOde(Boolean.FALSE);
 			}
+			boolean spCalistir = false;
+			if (erpDatabaseDurum && sirket.isDegisti() && sirket.isErp()) {
+				if (PdksUtil.hasStringValue(sirket.getDatabaseAdiERP()) || PdksUtil.hasStringValue(sirket.getDatabaseKoduERP())) {
+					if (PdksUtil.hasStringValue(sirket.getDatabaseAdiERP()) == false) {
+						sirket.setDatabaseAdiERP("");
+						sirket.setDatabaseKoduERP("");
+					} else
+					if (sirket.getDatabaseKoduERP() == null)
+						sirket.setDatabaseKoduERP("");
+					spCalistir = true;
+
+				}
+			}
+
 			pdksEntityController.saveOrUpdate(session, entityManager, sirket);
+			if (spCalistir) {
+				LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+				veriMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+				pdksEntityController.execSPList(veriMap, new StringBuffer(Sirket.SP_NAME_SP_ERP_VIEW_ALTER_CREATE), null);
+			}
+
 			session.flush();
 			fillsirketList();
 
@@ -197,6 +220,7 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 		pdksHaricList = null;
 		fillBagliOlduguDepartmanTanimList();
 		startupAction.fillSirketList(session);
+		erpDatabaseDurum = ortakIslemler.isExisStoreProcedure(Sirket.SP_NAME_SP_ERP_VIEW_ALTER_CREATE, session);
 		setSirketList(sirketList);
 	}
 
@@ -285,7 +309,7 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 	public void sayfaGirisAction() {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
- 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
 
 		fillsirketList();
 	}
@@ -392,6 +416,14 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 
 	public static void setSayfaURL(String sayfaURL) {
 		SirketHome.sayfaURL = sayfaURL;
+	}
+
+	public Boolean getErpDatabaseDurum() {
+		return erpDatabaseDurum;
+	}
+
+	public void setErpDatabaseDurum(Boolean erpDatabaseDurum) {
+		this.erpDatabaseDurum = erpDatabaseDurum;
 	}
 
 }

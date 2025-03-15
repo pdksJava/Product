@@ -21,6 +21,7 @@ import org.jboss.seam.faces.FacesMessages;
 import org.jboss.seam.framework.EntityHome;
 import org.pdks.entity.CalismaModeli;
 import org.pdks.entity.Departman;
+import org.pdks.entity.Sirket;
 import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaSablonu;
 import org.pdks.security.entity.User;
@@ -46,14 +47,16 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 	FacesMessages facesMessages;
 	@In(required = false, create = true)
 	OrtakIslemler ortakIslemler;
-	
+
 	public static String sayfaURL = "vardiyaSablonTanimlama";
 	private List<VardiyaSablonu> vardiyaSablonList = new ArrayList<VardiyaSablonu>();
 	private List<Vardiya> vardiyaList = new ArrayList<Vardiya>(), vardiyaCalisanList = new ArrayList<Vardiya>(), isKurVardiyaList = new ArrayList<Vardiya>();
 	private boolean vardiyaVar = Boolean.FALSE, isKur = Boolean.FALSE, isKurGoster = Boolean.FALSE;
 	private Vardiya lastVardiya;
+	private List<Sirket> sirketList, pdksSirketList;
 	private List<Departman> departmanList = new ArrayList<Departman>();
 	private List<CalismaModeli> modelList;
+	private Sirket seciliSirket;
 	private Session session;
 
 	@Override
@@ -75,8 +78,22 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 		setLastVardiya(pdksVardiya);
 	}
 
-	public void kayitGuncelle() {
+	/**
+	 * @param sablonu
+	 */
+	public void kayitGuncelle(VardiyaSablonu sablonu) {
+		if (sablonu == null) {
+			fillBagliOlduguDepartmanTanimList();
+			sablonu = new VardiyaSablonu();
+			if (seciliSirket != null) {
+				sablonu.setSirket(seciliSirket);
+				sablonu.setDepartman(seciliSirket.getDepartman());
+			} else if (departmanList.size() == 1)
+				sablonu.setDepartman(departmanList.get(0));
+		}
+		setInstance(sablonu);
 		fillPdksVardiyaList();
+		sirketList = ortakIslemler.getDepartmanPDKSSirketList(sablonu.getDepartman(), session);
 		setVardiyaVar(Boolean.TRUE);
 
 	}
@@ -87,7 +104,7 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 
 		try {
 			tanimList = ortakIslemler.fillDepartmanTanimList(session);
-			;
+
 		} catch (Exception e) {
 			logger.error("PDKS hata in : \n");
 			e.printStackTrace();
@@ -98,16 +115,6 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 		}
 
 		setDepartmanList(tanimList);
-	}
-
-	public void vardiyaSablonuEkle() {
-		this.clearInstance();
-		fillPdksVardiyaList();
-		setVardiyaList(new ArrayList<Vardiya>());
-		setVardiyaVar(Boolean.FALSE);
-		VardiyaSablonu sablonu = getInstance();
-		if (departmanList.size() == 1)
-			sablonu.setDepartman(departmanList.get(0));
 	}
 
 	@Override
@@ -153,6 +160,8 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 				}
 				if (pdksVardiyaSablon.getId() == null && !authenticatedUser.isAdmin())
 					pdksVardiyaSablon.setDepartman(authenticatedUser.getDepartman());
+				if (pdksVardiyaSablon.getSirket() != null)
+					pdksVardiyaSablon.setDepartman(pdksVardiyaSablon.getSirket().getDepartman());
 				pdksEntityController.saveOrUpdate(session, entityManager, pdksVardiyaSablon);
 				session.flush();
 				fillPdksVardiyaSablonList();
@@ -184,13 +193,28 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 			}
 			vardiyaSablonList.clear();
 			isKurGoster = Boolean.FALSE;
+			if (seciliSirket != null) {
+				Departman seciliDepartman = seciliSirket.getDepartman();
+				for (Iterator iterator = sablonList.iterator(); iterator.hasNext();) {
+					VardiyaSablonu vardiyaSablonu = (VardiyaSablonu) iterator.next();
+					Departman departman = vardiyaSablonu.getDepartman();
+					Sirket sirket = vardiyaSablonu.getSirket();
+					boolean sil = false;
+					if (departman != null && !seciliDepartman.getId().equals(departman.getId()))
+						sil = true;
+					if (sirket != null && !seciliSirket.getId().equals(sirket.getId()))
+						sil = true;
+					if (sil)
+						iterator.remove();
+				}
+
+			}
 			if (!sablonList.isEmpty()) {
 				sablonList = PdksUtil.sortListByAlanAdi(sablonList, "sonIslemTarihi", Boolean.TRUE);
 				for (Iterator iterator = sablonList.iterator(); iterator.hasNext();) {
 					VardiyaSablonu pdksVardiyaSablonu = (VardiyaSablonu) iterator.next();
 					if (pdksVardiyaSablonu.getDurum()) {
-						if (!isKurGoster)
-							isKurGoster = pdksVardiyaSablonu.isIsKurMu();
+
 						vardiyaSablonList.add(pdksVardiyaSablonu);
 						iterator.remove();
 					}
@@ -207,18 +231,12 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 
 	}
 
-	private void fillCalismaModelList() {
+	private void fillCalismaModelList(VardiyaSablonu pdksVardiyaSablonu) {
 		List<CalismaModeli> list = null;
-		VardiyaSablonu pdksVardiyaSablonu = getInstance();
+		Long pdksDepartmanId = pdksVardiyaSablonu.getDepartman() != null ? pdksVardiyaSablonu.getDepartman().getId() : null;
 		try {
-			HashMap parametreMap = new HashMap();
-			parametreMap.put("durum", Boolean.TRUE);
-			parametreMap.put("toplamGunGuncelle", Boolean.FALSE);
-			if (pdksVardiyaSablonu.getDepartman() != null)
-				parametreMap.put("departman.id", pdksVardiyaSablonu.getDepartman().getId());
-			if (session != null)
-				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			list = pdksEntityController.getObjectByInnerObjectList(parametreMap, CalismaModeli.class);
+
+			list = ortakIslemler.getCalismaModeliList(pdksVardiyaSablonu.getSirket(), pdksDepartmanId, false, session);
 			if (list.size() > 1)
 				list = PdksUtil.sortObjectStringAlanList(list, "getAciklama", null);
 
@@ -242,16 +260,15 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 	}
 
 	public void fillPdksVardiyaList() {
-		fillCalismaModelList();
-		List<Vardiya> pdksList = new ArrayList<Vardiya>();
 		VardiyaSablonu pdksVardiyaSablonu = getInstance();
+		fillCalismaModelList(pdksVardiyaSablonu);
+		List<Vardiya> pdksList = new ArrayList<Vardiya>();
+		Long depLong = pdksVardiyaSablonu.getDepartman() != null ? pdksVardiyaSablonu.getDepartman().getId() : null;
+		Sirket sirket = pdksVardiyaSablonu.getSirket();
 		boolean durum = Boolean.FALSE;
 		try {
-			HashMap parametreMap = new HashMap();
-			parametreMap.put("durum", Boolean.TRUE);
-			if (session != null)
-				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			pdksList = pdksEntityController.getObjectByInnerObjectList(parametreMap, Vardiya.class);
+			pdksList = ortakIslemler.getVardiyaList(sirket, depLong, session);
+
 			if (pdksList.size() > 1)
 				pdksList = PdksUtil.sortListByAlanAdi(pdksList, "vardiyaNumeric", false);
 			if (isKurVardiyaList == null)
@@ -283,8 +300,7 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 			}
 			if (!pdksList.isEmpty())
 				vardiyaCalisanList.addAll(pdksList);
-			if (pdksVardiyaSablonu.isIsKurMu())
-				pdksList = isKurVardiyaList;
+
 		} catch (Exception e) {
 			logger.error("PDKS hata in : \n");
 			e.printStackTrace();
@@ -300,17 +316,12 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 			session.refresh(getInstance());
 	}
 
-	public String sablonIskurDegisti() {
-		VardiyaSablonu pdksVardiyaSablonu = getInstance();
-		vardiyaList = !pdksVardiyaSablonu.isIsKurMu() ? vardiyaCalisanList : isKurVardiyaList;
-		return "";
-	}
-
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		pdksSirketList = ortakIslemler.getDepartmanPDKSSirketList(null, session);
 		fillPdksVardiyaSablonList();
 		if (authenticatedUser.isAdmin())
 			fillBagliOlduguDepartmanTanimList();
@@ -414,5 +425,29 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 
 	public static void setSayfaURL(String sayfaURL) {
 		VardiyaSablonuHome.sayfaURL = sayfaURL;
+	}
+
+	public List<Sirket> getSirketList() {
+		return sirketList;
+	}
+
+	public void setSirketList(List<Sirket> sirketList) {
+		this.sirketList = sirketList;
+	}
+
+	public List<Sirket> getPdksSirketList() {
+		return pdksSirketList;
+	}
+
+	public void setPdksSirketList(List<Sirket> pdksSirketList) {
+		this.pdksSirketList = pdksSirketList;
+	}
+
+	public Sirket getSeciliSirket() {
+		return seciliSirket;
+	}
+
+	public void setSeciliSirket(Sirket seciliSirket) {
+		this.seciliSirket = seciliSirket;
 	}
 }

@@ -39,8 +39,8 @@
 							</s:decorate>
 							<s:decorate template="/layout/edit.xhtml"
 								rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin or authenticatedUser.raporKullanici) and tumHareketlerHome.departmanList.size()>1}">
-								<ui:define name="label">PDKS Departman</ui:define>
-								<h:selectOneMenu value="#{tumHareketlerHome.departmanId}" required="true" requiredMessage="PDKS Departman seçiniz">
+								<ui:define name="label">#{ortakIslemler.firmaKaynagiAciklama()}</ui:define>
+								<h:selectOneMenu value="#{tumHareketlerHome.departmanId}" required="true" requiredMessage="#{ortakIslemler.firmaKaynagiAciklama()} seçiniz">
 									<f:selectItem itemLabel="Lütfen seçiniz" />
 									<f:selectItems value="#{tumHareketlerHome.departmanList}" />
 									<a4j:support event="onchange" action="#{tumHareketlerHome.fillSirketList()}" ajaxSingle="true" reRender="sirketler" />
@@ -56,18 +56,29 @@
 
 								</h:selectOneMenu>
 							</s:decorate>
-							<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin or tumHareketlerHome.ikRole}">
-								<ui:define name="label">PDKS Kapilari</ui:define>
-								<h:selectBooleanCheckbox value="#{tumHareketlerHome.pdksKapi}" />
-							</s:decorate>
-							<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin or tumHareketlerHome.ikRole}">
-								<ui:define name="label">PDKS Hariç Kapilari</ui:define>
-								<h:selectBooleanCheckbox value="#{tumHareketlerHome.pdksHaricKapi}" />
-							</s:decorate>
+ 							<c:if test="#{tumHareketlerHome.pdksHaricKapiVar}">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin or tumHareketlerHome.ikRole}">
+									<ui:define name="label">PDKS Kapilari</ui:define>
+									<h:selectBooleanCheckbox value="#{tumHareketlerHome.pdksKapi}" />
+								</s:decorate>
+								<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin or tumHareketlerHome.ikRole}">
+									<ui:define name="label">PDKS Hariç Kapilari</ui:define>
+									<h:selectBooleanCheckbox value="#{tumHareketlerHome.pdksHaricKapi}">
+										<a4j:support event="onclick" status="ajaxStatus" ajaxSingle="true" reRender="hareketGirisForm" />
+
+									</h:selectBooleanCheckbox>
+								</s:decorate>
+								<c:if test="#{tumHareketlerHome.pdksHaricKapi and tumHareketlerHome.yemekKapiVar}">
+									<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin or tumHareketlerHome.ikRole}">
+										<ui:define name="label">Yemek Hane Kapilari</ui:define>
+										<h:selectBooleanCheckbox value="#{tumHareketlerHome.yemekKapi}" />
+									</s:decorate>
+								</c:if>
+							</c:if>
 							<ui:fragment rendered="#{authenticatedUser.admin or tumHareketlerHome.ikRole or authenticatedUser.sistemYoneticisi}">
 								<s:decorate template="/layout/edit.xhtml"
 									rendered="#{authenticatedUser.admin or ortakIslemler.getParameterKeyHasStringValue('hareketVardiyaOku')}">
-									<ui:define name="label">Vardiya Bilgisi Oku</ui:define>
+									<ui:define name="label">#{ortakIslemler.vardiyaAciklama()} Bilgisi Oku</ui:define>
 									<h:selectBooleanCheckbox value="#{tumHareketlerHome.vardiyaOkuDurum}" />
 								</s:decorate>
 							</ui:fragment>
@@ -79,10 +90,12 @@
 							<s:decorate template="/layout/edit.xhtml">
 								<a4j:commandButton status="ajaxStatus" value="Listele" action="#{tumHareketlerHome.fillHareketList}" reRender="hareketPanel" />
 							</s:decorate>
-							<s:decorate template="/layout/edit.xhtml">
-								<a4j:commandButton status="ajaxStatus" value="#{ortakIslemler.getParameterKey('kapiGirisSistemAdi')} Güncelle"
-									action="#{tumHareketlerHome.kapiGirisGuncellemeBasla}" reRender="hareketPanel" />
-							</s:decorate>
+							<ui:fragment rendered="#{kapiGirisGuncelleme.kapiGirisGuncellemeKontrol(tumHareketlerHome.session)}">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin or authenticatedUser.IK}">
+									<a4j:commandButton status="ajaxStatus" value="#{ortakIslemler.getParameterKey('kapiGirisSistemAdi')} Güncelle"
+										action="#{tumHareketlerHome.kapiGirisGuncellemeBasla}" reRender="hareketPanel" />
+								</s:decorate>
+							</ui:fragment>
 						</h:panelGrid>
 					</h:panelGrid>
 				</a4j:outputPanel>
@@ -142,31 +155,31 @@
 									<h:outputText value="Kapi Tipi" />
 
 								</f:facet>
-								<ui:fragment rendered="#{hareketler.kapiView.kapi!=null }">
+								<ui:fragment rendered="#{hareketler.kapiView.kapi != null }">
 									<h:outputText value="#{hareketler.kapiView.kapi.tipi.aciklama}" />
 								</ui:fragment>
 							</rich:column>
 							<c:if test="#{tumHareketlerHome.vardiyaOku}">
 								<rich:column style="text-align:center">
 									<f:facet name="header">
-										<h:outputText value="Vardiya Tarihi" />
+										<h:outputText value="#{ortakIslemler.vardiyaAciklama()} Tarihi" />
 									</f:facet>
-									<ui:fragment rendered="#{hareketler.vardiyaGun!=null }">
+									<ui:fragment rendered="#{hareketler.vardiyaGun != null }">
  										#{authenticatedUser.dateFormatla(hareketler.vardiyaGun.vardiyaDate )}
  									</ui:fragment>
 								</rich:column>
 								<rich:column style="text-align:center">
 									<f:facet name="header">
-										<h:outputText value="Vardiya Adı" />
+										<h:outputText value="#{ortakIslemler.vardiyaAciklama()} Adı" />
 									</f:facet>
-									<ui:fragment rendered="#{hareketler.vardiyaGun!=null}">
+									<ui:fragment rendered="#{hareketler.vardiyaGun != null}">
 	 									#{hareketler.vardiyaGun.vardiya.kisaAdi}</ui:fragment>
 								</rich:column>
 								<rich:column style="text-align:center">
 									<f:facet name="header">
-										<h:outputText value="Vardiya Başlama Zamanı" />
+										<h:outputText value="#{ortakIslemler.vardiyaAciklama()} Başlama Zamanı" />
 									</f:facet>
-									<ui:fragment rendered="#{hareketler.vardiyaGun!=null and hareketler.vardiyaGun.vardiya.calisma}">
+									<ui:fragment rendered="#{hareketler.vardiyaGun != null and hareketler.vardiyaGun.vardiya.calisma}">
 										 
 										#{authenticatedUser.timeFormatla(hareketler.vardiyaGun.islemVardiya.vardiyaBasZaman )}
  									</ui:fragment>
@@ -174,9 +187,9 @@
 
 								<rich:column style="text-align:center">
 									<f:facet name="header">
-										<h:outputText value="Vardiya Bitiş Zamanı" />
+										<h:outputText value="#{ortakIslemler.vardiyaAciklama()} Bitiş Zamanı" />
 									</f:facet>
-									<ui:fragment rendered="#{hareketler.vardiyaGun!=null and hareketler.vardiyaGun.vardiya.calisma}">
+									<ui:fragment rendered="#{hareketler.vardiyaGun != null and hareketler.vardiyaGun.vardiya.calisma}">
  										#{authenticatedUser.timeFormatla(hareketler.vardiyaGun.islemVardiya.vardiyaBitZaman )}
   									</ui:fragment>
 								</rich:column>
@@ -199,7 +212,7 @@
 									<f:facet name="header">
 										<h:outputText value="Orjinal Zamanı " />
 									</f:facet>
-									<ui:fragment rendered="#{hareketler.islem!=null and hareketler.kgsZaman!=null}">
+									<ui:fragment rendered="#{hareketler.islem != null and hareketler.kgsZaman != null}">
 										<h:outputText value="#{authenticatedUser.dateTimeFormatla(hareketler.kgsZaman)}" />
 									</ui:fragment>
 								</rich:column>
@@ -207,7 +220,7 @@
 									<f:facet name="header">
 										<h:outputText value="İşlem Yapan " />
 									</f:facet>
-									<ui:fragment rendered="#{hareketler.islem!=null or hareketler.sirket=='K'}">
+									<ui:fragment rendered="#{hareketler.islem != null or hareketler.sirket == 'K'}">
 										<h:outputText value="#{hareketler.islem.guncelleyenUser.adSoyad}" />
 									</ui:fragment>
 								</rich:column>

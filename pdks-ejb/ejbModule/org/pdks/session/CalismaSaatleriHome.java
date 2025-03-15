@@ -11,7 +11,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 
-import javax.faces.model.SelectItem;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
@@ -38,7 +37,6 @@ import org.pdks.entity.PersonelHareketIslem;
 import org.pdks.entity.PersonelIzin;
 import org.pdks.entity.PersonelView;
 import org.pdks.entity.Sirket;
-import org.pdks.entity.Tanim;
 import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGun;
 import org.pdks.entity.VardiyaSaat;
@@ -127,102 +125,22 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 
 	public String fillSirketList() {
 		Date bugun = PdksUtil.getDate(date);
-		List<Sirket> list = new ArrayList<Sirket>();
-		HashMap map = new HashMap();
-		map.put(PdksEntityController.MAP_KEY_MAP, "getId");
-		map.put(PdksEntityController.MAP_KEY_SELECT, "sirket");
-		map.put("pdks=", Boolean.TRUE);
-		map.put("durum=", Boolean.TRUE);
-		map.put("sskCikisTarihi>=", bugun);
-		map.put("iseBaslamaTarihi<=", bugun);
-		if (aramaSecenekleri.getDepartmanId() != null && (authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIKAdmin() || !authenticatedUser.isYoneticiKontratli()))
-			map.put("sirket.departman.id=", aramaSecenekleri.getDepartmanId());
-		if (session != null)
-			map.put(PdksEntityController.MAP_KEY_SESSION, session);
-		TreeMap sirketMap = pdksEntityController.getObjectByInnerObjectMapInLogic(map, Personel.class, Boolean.FALSE);
-
-		aramaSecenekleri.setSirketId(null);
-		if (aramaSecenekleri.getSirketIdList() != null)
-			aramaSecenekleri.getSirketIdList().clear();
-		else
-			aramaSecenekleri.setSirketIdList(new ArrayList<SelectItem>());
-		if (!sirketMap.isEmpty()) {
-			Long sirketId = null;
-			list = PdksUtil.sortObjectStringAlanList(new ArrayList<Sirket>(sirketMap.values()), "getAd", null);
-			for (Sirket sirket : list) {
-				if (sirket.getDurum() && sirket.getFazlaMesai())
-					aramaSecenekleri.getSirketIdList().add(new SelectItem(sirket.getId(), sirket.getAd()));
-			}
-			if (aramaSecenekleri.getSirketIdList().size() == 1)
-				sirketId = (Long) aramaSecenekleri.getSirketIdList().get(0).getValue();
-			aramaSecenekleri.setSirketId(sirketId);
-			fillTesisList();
-		} else {
-			if (aramaSecenekleri.getTesisList() != null)
-				aramaSecenekleri.getTesisList().clear();
-			else
-				aramaSecenekleri.setTesisList(new ArrayList<SelectItem>());
-		}
+		ortakIslemler.setAramaSecenekSirketVeTesisData(aramaSecenekleri, bugun, bugun, false, session);
 		clearVardiyaList();
 		return "";
 	}
 
 	public String fillTesisList() {
-		if (aramaSecenekleri.getTesisList() != null)
-			aramaSecenekleri.getTesisList().clear();
-		else
-			aramaSecenekleri.setTesisList(new ArrayList<SelectItem>());
-		clearVardiyaList();
-		Long tesisId = null;
-		if (aramaSecenekleri.getSirketId() != null) {
-			Date bugun = PdksUtil.getDate(date);
-			List<Tanim> list = new ArrayList<Tanim>();
-			HashMap map = new HashMap();
-			map.put("id ", aramaSecenekleri.getSirketId());
-			if (session != null)
-				map.put(PdksEntityController.MAP_KEY_SESSION, session);
-			Sirket sirket = (Sirket) pdksEntityController.getObjectByInnerObject(map, Sirket.class);
-			if (aramaSecenekleri.getTesisList() != null)
-				aramaSecenekleri.getTesisList().clear();
-			else
-				aramaSecenekleri.setTesisList(new ArrayList<SelectItem>());
-			if (sirket.isTesisDurumu()) {
-				map.clear();
-				map.put(PdksEntityController.MAP_KEY_MAP, "getId");
-				map.put(PdksEntityController.MAP_KEY_SELECT, "tesis");
-				map.put("pdks=", Boolean.TRUE);
-				map.put("durum=", Boolean.TRUE);
-				map.put("sirket.id=", aramaSecenekleri.getSirketId());
-				map.put("sskCikisTarihi>=", bugun);
-				map.put("iseBaslamaTarihi<=", bugun);
-				if (session != null)
-					map.put(PdksEntityController.MAP_KEY_SESSION, session);
-				TreeMap tesisMap = pdksEntityController.getObjectByInnerObjectMapInLogic(map, Personel.class, Boolean.FALSE);
-				if (!tesisMap.isEmpty()) {
-					list = PdksUtil.sortObjectStringAlanList(new ArrayList(tesisMap.values()), "getAciklama", null);
-					for (Tanim tesis : list) {
-						if (tesisId == null)
-							tesisId = tesis.getId();
-						aramaSecenekleri.getTesisList().add(new SelectItem(tesis.getId(), tesis.getAciklama()));
-					}
-					aramaSecenekleri.setTesisId(tesisId);
-
-				}
-			} else {
-				tesisId = null;
-
-			}
-		}
-		aramaSecenekleri.setTesisId(tesisId);
-
-		return "";
+ 		clearVardiyaList();
+		Date bugun = PdksUtil.getDate(date);
+		ortakIslemler.setAramaSecenekTesisData(aramaSecenekleri, bugun, bugun, false, session);
+ 		return "";
 	}
 
 	private void clearVardiyaList() {
 		hareketList.clear();
 		vardiyaGunList.clear();
-
-	}
+ 	}
 
 	private void fillEkSahaTanim() {
 		ortakIslemler.fillEkSahaTanimAramaSecenekAta(session, Boolean.FALSE, Boolean.TRUE, aramaSecenekleri);
@@ -402,12 +320,8 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 		try {
 
 			cal.setTime(date);
-			HashMap parametreMap2 = new HashMap();
-			parametreMap2.put("yil", cal.get(Calendar.YEAR));
-			parametreMap2.put("ay", cal.get(Calendar.MONTH) + 1);
-			if (session != null)
-				parametreMap2.put(PdksEntityController.MAP_KEY_SESSION, session);
-			DenklestirmeAy da = (DenklestirmeAy) pdksEntityController.getObjectByInnerObject(parametreMap2, DenklestirmeAy.class);
+
+			DenklestirmeAy da = (DenklestirmeAy) ortakIslemler.getSQLDenklestirmeAy(cal, session);
 			Double yemekMolasiYuzdesi = ortakIslemler.getYemekMolasiYuzdesi(da, session);
 
 			List<YemekIzin> yemekGenelList = ortakIslemler.getYemekList(tarih1, tarih2, session);
@@ -422,6 +336,7 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 				vardiyaGun.setHareketler(null);
 				vardiyaGun.setGirisHareketleri(null);
 				vardiyaGun.setCikisHareketleri(null);
+				vardiyaGun.setGecersizHareketler(null);
 				Vardiya vardiya = vardiyaGun.getVardiya();
 				if (hareketMap.containsKey(personelId)) {
 					List<HareketKGS> list = hareketMap.get(personelId);
@@ -522,7 +437,7 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 	public ByteArrayOutputStream calismaSaatleriExcelDevam() {
 		ByteArrayOutputStream baos = null;
 		Workbook wb = new XSSFWorkbook();
-		Sheet sheet = ExcelUtil.createSheet(wb, "Vardiya Listesi", false);
+		Sheet sheet = ExcelUtil.createSheet(wb, ortakIslemler.vardiyaAciklama() + " Listesi", false);
 		// Sheet sheetHareket = ExcelUtil.createSheet(wb, "Hareket  Listesi", false);
 		CellStyle header = ExcelUtil.getStyleHeader(wb);
 		CellStyle styleOdd = ExcelUtil.getStyleOdd(null, wb);
@@ -566,7 +481,7 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Eksik Çalışma Süre");
 		}
 
-		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Vardiya");
+		ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.vardiyaAciklama());
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İlk Giriş");
 		ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Son Çıkış");
 		if (izinDurum)

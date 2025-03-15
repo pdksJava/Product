@@ -30,6 +30,7 @@ import java.text.ParseException;
 import java.text.RuleBasedCollator;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
@@ -77,7 +78,9 @@ import org.jboss.seam.international.StatusMessage.Severity;
 import org.jboss.seam.persistence.HibernateSessionProxy;
 import org.json.JSONObject;
 import org.json.XML;
+import org.pdks.entity.BaseObject;
 import org.pdks.entity.Dosya;
+import org.pdks.entity.Liste;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
 import org.pdks.entity.Tanim;
@@ -132,6 +135,98 @@ public class PdksUtil implements Serializable {
 	private static Integer yarimYuvarlaLast = 1, sicilNoUzunluk = null;
 
 	private static boolean sistemDestekVar = false, puantajSorguAltBolumGir = false;
+	
+	/**
+	 * @param list
+	 * @param str
+	 */
+	public static void addMessageAvailableInfo(List<Liste> list, String str) {
+		if (list != null) {
+			Liste liste = new Liste(Severity.INFO, str);
+			liste.setSelected("blue");
+			liste.setChecked("msginfo.png");
+			list.add(liste);
+		}
+	}
+
+	/**
+	 * @param list
+	 * @param str
+	 */
+	public static void addMessageAvailableError(List<Liste> list, String str) {
+		if (list != null) {
+			Liste liste = new Liste(Severity.ERROR, str);
+			liste.setSelected("red");
+			liste.setChecked("msgerror.png");
+			list.add(liste);
+		}
+	}
+
+	/**
+	 * @param list
+	 * @param str
+	 */
+	public static void addMessageAvailableWarn(List<Liste> list, String str) {
+		if (list != null) {
+			Liste liste = new Liste(Severity.WARN, str);
+			liste.setSelected("black");
+			liste.setChecked("msgwarn.png");
+			list.add(liste);
+		}
+	}
+
+
+	/**
+	 * @param cmd
+	 * @param bekle
+	 * @return
+	 */
+	public static List<String> executeCommand(String cmd, boolean bekle) {
+		Process p = null;
+		List<String> temps = new ArrayList<String>();
+		if (bekle)
+			System.out.println(cmd);
+		try {
+			logger.info(cmd);
+			p = Runtime.getRuntime().exec(cmd);
+			if (bekle)
+				p.waitFor();
+			BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			String s = "";
+			while ((s = stdInput.readLine()) != null)
+				temps.add(s);
+		} catch (Exception e) {
+			if (e.getLocalizedMessage() != null)
+				temps.add(e.getLocalizedMessage());
+
+		}
+		return temps;
+	}
+
+	/**
+	 * @param list
+	 */
+	public static List getAktifList(List list) {
+		if (list != null) {
+			for (Iterator iterator = list.iterator(); iterator.hasNext();) {
+				Object object = (Object) iterator.next();
+				boolean sil = false;
+				if (object instanceof BaseObject) {
+					BaseObject new_name = (BaseObject) object;
+					sil = new_name.getDurum() == null || new_name.getDurum().booleanValue() == false;
+
+				} else {
+					Boolean durum = (Boolean) PdksUtil.getMethodObject(object, "getDurum", null);
+					if (durum != null)
+						sil = durum.booleanValue() == false;
+				}
+				if (sil)
+					iterator.remove();
+
+			}
+		}
+		return list;
+	}
 
 	/**
 	 * @param gunSira
@@ -497,7 +592,7 @@ public class PdksUtil implements Serializable {
 		String label = "";
 		if (list != null && value != null) {
 			for (SelectItem selectItem : list) {
-				if (selectItem.getValue().equals(value))
+				if (selectItem.getValue() != null && selectItem.getValue().equals(value))
 					try {
 						label = selectItem.getLabel();
 						break;
@@ -1991,13 +2086,14 @@ public class PdksUtil implements Serializable {
 	 * @param object
 	 * @param method
 	 * @param parametre
+	 * @param bos
 	 */
-	public static void runMethodObject(Object object, String method, Object[] parametre) {
+	public static void runMethodObjectNull(Object object, String method, Object[] parametre, Class[] bos) {
 		Class[] classes = null;
 		if (parametre != null) {
 			classes = new Class[parametre.length];
 			for (int i = 0; i < classes.length; i++)
-				classes[i] = parametre[i].getClass();
+				classes[i] = parametre[i] != null ? parametre[i].getClass() : bos[i];
 		}
 		try {
 			Method run = object.getClass().getMethod(method, classes);
@@ -2008,6 +2104,16 @@ public class PdksUtil implements Serializable {
 			logger.error("PDKS hata out : " + e.getMessage());
 
 		}
+	}
+
+	/**
+	 * @param object
+	 * @param method
+	 * @param parametre
+	 */
+	public static void runMethodObject(Object object, String method, Object[] parametre) {
+		Class[] bos = null;
+		runMethodObjectNull(object, method, parametre, bos);
 	}
 
 	/**
@@ -2318,7 +2424,7 @@ public class PdksUtil implements Serializable {
 	 * @param severity
 	 * @param yeni
 	 */
-	private static void addMessage(String message, Severity severity, Boolean yeni) {
+	public static void addMessage(String message, Severity severity, Boolean yeni) {
 		Object object = Component.getInstance("facesMessages");
 		if (object != null) {
 			FacesMessages facesMessages = (FacesMessages) object;
@@ -2588,12 +2694,15 @@ public class PdksUtil implements Serializable {
 	/**
 	 * @param user
 	 */
-	public static void setUserYetki(User user) {
+	public static List<Role> setUserYetki(User user) {
+		List<Role> bagliRoller = null;
 		if (user != null) {
 			user.setAdmin(Boolean.FALSE);
 			user.setGenelMudur(Boolean.FALSE);
 			user.setIKDirektor(Boolean.FALSE);
 			user.setAnahtarKullanici(Boolean.FALSE);
+			user.setTesisSuperVisor(Boolean.FALSE);
+			user.setSirketSuperVisor(Boolean.FALSE);
 			user.setIK(Boolean.FALSE);
 			user.setMudur(Boolean.FALSE);
 			user.setYonetici(Boolean.FALSE);
@@ -2608,67 +2717,102 @@ public class PdksUtil implements Serializable {
 			user.setSistemYoneticisi(Boolean.FALSE);
 			user.setPersonel(Boolean.FALSE);
 			user.setTaseronAdmin(Boolean.FALSE);
-			user.setTesisYonetici(Boolean.FALSE);
 			user.setRaporKullanici(Boolean.FALSE);
-			Personel pdksPersonel = user.getPdksPersonel();
-			if (user.getYetkiliRollerim() != null)
-				for (Role role : user.getYetkiliRollerim()) {
-					if (role.getRolename().equals(Role.TIPI_IK_YETKILI_RAPOR_KULLANICI))
-						user.setRaporKullanici(Boolean.TRUE);
-					else if (role.getRolename().equals(Role.TIPI_ADMIN))
-						user.setAdmin(Boolean.TRUE);
-					else if (role.getRolename().equals(Role.TIPI_ANAHTAR_KULLANICI)) {
-						user.setIK(Boolean.TRUE);
-						user.setAnahtarKullanici(Boolean.TRUE);
-					} else if (role.getRolename().equals(Role.TIPI_SISTEM_YONETICI)) {
-						user.setIK(Boolean.TRUE);
-						user.setSistemYoneticisi(Boolean.TRUE);
-					} else if (role.getRolename().equals(Role.TIPI_IK))
-						user.setIK(Boolean.TRUE);
-					else if (role.getRolename().equals(Role.TIPI_IK_SIRKET)) {
-						user.setIKSirket(Boolean.TRUE);
-						user.setIK(Boolean.TRUE);
-					} else if (role.getRolename().equals(Role.TIPI_IK_Tesis)) {
-						user.setIK_Tesis(Boolean.TRUE);
-						user.setIK(Boolean.TRUE);
-					} else if (role.getRolename().equals(Role.TIPI_IK_DIREKTOR)) {
-						user.setIK(Boolean.TRUE);
-						user.setIKDirektor(Boolean.TRUE);
-					} else if (role.getRolename().equals(Role.TIPI_YONETICI))
-						user.setYonetici(Boolean.TRUE);
-					else if (role.getRolename().equals(Role.TIPI_YONETICI_KONTRATLI)) {
-						user.setYonetici(Boolean.TRUE);
-						user.setYoneticiKontratli(Boolean.TRUE);
-					} else if (role.getRolename().equals(Role.TIPI_GENEL_MUDUR)) {
-						user.setIK(Boolean.TRUE);
-						user.setGenelMudur(Boolean.TRUE);
-					} else if (role.getRolename().equals(Role.TIPI_SEKRETER))
-						user.setSekreter(Boolean.TRUE);
-					else if (role.getRolename().equals(Role.TIPI_TASERON_ADMIN))
-						user.setTaseronAdmin(Boolean.TRUE);
-					else if (role.getRolename().equals(Role.TIPI_SUPER_VISOR)) {
-						user.setSuperVisor(Boolean.TRUE);
-						user.setYonetici(Boolean.TRUE);
-					} else if (role.getRolename().equals(Role.TIPI_DIREKTOR_SUPER_VISOR)) {
-						user.setDirektorSuperVisor(pdksPersonel != null && pdksPersonel.getEkSaha1() != null && pdksPersonel.getEkSaha1().getDurum());
-						user.setYonetici(Boolean.TRUE);
-					} else if (role.getRolename().equals(Role.TIPI_PROJE_MUDURU))
-						user.setProjeMuduru(Boolean.TRUE);
-					else if (role.getRolename().equals(Role.TIPI_MUDUR))
-						user.setMudur(Boolean.TRUE);
-					else if (role.getRolename().equals(Role.TIPI_OPERATOR_SSK_IZIN))
-						user.setOperatorSSK(Boolean.TRUE);
-					else if (role.getRolename().equals(Role.TIPI_PERSONEL))
-						user.setPersonel(Boolean.TRUE);
-					else if (role.getRolename().equals(Role.TIPI_TESIS_YONETICI)) {
-						user.setYonetici(Boolean.TRUE);
-						user.setTesisYonetici(Boolean.TRUE);
-					}
+			List<Role> rollerim = user.getYetkiliRollerim();
+			if (rollerim != null) {
+				bagliRoller = setUserYetkiler(user, rollerim);
+				if (!bagliRoller.isEmpty())
+					setUserYetkiler(user, bagliRoller);
 
-				}
-
+			}
 		}
+		if (bagliRoller == null)
+			bagliRoller = new ArrayList<Role>();
+		user.setBagliRoller(bagliRoller);
 		user.setYetkiSet(Boolean.TRUE);
+		return bagliRoller;
+	}
+
+	/**
+	 * @param user
+	 * @param roller
+	 * @return
+	 */
+	private static List<Role> setUserYetkiler(User user, List<Role> roller) {
+		List<String> yoneticiYetkiliRoller = Arrays.asList(new String[] { Role.TIPI_YONETICI_KONTRATLI, Role.TIPI_SUPER_VISOR, Role.TIPI_DIREKTOR_SUPER_VISOR, Role.TIPI_PROJE_MUDURU, Role.TIPI_MUDUR, Role.TIPI_TESIS_SUPER_VISOR, Role.TIPI_SIRKET_SUPER_VISOR });
+		List<String> ikYetkiliRoller = Arrays.asList(new String[] { Role.TIPI_ANAHTAR_KULLANICI, Role.TIPI_IK_Tesis, Role.TIPI_IK_SIRKET, Role.TIPI_IK_DIREKTOR, Role.TIPI_SISTEM_YONETICI, Role.TIPI_GENEL_MUDUR });
+		List<Role> digerRoller = new ArrayList<Role>();
+		Personel pdksPersonel = user.getPdksPersonel();
+		HashMap<String, Role> roleMap = new HashMap<String, Role>();
+		for (Role role : roller) {
+			String rolAdi = role.getRolename();
+			roleMap.put(rolAdi, role);
+		}
+		for (Role role : roller) {
+			String rolAdi = role.getRolename();
+			if (ikYetkiliRoller.contains(rolAdi))
+				esRolKontrol(Role.TIPI_IK, roleMap, digerRoller);
+			if (yoneticiYetkiliRoller.contains(rolAdi))
+				esRolKontrol(Role.TIPI_YONETICI, roleMap, digerRoller);
+			if (rolAdi.equals(Role.TIPI_IK_YETKILI_RAPOR_KULLANICI))
+				user.setRaporKullanici(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_ADMIN))
+				user.setAdmin(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_ANAHTAR_KULLANICI))
+				user.setAnahtarKullanici(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_SISTEM_YONETICI))
+				user.setSistemYoneticisi(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_IK))
+				user.setIK(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_IK_SIRKET))
+				user.setIKSirket(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_IK_Tesis))
+				user.setIK_Tesis(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_IK_DIREKTOR))
+				user.setIKDirektor(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_YONETICI))
+				user.setYonetici(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_YONETICI_KONTRATLI))
+				user.setYoneticiKontratli(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_GENEL_MUDUR))
+				user.setGenelMudur(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_SEKRETER))
+				user.setSekreter(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_TASERON_ADMIN))
+				user.setTaseronAdmin(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_SUPER_VISOR))
+				user.setSuperVisor(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_DIREKTOR_SUPER_VISOR))
+				user.setDirektorSuperVisor(pdksPersonel != null && pdksPersonel.getEkSaha1() != null && pdksPersonel.getEkSaha1().getDurum());
+			else if (rolAdi.equals(Role.TIPI_PROJE_MUDURU))
+				user.setProjeMuduru(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_MUDUR))
+				user.setMudur(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_OPERATOR_SSK_IZIN))
+				user.setOperatorSSK(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_PERSONEL))
+				user.setPersonel(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_TESIS_SUPER_VISOR))
+				user.setTesisSuperVisor(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_SIRKET_SUPER_VISOR))
+				user.setSirketSuperVisor(Boolean.TRUE);
+		}
+
+		roleMap = null;
+		return digerRoller;
+	}
+
+	/**
+	 * @param roleName
+	 * @param roleMap
+	 * @param digerRoller
+	 */
+	private static void esRolKontrol(String roleName, HashMap<String, Role> roleMap, List<Role> digerRoller) {
+		if (roleMap != null && !roleMap.containsKey(roleName)) {
+			Role role2 = new Role(roleName);
+			digerRoller.add(role2);
+			roleMap.put(role2.getRolename(), role2);
+		}
 	}
 
 	/**
@@ -2837,8 +2981,42 @@ public class PdksUtil implements Serializable {
 						String parca[] = str.split(":");
 						if (parca.length != 2)
 							continue;
-						List<String> saatList = getStringTokenizer(parca[0]);
-						List<String> dakikaList = getStringTokenizer(parca[1]);
+						List<String> saatParseList = getStringTokenizer(parca[0]), saatList = new ArrayList<String>();
+						for (Iterator iterator = saatParseList.iterator(); iterator.hasNext();) {
+							String string = (String) iterator.next();
+							boolean ekle = true;
+							if (string.indexOf("-") >= 0) {
+								String saat[] = string.split("-");
+								if (saat.length == 2) {
+									ekle = false;
+									for (int i = Integer.parseInt(saat[0]); i <= Integer.parseInt(saat[1]); i++) {
+										saatList.add(String.valueOf(i));
+									}
+
+								}
+
+							}
+							if (ekle)
+								saatList.add(string);
+						}
+						List<String> dakikaParseList = getStringTokenizer(parca[1]), dakikaList = new ArrayList<String>();
+						for (Iterator iterator = dakikaParseList.iterator(); iterator.hasNext();) {
+							String string = (String) iterator.next();
+							boolean ekle = true;
+							if (string.indexOf("-") >= 0) {
+								String dakika[] = string.split("-");
+								if (dakika.length == 2) {
+									ekle = false;
+									for (int i = Integer.parseInt(dakika[0]); i <= Integer.parseInt(dakika[1]); i = i + 5) {
+										dakikaList.add(String.valueOf(i));
+									}
+
+								}
+
+							}
+							if (ekle)
+								dakikaList.add(string);
+						}
 						for (String saat : saatList) {
 							for (String dakika : dakikaList) {
 								zamaniGeldi = zamaniGeldimi(simdikiSaat, simdikiDakika, saat + ":" + dakika);
@@ -2848,6 +3026,8 @@ public class PdksUtil implements Serializable {
 							if (zamaniGeldi)
 								break;
 						}
+						saatParseList = null;
+						dakikaParseList = null;
 						parca = null;
 						saatList = null;
 						dakikaList = null;
@@ -2978,14 +3158,9 @@ public class PdksUtil implements Serializable {
 	public static Session getSessionUser(EntityManager em, User user) {
 		Session session1 = null;
 		if (user != null) {
-			if (em != null)
-				session1 = getSession(em, Boolean.FALSE);
 			try {
-				// Session sessionSQL = user.getSessionSQL();
-				// if (sessionSQL != null) {
-				// sessionSQL.close();
-				// sessionSQL = null;
-				// }
+				if (em != null)
+					session1 = getSession(em, Boolean.FALSE);
 			} catch (Exception e) {
 				logger.error(e);
 			} finally {
@@ -3161,24 +3336,6 @@ public class PdksUtil implements Serializable {
 			gecenZaman = new Date(sureLong);
 		}
 		return gecenZaman;
-	}
-
-	/**
-	 * @param sayisal
-	 * @return
-	 */
-	public static List<SelectItem> getAyListesi(boolean sayisal) {
-		List<SelectItem> list = new ArrayList<SelectItem>();
-		Calendar cal = Calendar.getInstance();
-		cal.set(cal.get(Calendar.YEAR), Calendar.JANUARY, 1);
-		for (int i = 0; i < 12; i++) {
-			if (sayisal)
-				list.add(new SelectItem(i + 1, convertToDateString(cal.getTime(), "MMMMM")));
-			else
-				list.add(new SelectItem(String.valueOf(i), convertToDateString(cal.getTime(), "MMMMM")));
-			cal.add(Calendar.MONTH, 1);
-		}
-		return list;
 	}
 
 	/**
