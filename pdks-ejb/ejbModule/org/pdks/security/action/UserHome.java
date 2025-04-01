@@ -35,6 +35,7 @@ import org.pdks.security.entity.User;
 import org.pdks.session.OrtakIslemler;
 import org.pdks.session.PdksEntityController;
 import org.pdks.session.PdksUtil;
+import org.pdks.system.filter.RequestEncodingFilter;
 
 import com.Ostermiller.util.RandPass;
 
@@ -309,8 +310,15 @@ public class UserHome extends EntityHome<User> implements Serializable {
 	 */
 	public boolean hasPermission(Object target, String action) {
 		boolean sonuc = Boolean.FALSE;
+		boolean ipControlYok = authenticatedUser != null;
 		try {
-			if (identity != null && identity.isLoggedIn() && authenticatedUser != null) {
+			if (ipControlYok && RequestEncodingFilter.getIpControl()) {
+				String remoteAddr = PdksUtil.getRemoteAddr();
+				ipControlYok = remoteAddr.equals(authenticatedUser.getRemoteAddr());
+				if (ipControlYok == false)
+					PdksUtil.addMessageError("Bir sorun ile karşılaştık, internet uygulamasını kapatıp tekrar açınız!");
+			}
+			if (ipControlYok && identity != null && identity.isLoggedIn()) {
 				HashMap<String, Boolean> menuYetkiMap = authenticatedUser.getMenuYetkiMap();
 				if (menuYetkiMap == null) {
 					menuYetkiMap = new HashMap<String, Boolean>();

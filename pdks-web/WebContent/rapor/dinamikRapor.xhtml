@@ -1,0 +1,171 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml" xmlns:s="http://jboss.com/products/seam/taglib" xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:f="http://java.sun.com/jsf/core" xmlns:h="http://java.sun.com/jsf/html" xmlns:rich="http://richfaces.org/rich"
+	xmlns:a4j="http://richfaces.org/a4j" xmlns:c="http://java.sun.com/jstl/core" template="/layout/template.xhtml">
+	<ui:define name="title">
+		<h:outputText value="#{ortakIslemler.getMenuAdi('dinamikRapor')}" />
+	</ui:define>
+	<ui:define name="body">
+
+		<h:form id="formOrganizasyon">
+			<rich:panel style="vardiyaGun" header="#{ortakIslemler.getMenuUserAdi(dinamikRaporHome.session,'dinamikRapor')}">
+
+				<h:panelGrid columns="1" rendered="#{dinamikRaporHome.dinamikRaporList.size()>1}">
+					<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin==false}">
+						<ui:define name="label">Rapor Adı</ui:define>
+						<h:selectOneMenu value="#{dinamikRaporHome.seciliPdksDinamikRapor}">
+							<s:selectItems var="comp" value="#{dinamikRaporHome.dinamikRaporList}" label="#{comp.aciklama}" noSelectionLabel="Lütfen seçiniz" />
+							<s:convertEntity />
+							<a4j:support event="onchange" action="#{dinamikRaporHome.dinamikRaporGuncelle(dinamikRaporHome.seciliPdksDinamikRapor)}"
+								reRender="raporParametreTable" status="ajaxStatus" ajaxSingle="true" />
+
+						</h:selectOneMenu>
+					</s:decorate>
+					<rich:dataTable rowClasses="acik,koyu" value="#{dinamikRaporHome.dinamikRaporList}" var="rapor" rows="20" rowKeyVar="row"
+						rendered="#{authenticatedUser.admin}">
+						<f:facet name="header">
+							<h:outputText value="Dinamik Raporlar" />
+						</f:facet>
+						<rich:column style="text-align:center">
+							<f:facet name="header">
+                        İşlemler
+              		  </f:facet>
+							<a4j:commandLink status="ajaxStatus" ajaxSingle="true" id="editlink" action="#{dinamikRaporHome.dinamikRaporGuncelle(rapor)}"
+								reRender="raporParametreTable">
+								<h:graphicImage value="/img/edit.gif" style="border:0" />
+
+							</a4j:commandLink>
+							<rich:toolTip for="editlink" value="Güncelle" />
+
+
+						</rich:column>
+						<c:if test="#{authenticatedUser.admin}">
+							<rich:column>
+								<f:facet name="header">
+                     	   Rapor Başlık
+              		 	 </f:facet>
+								<h:outputText value="#{rapor.aciklama}" />
+							</rich:column>
+							<rich:column>
+								<f:facet name="header">
+                      		 Database Tanımı
+              		 	 </f:facet>
+								<h:outputText value="#{rapor.dbTanim}" />
+							</rich:column>
+							<rich:column>
+								<f:facet name="header">
+                      		 Database Rapor Tipi
+              		 	 </f:facet>
+								<h:outputText value="#{rapor.pdksDinamikRaporTipiAciklama}" />
+							</rich:column>
+							<rich:column style="text-align:center">
+								<f:facet name="header">
+                      		Görüntülensin
+              		 	 </f:facet>
+								<h:outputText value="#{authenticatedUser.getYesNo(rapor.goruntulemeDurum)}" />
+							</rich:column>
+						</c:if>
+
+						<f:facet name="footer">
+							<rich:datascroller renderIfSinglePage="false" maxPages="5" />
+						</f:facet>
+					</rich:dataTable>
+				</h:panelGrid>
+
+				<a4j:outputPanel id="raporParametreTable">
+					<c:if test="#{dinamikRaporHome.seciliPdksDinamikRapor!=null}">
+						<rich:panel>
+
+							<h:panelGrid columns="2">
+								<c:forEach items="#{dinamikRaporHome.dinamikRaporParametreList}" var="parametre">
+									<s:decorate template="/layout/edit.xhtml">
+										<ui:define name="label">#{ortakIslemler.getDinamikRaporAlanAciklama(parametre.aciklama)}</ui:define>
+										<ui:fragment rendered="#{parametre.secimList.size()>1}">
+											<h:selectOneMenu value="#{parametre.value}" required="#{parametre.zorunlu}"
+												requiredMessage="#{ortakIslemler.getDinamikRaporAlanAciklama(parametre.aciklama)} seçiniz!">
+												<f:selectItem itemLabel="Lütfen seçiniz" />
+												<f:selectItems value="#{parametre.secimList}" />
+												<a4j:support event="onchange" ajaxSingle="true" />
+											</h:selectOneMenu>
+										</ui:fragment>
+										<ui:fragment rendered="#{parametre.secimList==null}">
+											<ui:fragment rendered="#{parametre.karakter or parametre.sayisal}">
+												<h:inputText value="#{parametre.karakterDeger}" size="2" maxlength="255" required="#{parametre.zorunlu}"
+													requiredMessage="#{ortakIslemler.getDinamikRaporAlanAciklama(parametre.aciklama)} giriniz" />
+											</ui:fragment>
+											<ui:fragment rendered="#{parametre.sayisal and false}">
+												<h:inputText value="#{parametre.doubleDeger}" size="2" maxlength="25" required="#{parametre.zorunlu}"
+													requiredMessage="#{ortakIslemler.getDinamikRaporAlanAciklama(parametre.aciklama)} giriniz" />
+											</ui:fragment>
+											<ui:fragment rendered="#{parametre.tarih}">
+												<rich:calendar datePattern="#{authenticatedUser.dateFormat}" value="#{parametre.tarihDeger}" showWeekDaysBar="false" showWeeksBar="false"
+													required="#{parametre.zorunlu}" requiredMessage="#{parametre.aciklama} seçiniz">
+													<a4j:support event="onchanged" action="#{dinamikRaporHome.dinamikRaporDataList.clear()}" ajaxSingle="true" status="ajaxStatus"
+														reRender="raporTable" />
+												</rich:calendar>
+											</ui:fragment>
+										</ui:fragment>
+									</s:decorate>
+
+								</c:forEach>
+							</h:panelGrid>
+
+							<a4j:outputPanel id="raporTable">
+								<ui:fragment rendered="#{not empty dinamikRaporHome.dinamikRaporAlanList}">
+									<a4j:commandButton status="ajaxStatus" value="Rapor Getir" action="#{dinamikRaporHome.fillDinamikRaporList()}" reRender="raporTable" />
+
+
+									<h:commandLink value="#{messages['ortak.etiket.excelAktar']}" action="#{dinamikRaporHome.excelDinamikRaporList()}" target="blank"
+										rendered="#{not empty dinamikRaporHome.dinamikRaporDataList}" />
+
+									<rich:dataTable rowClasses="acik,koyu" value="#{dinamikRaporHome.dinamikRaporDataList}" var="veri" rows="50" rowKeyVar="row">
+										<f:facet name="header">
+											<h:outputText value="#{dinamikRaporHome.seciliPdksDinamikRapor.aciklama}" />
+										</f:facet>
+										<c:forEach items="#{dinamikRaporHome.dinamikRaporAlanList}" var="raporAlan">
+											<rich:column style="text-align :#{raporAlan.pdksDinamikRaporAlanHizala}">
+												<f:facet name="header">
+													<h:outputText value="#{ortakIslemler.getDinamikRaporAlanAciklama(raporAlan.aciklama)}" />
+												</f:facet>
+												<ui:fragment rendered="#{raporAlan.karakter}">
+													<h:outputText value="#{dinamikRaporHome.getDinamikRaporAlan(veri,raporAlan.sira)}" />
+												</ui:fragment>
+												<ui:fragment rendered="#{raporAlan.sayisal}">
+													<h:outputText value="#{authenticatedUser.sayiFormatliGoster(dinamikRaporHome.getDinamikRaporAlan(veri,raporAlan.sira))}" />
+												</ui:fragment>
+												<ui:fragment rendered="#{raporAlan.tarih}">
+													<h:outputText value="#{authenticatedUser.dateFormatla(dinamikRaporHome.getDinamikRaporAlan(veri,raporAlan.sira))}" />
+												</ui:fragment>
+												<ui:fragment rendered="#{raporAlan.saat}">
+													<h:outputText value="#{authenticatedUser.saatFormatla(dinamikRaporHome.getDinamikRaporAlan(veri,raporAlan.sira))}" />
+												</ui:fragment>
+												<ui:fragment rendered="#{raporAlan.tarihSaat}">
+													<h:outputText value="#{authenticatedUser.dateTimeFormatla(dinamikRaporHome.getDinamikRaporAlan(veri,raporAlan.sira))}" />
+												</ui:fragment>
+
+											</rich:column>
+										</c:forEach>
+										<f:facet name="footer">
+											<rich:datascroller renderIfSinglePage="false" maxPages="5" />
+										</f:facet>
+									</rich:dataTable>
+									<h:commandLink value="#{messages['ortak.etiket.excelAktar']}" action="#{dinamikRaporHome.excelDinamikRaporList()}" target="blank"
+										rendered="#{not empty dinamikRaporHome.dinamikRaporDataList}" />
+
+
+								</ui:fragment>
+							</a4j:outputPanel>
+						</rich:panel>
+					</c:if>
+
+				</a4j:outputPanel>
+
+
+			</rich:panel>
+
+		</h:form>
+
+
+	</ui:define>
+</ui:composition>

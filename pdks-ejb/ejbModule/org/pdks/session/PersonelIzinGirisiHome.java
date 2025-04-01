@@ -41,7 +41,6 @@ import org.jboss.seam.faces.FacesMessages;
 import org.jboss.seam.faces.Renderer;
 import org.jboss.seam.framework.EntityHome;
 import org.pdks.entity.AramaSecenekleri;
-import org.pdks.entity.BordroDetayTipi;
 import org.pdks.entity.DenklestirmeAy;
 import org.pdks.entity.Departman;
 import org.pdks.entity.Dosya;
@@ -69,6 +68,7 @@ import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGun;
 import org.pdks.entity.VardiyaHafta;
 import org.pdks.entity.YemekIzin;
+import org.pdks.enums.BordroDetayTipi;
 import org.pdks.quartz.IzinBakiyeGuncelleme;
 import org.pdks.security.entity.User;
 import org.pdks.security.entity.UserVekalet;
@@ -2303,13 +2303,13 @@ public class PersonelIzinGirisiHome extends EntityHome<PersonelIzin> implements 
 		else
 			personelIzinList.clear();
 		try {
-			if (PdksUtil.hasStringValue(sicilNo)) {
+			if (PdksUtil.isSistemDestekVar() && PdksUtil.hasStringValue(sicilNo)) {
 				veriMap = new HashMap<String, List<String>>();
 				perNoList = new ArrayList<String>();
 				perNoList.add(sicilNo);
 				veriMap.put("P", perNoList);
 			}
-			List<IzinERP> izinERPReturnList = ortakIslemler.izinERPDBGuncelle(true, veriMap, session);
+			List<IzinERP> izinERPReturnList = ortakIslemler.izinERPDBGuncelle(veriMap == null, veriMap, session);
 			if (izinERPReturnList != null) {
 				for (IzinERP izinERP : izinERPReturnList) {
 					if (izinERP != null && izinERP.getId() != null && izinERP.getDurum() != null && izinERP.getDurum().booleanValue()) {

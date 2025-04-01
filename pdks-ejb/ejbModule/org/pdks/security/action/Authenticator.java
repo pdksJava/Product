@@ -29,7 +29,6 @@ import org.pdks.erp.action.SapRfcManager;
 import org.pdks.erp.entity.SAPSunucu;
 import org.pdks.security.entity.Role;
 import org.pdks.security.entity.User;
-import org.pdks.session.IAuthenticator;
 import org.pdks.session.LDAPUserManager;
 import org.pdks.session.OrtakIslemler;
 import org.pdks.session.PdksEntityController;
@@ -42,9 +41,9 @@ public class Authenticator implements IAuthenticator, Serializable {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -5011682752102859161L;
-	static Logger logger = Logger.getLogger(Authenticator.class);
+	private static final long serialVersionUID = -8380953982616334438L;
 
+	static Logger logger = Logger.getLogger(Authenticator.class);
 	@In
 	Identity identity;
 	@In
@@ -62,9 +61,6 @@ public class Authenticator implements IAuthenticator, Serializable {
 	@In(required = false, create = true)
 	HashMap<String, String> parameterMap;
 
-	@Out(scope = ScopeType.SESSION, required = false)
-	List<Liste> mesajList;
-
 	/*
 	 * @In LDAPUserManager ldapUserManager;
 	 */
@@ -77,6 +73,7 @@ public class Authenticator implements IAuthenticator, Serializable {
 	PdksEntityController pdksEntityController;
 
 	private String adres;
+	private List<Liste> mesajList = null;
 	private Session session;
 
 	/**
@@ -106,8 +103,8 @@ public class Authenticator implements IAuthenticator, Serializable {
 		String userName = username.trim();
 		boolean sonuc = Boolean.FALSE;
 		User loginUser = null;
-
 		String password = credentials.getPassword();
+
 		Map<String, String> map = null;
 		try {
 			map = FacesContext.getCurrentInstance().getExternalContext().getRequestHeaderMap();
@@ -284,9 +281,10 @@ public class Authenticator implements IAuthenticator, Serializable {
 							loginUser.setTestLogin(test);
 							loginUser.setCalistigiSayfa("anasayfa");
 							ortakIslemler.sistemeGirisIslemleri(loginUser, Boolean.TRUE, null, null, session);
-							logger.info(loginUser.getUsername() + " " + loginUser.getAdSoyad() + " " + (loginUser.getEmail() != null && !loginUser.getEmail().equals(loginUser.getUsername()) ? loginUser.getEmail() + " E-postali" : "") + " kullanıcısı PDKS sistemine login oldu. "
+							logger.info(loginUser.getUsername() + " " + loginUser.getAdSoyad() + " " + (loginUser.getEmail() != null && !loginUser.getEmail().equals(loginUser.getUsername()) ? loginUser.getEmail() + " e-postalı" : "") + " kullanıcısı PDKS sistemine login oldu. "
 									+ PdksUtil.getCurrentTimeStampStr());
 							loginUser.setSessionSQL(session);
+							loginUser.setLogin(Boolean.TRUE);
 						} catch (Exception e) {
 							logger.error("PDKS hata in : \n");
 							e.printStackTrace();
@@ -301,12 +299,12 @@ public class Authenticator implements IAuthenticator, Serializable {
 							} catch (Exception e) {
 							}
 						}
-						loginUser.setLogin(Boolean.TRUE);
+
 					}
 				}
 			} else if (mesajList.isEmpty())
 				addMessageAvailableError(credentials.getUsername().trim() + " kullanıcı adı sistemde kayıtlı değildir!");
-			sonuc = getSonDurum(sonuc, loginUser);
+			sonuc = getSonDurum(sonuc, userName, loginUser);
 			return sonuc;
 		} catch (Exception ex) {
 			logger.debug("Hata : " + ex.getMessage());
@@ -325,20 +323,28 @@ public class Authenticator implements IAuthenticator, Serializable {
 			logger.debug("authenticating " + username);
 
 		}
-		sonuc = getSonDurum(sonuc, loginUser);
+		sonuc = getSonDurum(sonuc, userName, loginUser);
 		return sonuc;
 
 	}
 
 	/**
 	 * @param sonuc
+	 * @param userName
 	 * @param loginUser
 	 * @return
 	 */
-	private boolean getSonDurum(boolean sonuc, User loginUser) {
+	private boolean getSonDurum(boolean sonuc, String userName, User loginUser) {
 		if (loginUser == null || loginUser.getId() == null)
 			sonuc = false;
 		authenticatedUser = sonuc ? loginUser : null;
+		if (sonuc == false && mesajList.isEmpty() == false) {
+			authenticatedUser = new User();
+			authenticatedUser.setUsername(userName);
+			List list = ortakIslemler.getSelectItemList("hataMesajList", authenticatedUser);
+			list.clear();
+			list.addAll(mesajList);
+		}
 		return sonuc;
 	}
 
@@ -399,8 +405,4 @@ public class Authenticator implements IAuthenticator, Serializable {
 		this.session = session;
 	}
 
-	public String getAciklamaIslem() {
-		String str = "Sisteme Giriş";
-		return str;
-	}
 }

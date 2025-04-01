@@ -23,6 +23,8 @@ import javax.persistence.UniqueConstraint;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.pdks.enums.KatSayiTipi;
+import org.pdks.enums.PersonelDurumTipi;
 import org.pdks.session.PdksUtil;
 
 @Entity(name = VardiyaGun.TABLE_NAME)
@@ -954,6 +956,9 @@ public class VardiyaGun extends BaseObject {
 		this.vardiyalar = value;
 	}
 
+	/**
+	 * @param value
+	 */
 	public void setKontrolVardiyalar(ArrayList<Vardiya> value) {
 		this.vardiyalar = value;
 		if (value != null && vardiya != null && (vardiya.isFMI() || vardiya.getDurum().equals(Boolean.FALSE)) && vardiya.getId() != null) {

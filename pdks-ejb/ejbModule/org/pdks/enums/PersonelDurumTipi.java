@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.pdks.entity;
+package org.pdks.enums;
 
 public enum PersonelDurumTipi {
 
@@ -18,12 +18,13 @@ public enum PersonelDurumTipi {
 	}
 
 	public static PersonelDurumTipi fromValue(Integer v) {
+		PersonelDurumTipi deger = null;
 		for (PersonelDurumTipi c : PersonelDurumTipi.values()) {
 			if (c.value.equals(v)) {
-				return c;
+				deger = c;
 			}
 		}
-		throw new IllegalArgumentException();
+		return deger;
 	}
 
 }

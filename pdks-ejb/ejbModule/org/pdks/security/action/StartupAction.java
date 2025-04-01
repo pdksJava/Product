@@ -34,6 +34,8 @@ import org.jboss.seam.annotations.Transactional;
 import org.jboss.seam.security.Identity;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.pdks.dinamikRapor.entity.PdksDinamikRaporAlan;
+import org.pdks.dinamikRapor.entity.PdksDinamikRaporParametre;
 import org.pdks.entity.AccountPermission;
 import org.pdks.entity.ArifeVardiyaDonem;
 import org.pdks.entity.AylikPuantaj;
@@ -48,7 +50,6 @@ import org.pdks.entity.LDAPDomain;
 import org.pdks.entity.MailUser;
 import org.pdks.entity.MenuIliski;
 import org.pdks.entity.MenuItem;
-import org.pdks.entity.NoteTipi;
 import org.pdks.entity.Notice;
 import org.pdks.entity.Parameter;
 import org.pdks.entity.Personel;
@@ -67,6 +68,7 @@ import org.pdks.entity.VardiyaGun;
 import org.pdks.entity.VardiyaHafta;
 import org.pdks.entity.VardiyaYemekIzin;
 import org.pdks.entity.YemekKartsiz;
+import org.pdks.enums.NoteTipi;
 import org.pdks.erp.action.SapRfcManager;
 import org.pdks.erp.entity.SAPSunucu;
 import org.pdks.security.entity.KullaniciSession;
@@ -80,6 +82,7 @@ import org.pdks.session.OrtakIslemler;
 import org.pdks.session.PdksEntityController;
 import org.pdks.session.PdksUtil;
 import org.pdks.session.SSLImport;
+import org.pdks.system.filter.RequestEncodingFilter;
 
 import com.google.gson.Gson;
 import com.pdks.mail.model.MailManager;
@@ -256,6 +259,8 @@ public class StartupAction implements Serializable {
 			list.add(CalismaModeliGun.class);
 			list.add(CalismaModeliVardiya.class);
 			list.add(DepartmanMailGrubu.class);
+			list.add(PdksDinamikRaporAlan.class);
+			list.add(PdksDinamikRaporParametre.class);
 			list.add(IzinHakedisHakki.class);
 			list.add(IzinTipiBirlesikHaric.class);
 			list.add(IzinTipiMailAdres.class);
@@ -751,6 +756,7 @@ public class StartupAction implements Serializable {
 				PersonelDenklestirme.setCalismaSaatiSua(parameterMap.containsKey("calismaSaatiSua") ? Double.parseDouble(parameterMap.get("calismaSaatiSua")) : 7.0d);
 				PersonelDenklestirme.setCalismaSaatiPartTime(parameterMap.containsKey("calismaSaatiPartTime") ? Double.parseDouble(parameterMap.get("calismaSaatiPartTime")) : 6.0d);
 				PdksUtil.setUrl(parameterMap.containsKey("uygulamaURL") ? parameterMap.get("uygulamaURL") : null);
+				RequestEncodingFilter.setIpControl(parameterMap.containsKey("ipControl") && parameterMap.get("ipControl").equals("1"));
 				Tanim.setMultiLanguage(parameterMap.containsKey("multiLanguage"));
 				setLDAPUserList(session);
 			} catch (Exception e) {
@@ -759,7 +765,6 @@ public class StartupAction implements Serializable {
 				logger.error("PDKS hata out : " + e.getMessage());
 			}
 		PdksUtil.setSicilNoUzunluk(sicilNoUzunluk);
-		SecurityEvents.setSifreUnuttum(parameterMap.containsKey("sifreUnuttum"));
 		if (parameterMap.containsKey("serverTimeUpdateFromDB")) {
 			if (PdksUtil.getTestSunucuDurum() || PdksUtil.getCanliSunucuDurum()) {
 				try {

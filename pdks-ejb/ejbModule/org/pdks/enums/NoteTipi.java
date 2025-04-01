@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.pdks.entity;
+package org.pdks.enums;
 
 import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlEnumValue;
@@ -23,12 +23,13 @@ public enum NoteTipi {
 	}
 
 	public static NoteTipi fromValue(String v) {
+		NoteTipi deger = null;
 		for (NoteTipi c : NoteTipi.values()) {
 			if (c.value.equals(v)) {
-				return c;
+				deger = c;
 			}
 		}
-		throw new IllegalArgumentException(v);
+		return deger;
 	}
 
 }
