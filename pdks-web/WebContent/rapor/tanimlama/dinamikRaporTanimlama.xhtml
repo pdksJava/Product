@@ -82,6 +82,13 @@
               		 	 </f:facet>
 							<h:outputText value="#{rapor.orderSQL}" />
 						</rich:column>
+
+						<rich:column>
+							<f:facet name="header">
+                      		 Menü Sıra
+              		 	 </f:facet>
+							<h:outputText value="#{rapor.sira}" />
+						</rich:column>
 						<rich:column style="text-align:center">
 							<f:facet name="header">
                       		Aktif
@@ -136,7 +143,7 @@
 										<a4j:support event="onchange" reRender="aciklama2" ajaxSingle="true" status="ajaxStatus" action="#{ortakIslemler.emtpyAjaxFunction()}" />
 									</h:inputText>
 								</s:decorate>
-								<s:decorate template="/layout/edit.xhtml">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRapor.storeProcedure==false}">
 									<ui:define name="label">Parametre DB Adi</ui:define>
 									<h:inputText id="dbTanim2" value="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRaporParametre.dbTanim}" size="2" maxlength="255"
 										required="true" requiredMessage="Parametre başlık giriniz">
@@ -162,7 +169,7 @@
 								</s:decorate>
 								<s:decorate template="/layout/edit.xhtml" rendered="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRapor.storeProcedure==false}">
 									<ui:define name="label">Eşitlikten Farklı</ui:define>
-									 
+
 									<h:selectOneMenu id="esitlik" value="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRaporParametre.esitlik}">
 										<f:selectItem itemValue="" itemLabel="Lütfen seçiniz" />
 										<f:selectItems value="#{dinamikRaporTanimlamaHome.esitlikList}" />
@@ -226,7 +233,7 @@
               		 	 </f:facet>
 								<h:outputText value="#{ortakIslemler.getDinamikRaporAlanAciklama(parametre.aciklama)}" />
 							</rich:column>
-							<rich:column>
+							<rich:column rendered="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRapor.storeProcedure==false}">
 								<f:facet name="header">
                       		 Database Tanımı
               		 	 </f:facet>
@@ -349,6 +356,18 @@
 
 								</s:decorate>
 								<s:decorate template="/layout/edit.xhtml">
+									<ui:define name="label">Filtre</ui:define>
+									<h:selectBooleanCheckbox id="filter" value="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRaporAlan.filter}">
+										<a4j:support event="onclick" reRender="filter" ajaxSingle="true" status="ajaxStatus" action="#{ortakIslemler.emtpyAjaxFunction()}" />
+									</h:selectBooleanCheckbox>
+								</s:decorate>
+								<s:decorate template="/layout/edit.xhtml">
+									<ui:define name="label">Göster</ui:define>
+									<h:selectBooleanCheckbox id="goster" value="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRaporAlan.goster}">
+										<a4j:support event="onclick" reRender="goster" ajaxSingle="true" status="ajaxStatus" action="#{ortakIslemler.emtpyAjaxFunction()}" />
+									</h:selectBooleanCheckbox>
+								</s:decorate>
+								<s:decorate template="/layout/edit.xhtml">
 									<ui:define name="label">Aktif</ui:define>
 									<h:selectBooleanCheckbox id="durum3" value="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRaporAlan.durum}">
 										<a4j:support event="onclick" reRender="durum3" ajaxSingle="true" status="ajaxStatus" action="#{ortakIslemler.emtpyAjaxFunction()}" />
@@ -413,6 +432,18 @@
                       		Hizalama Tipi
               		 	 </f:facet>
 								<h:outputText value="#{alan.pdksDinamikRaporAlanhHizalaAciklama}" />
+							</rich:column>
+							<rich:column style="text-align:center">
+								<f:facet name="header">
+                      		Filtre
+              		 	 </f:facet>
+								<h:outputText value="#{authenticatedUser.getYesNo(alan.filter)}" />
+							</rich:column>
+							<rich:column style="text-align:center">
+								<f:facet name="header">
+                      		Göster
+              		 	 </f:facet>
+								<h:outputText value="#{authenticatedUser.getYesNo(alan.goster)}" />
 							</rich:column>
 							<rich:column style="text-align:center">
 								<f:facet name="header">
@@ -503,6 +534,13 @@
 								</s:decorate>
 							</c:if>
 							<s:decorate template="/layout/edit.xhtml">
+								<ui:define name="label">Menü Sıra</ui:define>
+								<h:inputText id="sira2" value="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRapor.sira}" size="2" maxlength="5" required="true"
+									requiredMessage="Menü sıra giriniz">
+									<a4j:support event="onchange" reRender="sira" ajaxSingle="true" status="ajaxStatus" action="#{ortakIslemler.emtpyAjaxFunction()}" />
+								</h:inputText>
+							</s:decorate>
+							<s:decorate template="/layout/edit.xhtml">
 								<ui:define name="label">Aktif</ui:define>
 								<h:selectBooleanCheckbox id="durum1" value="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRapor.durum}">
 									<a4j:support event="onclick" reRender="durum1" ajaxSingle="true" status="ajaxStatus" action="#{ortakIslemler.emtpyAjaxFunction()}" />
@@ -510,7 +548,28 @@
 							</s:decorate>
 						</h:panelGrid>
 					</a4j:outputPanel>
-					<a4j:commandButton status="ajaxStatus" value="Kaydet" action="#{dinamikRaporTanimlamaHome.savePdksDinamikRapor()}" reRender="raporTable"
+					<a4j:outputPanel id="roller">
+
+						<rich:simpleTogglePanel switchType="client" label="Roller" height="110" opened="true">
+							<s:decorate>
+								<rich:listShuttle id="shuttle" sourceValue="#{dinamikRaporTanimlamaHome.roleList}" fastOrderControlsVisible="false"
+									orderControlsVisible="false" targetValue="#{dinamikRaporTanimlamaHome.raporRoleList}" var="rol"
+									copyControlLabel="#{messages['listShuttle.etiket.copyControlLabel']}"
+									removeControlLabel="#{messages['listShuttle.etiket.removeControlLabel']}"
+									copyAllControlLabel="#{messages['listShuttle.etiket.copyAllControlLabel']}"
+									removeAllControlLabel="#{messages['listShuttle.etiket.removeAllControlLabel']}" required="true" requiredMessage="Rol seçiniz">
+									<h:column>
+										<h:outputText value="#{rol.aciklama}" />
+									</h:column>
+									<a4j:support event="onlistchanged" reRender="roller" ajaxSingle="true" />
+									<s:convertEntity />
+
+								</rich:listShuttle>
+							</s:decorate>
+
+						</rich:simpleTogglePanel>
+					</a4j:outputPanel>
+					<a4j:commandButton status="ajaxStatus" value="Kaydet" action="#{dinamikRaporTanimlamaHome.saveDinamikRapor()}" reRender="raporTable"
 						oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" />
 				</h:panelGrid>
 				<c:if test="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRapor.id!=null}">
@@ -537,7 +596,7 @@
               		 	 </f:facet>
 											<h:outputText value="#{ortakIslemler.getDinamikRaporAlanAciklama(parametre.aciklama)}" />
 										</rich:column>
-										<rich:column>
+										<rich:column rendered="#{dinamikRaporTanimlamaHome.seciliPdksDinamikRapor.storeProcedure==false}">
 											<f:facet name="header">
                       		 Database Tanımı
               		 	 </f:facet>
@@ -625,6 +684,18 @@
                       		Hizalama Tipi
               		 	 </f:facet>
 											<h:outputText value="#{alan.pdksDinamikRaporAlanhHizalaAciklama}" />
+										</rich:column>
+										<rich:column style="text-align:center">
+											<f:facet name="header">
+                      		Filtre
+              		 	 </f:facet>
+											<h:outputText value="#{authenticatedUser.getYesNo(alan.filter)}" />
+										</rich:column>
+										<rich:column style="text-align:center">
+											<f:facet name="header">
+                      		Göster
+              		 	 </f:facet>
+											<h:outputText value="#{authenticatedUser.getYesNo(alan.goster)}" />
 										</rich:column>
 										<rich:column style="text-align:center">
 											<f:facet name="header">

@@ -89,13 +89,15 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 	@Transactional
 	public String delete() {
 		Parameter parameter = getInstance();
-		parameter.setChangeDate(new Date());
-		parameter.setChangeUser(authenticatedUser);
-
 		pdksEntityController.deleteObject(session, entityManager, parameter);
-
+		session.flush();
+		try {
+			pdksEntityController.savePrepareTableID(true, Parameter.class, entityManager, session);
+		} catch (Exception e) {
+		}
 		session.flush();
 		session.clear();
+
 		fillParameterList();
 		startupAction.fillStartMethod(authenticatedUser, true, session);
 		return "persisted";

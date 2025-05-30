@@ -2,6 +2,7 @@ package org.pdks.security.action;
 
 import java.io.File;
 import java.io.Serializable;
+import java.sql.Clob;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -19,10 +20,8 @@ import javax.persistence.EntityManager;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
-import org.hibernate.lob.SerializableClob;
 import org.jboss.seam.ScopeType;
 import org.jboss.seam.annotations.Create;
 import org.jboss.seam.annotations.In;
@@ -36,6 +35,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.pdks.dinamikRapor.entity.PdksDinamikRaporAlan;
 import org.pdks.dinamikRapor.entity.PdksDinamikRaporParametre;
+import org.pdks.dinamikRapor.entity.PdksDinamikRaporRole;
 import org.pdks.entity.AccountPermission;
 import org.pdks.entity.ArifeVardiyaDonem;
 import org.pdks.entity.AylikPuantaj;
@@ -119,6 +119,9 @@ public class StartupAction implements Serializable {
 
 	@Out(scope = ScopeType.APPLICATION, required = false)
 	HashMap<String, MenuItem> menuItemMap = new HashMap<String, MenuItem>();
+
+	@Out(scope = ScopeType.APPLICATION, required = false)
+	HashMap<String, Long> raporRoleMap = new HashMap<String, Long>();
 
 	@Out(scope = ScopeType.APPLICATION, required = false)
 	List<Sirket> pdksSirketleri = new ArrayList<Sirket>();
@@ -261,6 +264,7 @@ public class StartupAction implements Serializable {
 			list.add(DepartmanMailGrubu.class);
 			list.add(PdksDinamikRaporAlan.class);
 			list.add(PdksDinamikRaporParametre.class);
+			list.add(PdksDinamikRaporRole.class);
 			list.add(IzinHakedisHakki.class);
 			list.add(IzinTipiBirlesikHaric.class);
 			list.add(IzinTipiMailAdres.class);
@@ -279,11 +283,8 @@ public class StartupAction implements Serializable {
 			list.add(VardiyaHafta.class);
 			list.add(VardiyaYemekIzin.class);
 			list.add(YemekKartsiz.class);
-
-			// pdksEntityController.savePrepareTableID(ServisData.class, entityManager, session);
-
-			for (Class class1 : list) {
-				long adet = pdksEntityController.savePrepareTableID(class1, entityManager, session);
+ 			for (Class class1 : list) {
+				long adet = pdksEntityController.savePrepareTableID(false, class1, entityManager, session);
 				toplamAdet += adet;
 				if (adet > 0)
 					session.flush();
@@ -319,8 +320,8 @@ public class StartupAction implements Serializable {
 			veriMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List hatalar = pdksEntityController.execSPList(veriMap, new StringBuffer("SP_PDKS_VIEW_REFRESH"), null);
 			if (hatalar != null && !hatalar.isEmpty()) {
-				SerializableClob clobComment = (SerializableClob) hatalar.get(0);
-				String aciklama = PdksUtil.replaceAllManuel(IOUtils.toString(clobComment.getAsciiStream(), "UTF-8"), "|", "\n");
+				Clob clobComment = (Clob) hatalar.get(0);
+				String aciklama = PdksUtil.replaceAllManuel(PdksUtil.StringToByClob(clobComment), "|", "\n");
 				if (PdksUtil.hasStringValue(aciklama))
 					throw new Exception("\n" + aciklama);
 			}
@@ -409,6 +410,27 @@ public class StartupAction implements Serializable {
 			pdksSirketleri.addAll(list);
 		list = null;
 
+	}
+
+	/**
+	 * @param session
+	 */
+	public void fillRaporRole(Session session) {
+		raporRoleMap.clear();
+		HashMap fields = new HashMap();
+		List<PdksDinamikRaporRole> list = null;
+		try {
+			StringBuffer sb = new StringBuffer();
+			sb.append("select * from " + PdksDinamikRaporRole.TABLE_NAME + " " + PdksEntityController.getSelectLOCK());
+			if (session != null)
+				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+			list = pdksEntityController.getObjectBySQLList(sb, fields, PdksDinamikRaporRole.class);
+			for (PdksDinamikRaporRole raporRole : list) {
+				raporRoleMap.put(raporRole.getKey(), raporRole.getId());
+			}
+			list = null;
+		} catch (Exception e) {
+		}
 	}
 
 	public void fillParameter(Session session, boolean lockVar) {
@@ -793,6 +815,7 @@ public class StartupAction implements Serializable {
 		}
 		fillSirketList(session);
 		setHelpDeskParametre(session, pmMap);
+		fillRaporRole(session);
 		pmMap = null;
 	}
 

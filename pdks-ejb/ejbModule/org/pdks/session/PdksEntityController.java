@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 
@@ -655,7 +656,7 @@ public class PdksEntityController implements Serializable {
 	 * @throws Exception
 	 */
 	public List execFNList(LinkedHashMap<String, Object> veriMap, StringBuffer sp) throws Exception {
- 		List sonucList = null;
+		List sonucList = null;
 		boolean manuelReadUnCommitted = false;
 		try {
 			if (veriMap.containsKey("readUnCommitted")) {
@@ -669,7 +670,7 @@ public class PdksEntityController implements Serializable {
 				queryReadUnCommitted.executeUpdate();
 			}
 			SQLQuery query = prepareFunction(veriMap, sp);
- 			sonucList = query.list();
+			sonucList = query.list();
 			if (queryReadUnCommitted != null) {
 				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
 				queryReadUnCommitted.executeUpdate();
@@ -992,13 +993,14 @@ public class PdksEntityController implements Serializable {
 	}
 
 	/**
+	 * @param single
 	 * @param class1
 	 * @param em1
 	 * @param session
 	 * @return
 	 * @throws Exception
 	 */
-	public Long savePrepareTableID(Class class1, EntityManager em1, Session session) throws Exception {
+	public Long savePrepareTableID(boolean single, Class class1, EntityManager em1, Session session) throws Exception {
 		HashMap fields = new HashMap();
 		if (session != null)
 			fields.put(MAP_KEY_SESSION, session);
@@ -1056,8 +1058,19 @@ public class PdksEntityController implements Serializable {
 					}
 					session.flush();
 				}
-			} else
+			} else {
+				if (single) {
+					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+					if (session != null)
+						veriMap.put(MAP_KEY_SESSION, session);
+					StringBuffer sp = new StringBuffer("SP_CHECKIDENT_VIEW");
+					execSP(veriMap, sp);
+					session.flush();
+				}
+
 				kayitAdet = 0L;
+			}
+
 		}
 		list = null;
 		if (kayitAdet > 0)
@@ -1122,8 +1135,24 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 */
 	public Object getObjectBySQL(StringBuffer sb, HashMap fields, Class class1) {
+		StringBuffer sbOrj = new StringBuffer(sb.toString());
+		HashMap fieldsOrj = new HashMap();
+		fieldsOrj.putAll(fields);
+		try {
+			String str = sb.toString().toLowerCase(Locale.ENGLISH);
+			if (str.indexOf(" top ") < 1 && str.startsWith("select ")) {
+				str = sb.toString();
+				String str1 = str.substring(0, 7) + "top 1 ", str2 = str.substring(7);
+				sb = new StringBuffer(str1 + "" + str2);
+			}
+		} catch (Exception e) {
+		}
 		List list = getObjectBySQLList(sb, fields, class1);
+		if (list == null)
+			list = getObjectBySQLList(sbOrj, fieldsOrj, class1);
 		Object object = list != null && !list.isEmpty() ? list.get(0) : null;
+		fieldsOrj = null;
+		sb = new StringBuffer(sbOrj.toString());
 		return object;
 	}
 
@@ -1408,12 +1437,9 @@ public class PdksEntityController implements Serializable {
 
 				if (showSQL)
 					logger.info(sql + " in " + PdksUtil.convertToDateString(new Date(), PdksUtil.getDateFormat() + " H:mm:ss"));
-				try {
-					list = query.list();
-				} catch (Exception e) {
-					logger.error(sql);
-					list = null;
-				}
+
+				list = query.list();
+
 				if (queryReadUnCommitted != null) {
 					queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
 					queryReadUnCommitted.executeUpdate();
@@ -1497,43 +1523,33 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 */
 	public Object getSQLParamByFieldObject(String tableName, String fieldName, Object value, Class class1, Session session) {
-		Object object = null;
-		try {
-			HashMap parametreMap = new HashMap();
-			StringBuffer sb = new StringBuffer();
-			sb.append("select TOP 1 * from " + tableName + " " + selectLOCK);
-			if (value != null) {
-				sb.append(" where " + fieldName + " = :u");
-				parametreMap.put("u", value);
-			} else
-				sb.append(" where " + fieldName + "  is null");
+		HashMap parametreMap = new HashMap();
+		StringBuffer sb = new StringBuffer();
+		sb.append("select top 1 * from " + tableName + " " + selectLOCK);
+		if (value != null) {
+			sb.append(" where " + fieldName + " = :u");
+			parametreMap.put("u", value);
+		} else
+			sb.append(" where " + fieldName + "  is null");
 
-			if (session != null)
-				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			List list = null;
-			try {
-				list = getObjectBySQLList(sb, parametreMap, class1);
-			} catch (Exception e) {
+		if (session != null)
+			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+		List list = getObjectBySQLList(sb, parametreMap, class1);
 
+		Object object = list != null && !list.isEmpty() ? list.get(0) : null;
+		if (object == null && class1 != null) {
+			StringBuffer sb1 = new StringBuffer();
+			if (authenticatedUser != null && PdksUtil.hasStringValue(authenticatedUser.getCalistigiSayfa())) {
+				sb1.append(authenticatedUser.getCalistigiSayfa() + "\n");
 			}
-			object = list != null && !list.isEmpty() ? list.get(0) : null;
-			if (object == null && class1 != null) {
-				StringBuffer sb1 = new StringBuffer();
-				if (authenticatedUser != null && PdksUtil.hasStringValue(authenticatedUser.getCalistigiSayfa())) {
-					sb1.append(authenticatedUser.getCalistigiSayfa() + "\n");
-				}
-				sb1.append(sb.toString() + " --> " + value + " " + class1.getName());
-				if (value != null)
-					logger.debug(sb1.toString());
-				sb1 = null;
-			}
-			sb = null;
-			list = null;
-			parametreMap = null;
-
-		} catch (Exception e) {
-			logger.error(tableName + " --> " + fieldName + " : " + value + " " + class1.getName() + "\n" + e.getMessage());
+			sb1.append(sb.toString() + " --> " + value + " " + class1.getName());
+			if (value != null)
+				logger.debug(sb1.toString());
+			sb1 = null;
 		}
+		sb = null;
+		list = null;
+		parametreMap = null;
 
 		return object;
 	}

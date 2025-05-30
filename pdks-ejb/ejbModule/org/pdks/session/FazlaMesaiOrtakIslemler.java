@@ -235,6 +235,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 		List<AylikPuantaj> puantajList = dataMap.containsKey("aylikPuantajList") ? (List<AylikPuantaj>) dataMap.get("aylikPuantajList") : new ArrayList<AylikPuantaj>();
 		KapiView manuelGiris = dataMap.containsKey("manuelGirisKapi") ? (KapiView) dataMap.get("manuelGirisKapi") : null;
 		KapiView manuelCikis = dataMap.containsKey("manuelCikisKapi") ? (KapiView) dataMap.get("manuelCikisKapi") : null;
+		Date bayramAyirGun = dataMap.containsKey("bayramAyirGun") ? (Date) dataMap.get("bayramAyirGun") : null;
 		if (manuelGiris == null && manuelCikis == null) {
 			HashMap<String, KapiView> manuelKapiMap = ortakIslemler.getManuelKapiMap(null, session);
 			manuelGiris = manuelKapiMap.get(Kapi.TIPI_KODU_GIRIS);
@@ -251,11 +252,17 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 		LinkedHashMap<String, Object> dataDenkMap = new LinkedHashMap<String, Object>();
 		HashMap<Long, Double> vardiyaNetCalismaSuresiMap = new HashMap<Long, Double>();
 		Calendar cal = Calendar.getInstance();
+
+		if (bayramAyirGun == null)
+			bayramAyirGun = ortakIslemler.getBayramAyirGun();
+		if (bayramAyirGun != null)
+			dataDenkMap.put("bayramAyirGun", bayramAyirGun);
 		dataDenkMap.put("fiiliHesapla", Boolean.FALSE);
 		dataDenkMap.put("updateSatus", Boolean.FALSE);
 		dataDenkMap.put("yemekList", yemekList);
 		dataDenkMap.put("tatilGunleriMap", tatilGunleriMap);
 		dataDenkMap.put("girisView", manuelGiris);
+		dataDenkMap.put("cikisView", manuelCikis);
 		dataDenkMap.put("loginUser", authenticatedUser);
 		dataDenkMap.put("sistemUser", ortakIslemler.getSistemAdminUser(session));
 		dataDenkMap.put("vardiyaNetCalismaSuresiMap", vardiyaNetCalismaSuresiMap);
@@ -358,6 +365,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 				Vardiya vardiya = vg.getVardiya();
 				if (vardiya == null)
 					continue;
+
 				if (sutIzniDurum) {
 					boolean sutIzniDonemTamam = sutIzniPersonelDonemselDurum.getBasTarih().getTime() <= vg.getVardiyaDate().getTime() && sutIzniPersonelDonemselDurum.getBitTarih().getTime() >= vg.getVardiyaDate().getTime();
 					vg.setSutIzniVar(sutIzniDonemTamam);
@@ -411,7 +419,9 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 					}
 					vg.addCalismaSuresi(netSure);
 				}
+
 			}
+			ortakIslemler.bayramGecisleriAyir(manuelGiris, manuelCikis, tatilGunleriMap, ap.getVardiyalar(), personelView);
 			try {
 
 				for (VardiyaHafta vh : ap.getVardiyaHaftaList()) {
@@ -425,7 +435,7 @@ public class FazlaMesaiOrtakIslemler implements Serializable {
 
 				}
 				ap.setFazlaMesaiHesapla(false);
-				ortakIslemler.aylikPlanSureHesapla(false, normalCalismaVardiya, true, ap, false, tatilGunleriMap, session);
+				ortakIslemler.aylikPlanSureHesapla(manuelGiris, manuelCikis, false, normalCalismaVardiya, true, ap, false, tatilGunleriMap, session);
 
 			} catch (Exception exy) {
 				logger.error(exy);

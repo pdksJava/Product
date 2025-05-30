@@ -1971,7 +1971,8 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 					ortakIslemler.addObjectList(ekSaha, ekSahaList, Boolean.FALSE);
 
 			}
-		}
+		} else if (pdksPersonel.getSirket() != null)
+			pdksPersonel.setIzinKartiVar(pdksPersonel.getSirket().getIzinKartiVar());
 	}
 
 	/**
@@ -3040,7 +3041,12 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 		if (list != null && !list.isEmpty())
 			tanimsizPersonelList.addAll(list);
 
-		List<String> yeniList = yeniPersonelOlustur(false);
+		List<String> yeniList = null;
+		try {
+			yeniList = yeniPersonelOlustur(false);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		if (yeniList != null && !tanimsizPersonelList.isEmpty()) {
 			List<PersonelView> eskiList = new ArrayList<PersonelView>();
 			for (Iterator iterator = tanimsizPersonelList.iterator(); iterator.hasNext();) {
@@ -3495,6 +3501,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+
 		tanimsizPersonelList = ortakIslemler.getSelectItemList("personel", authenticatedUser);
 		fazlaMesaiIzinKullan = Boolean.FALSE;
 		yeniPersonelGuncelle = Boolean.FALSE;
@@ -3549,7 +3556,11 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 		if ((authenticatedUser.isIK() || authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi()))
 			updateValue = tableERPOku || ortakIslemler.getParameterKeyHasStringValue(PersonelERPGuncelleme.PARAMETER_KEY + "Update");
 		dosyaGuncelleDurum();
-		yeniPersonelOlustur(true);
+		try {
+			yeniPersonelOlustur(true);
+		} catch (Exception e) {
+			logger.error(e);
+		}
 
 	}
 
@@ -3589,7 +3600,7 @@ public class PdksPersonelHome extends EntityHome<Personel> implements Serializab
 	 * @param organizasyonDurum
 	 * @return
 	 */
-	public List<String> yeniPersonelOlustur(boolean organizasyonDurum) {
+	public List<String> yeniPersonelOlustur(boolean organizasyonDurum) throws Exception {
 		yeniPersonelGuncelle = Boolean.FALSE;
 		String key = ortakIslemler.getParametrePersonelERPTableView();
 		List<String> list = null;

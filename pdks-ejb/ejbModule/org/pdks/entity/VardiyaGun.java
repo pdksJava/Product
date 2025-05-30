@@ -63,16 +63,16 @@ public class VardiyaGun extends BaseObject {
 	private Date vardiyaDate;
 	private VardiyaGorev vardiyaGorev;
 	private VardiyaSaat vardiyaSaat, vardiyaSaatDB;
-	private ArrayList<HareketKGS> hareketler, girisHareketleri, cikisHareketleri, yemekHareketleri, gecersizHareketler;
+	private ArrayList<HareketKGS> hareketler, gecerliHareketler, girisHareketleri, cikisHareketleri, yemekHareketleri, gecersizHareketler, sonrakiGunHareketler;
 	private ArrayList<PersonelIzin> izinler;
-	private ArrayList<PersonelFazlaMesai> fazlaMesailer;
+	private List<PersonelFazlaMesai> fazlaMesailer;
 	private ArrayList<Vardiya> vardiyalar;
 	private VardiyaGun oncekiVardiyaGun, sonrakiVardiyaGun;
 	private int beklemeSuresi = 6;
 	private Double calismaSuaSaati = PersonelDenklestirme.getCalismaSaatiSua();
 	private Boolean izinHaftaTatilDurum;
 	private boolean hareketHatali = Boolean.FALSE, planHareketEkle = Boolean.TRUE, kullaniciYetkili = Boolean.TRUE, zamanGuncelle = Boolean.TRUE, zamanGelmedi = Boolean.FALSE;
-	private boolean fazlaMesaiTalepOnayliDurum = Boolean.FALSE, fazlaMesaiTalepDurum = Boolean.FALSE, ayarlamaBitti = false;
+	private boolean fazlaMesaiTalepOnayliDurum = Boolean.FALSE, fazlaMesaiTalepDurum = Boolean.FALSE, ayarlamaBitti = false, bayramAyir = false;
 	private double calismaSuresi = 0, normalSure = 0, resmiTatilSure = 0, haftaTatilDigerSure = 0, gecenAyResmiTatilSure = 0, aksamKatSayisi = 0d, aksamVardiyaSaatSayisi = 0d;
 	private double calisilmayanAksamSure = 0, fazlaMesaiSure = 0, bayramCalismaSuresi = 0, haftaCalismaSuresi = 0d, yasalMaxSure = 11.0d;
 	private Integer basSaat, basDakika, bitSaat, bitDakika;
@@ -82,9 +82,9 @@ public class VardiyaGun extends BaseObject {
 	private VardiyaSablonu vardiyaSablonu;
 	private HashMap<Integer, BigDecimal> katSayiMap;
 	private boolean bitmemisGun = Boolean.TRUE, islendi = Boolean.FALSE, ayrikHareketVar = Boolean.FALSE, gebeMi = false, sutIzniVar = false;
-	private int yarimYuvarla = PdksUtil.getYarimYuvarlaLast();
+	private int yarimYuvarla = PdksUtil.getYarimYuvarlaLast(), fazlaMesaiYuvarla = PdksUtil.getYarimYuvarlaLast();
 	private HareketKGS ilkGiris, sonCikis;
-	private boolean ayinGunu = Boolean.TRUE, onayli = Boolean.TRUE, fiiliHesapla = Boolean.FALSE, hataliDurum = Boolean.FALSE, donemAcik = Boolean.TRUE;
+	private boolean ayinGunu = Boolean.TRUE, onayli = Boolean.TRUE, fiiliHesapla = Boolean.FALSE, gecmisHataliDurum = Boolean.FALSE, hataliDurum = Boolean.FALSE, donemAcik = Boolean.TRUE;
 	private List<String> linkAdresler;
 	private HashMap<String, Personel> gorevliPersonelMap;
 	private CalismaModeli calismaModeli = null;
@@ -311,7 +311,8 @@ public class VardiyaGun extends BaseObject {
 		ArrayList<HareketKGS> orjinalHareketler = null;
 		if (hareketler != null) {
 			orjinalHareketler = new ArrayList<HareketKGS>();
-			for (HareketKGS kgsHareket : hareketler) {
+			List<HareketKGS> hareketList = gecerliHareketler == null ? hareketler : gecerliHareketler;
+			for (HareketKGS kgsHareket : hareketList) {
 				try {
 					if (kgsHareket.getId() != null)
 						if (kgsHareket.getId().startsWith(HareketKGS.GIRIS_ISLEM_YAPAN_SIRKET_KGS) || kgsHareket.getId().startsWith(HareketKGS.GIRIS_ISLEM_YAPAN_SIRKET_PDKS))
@@ -373,13 +374,13 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	@Transient
-	public ArrayList<PersonelFazlaMesai> getFazlaMesailer() {
+	public List<PersonelFazlaMesai> getFazlaMesailer() {
 		if (fazlaMesailer != null)
 			logger.debug(this.getVardiyaKeyStr() + " " + fazlaMesailer.size());
 		return fazlaMesailer;
 	}
 
-	public void setFazlaMesailer(ArrayList<PersonelFazlaMesai> value) {
+	public void setFazlaMesailer(List<PersonelFazlaMesai> value) {
 		if (value != null)
 			logger.debug(this.getVardiyaKeyStr() + " " + value.size());
 		this.fazlaMesailer = value;
@@ -393,7 +394,7 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	public void setCalismaSuresi(double value) {
-		if (this.getVardiyaDateStr().endsWith("1231") && value != 0.0d)
+		if (this.getVardiyaDateStr().endsWith("0422"))
 			logger.debug(value);
 		this.calismaSuresi = value;
 	}
@@ -401,7 +402,7 @@ public class VardiyaGun extends BaseObject {
 	@Transient
 	public void addCalismaSuresi(double value) {
 		if (value != 0.0d) {
-			if (this.getVardiyaDateStr().endsWith("1231"))
+			if (this.getVardiyaDateStr().endsWith("0422"))
 				logger.debug(value);
 		}
 
@@ -549,7 +550,6 @@ public class VardiyaGun extends BaseObject {
 			kapi = null;
 		}
 		boolean durum = Boolean.TRUE;
-
 		if (kapi != null && hareket != null && (kapi.isGirisKapi() || kapi.isCikisKapi())) {
 			if (hareketler == null) {
 				hareketler = new ArrayList<HareketKGS>();
@@ -729,6 +729,8 @@ public class VardiyaGun extends BaseObject {
 
 	@Transient
 	public Boolean getHareketDurum() {
+		if (vardiyaDateStr.endsWith("01"))
+			logger.debug("");
 		boolean hareketDurum = (hareketler == null || !hareketHatali);
 		if (hareketDurum && hareketler != null)
 			hareketDurum = girisHareketleri != null && cikisHareketleri != null && girisHareketleri.size() == cikisHareketleri.size();
@@ -1182,15 +1184,19 @@ public class VardiyaGun extends BaseObject {
 		return resmiTatilSure;
 	}
 
-	public void setResmiTatilSure(double resmiTatilSure) {
-		if (resmiTatilSure > 0.0d)
-			logger.debug(resmiTatilSure);
-		this.resmiTatilSure = resmiTatilSure;
+	public void setResmiTatilSure(double value) {
+		if (value != 0.0d) {
+			if (this.getVardiyaDateStr().endsWith("0501"))
+				logger.debug(value);
+		}
+		this.resmiTatilSure = value;
 	}
 
 	public void addResmiTatilSure(double value) {
-		if (value > 0.0d)
-			logger.debug(value);
+		if (value != 0.0d) {
+			if (this.getVardiyaDateStr().endsWith("0501"))
+				logger.debug(value);
+		}
 		this.resmiTatilSure += value;
 	}
 
@@ -1778,7 +1784,7 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	public void setGecenAyResmiTatilSure(double value) {
-		if (value != 0.0d || vardiyaDateStr.endsWith("0101"))
+		if (value != 0.0d && vardiyaDateStr.endsWith("01"))
 			logger.debug(value);
 		this.gecenAyResmiTatilSure = value;
 	}
@@ -1864,6 +1870,8 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	public void addGecenAyResmiTatilSure(double value) {
+		if (value != 0.0d && vardiyaDateStr.endsWith("01"))
+			logger.debug(value);
 		this.gecenAyResmiTatilSure += value;
 	}
 
@@ -2100,6 +2108,7 @@ public class VardiyaGun extends BaseObject {
 
 	public void setYarimYuvarla(int yarimYuvarla) {
 		this.yarimYuvarla = yarimYuvarla;
+		this.setFazlaMesaiYuvarla(yarimYuvarla);
 	}
 
 	@Transient
@@ -2436,5 +2445,49 @@ public class VardiyaGun extends BaseObject {
 			logger.debug(this.getVardiyaKeyStr() + " " + hareketKGS.getId() + " " + gecersizHareketler.size());
 		}
 
+	}
+
+	@Transient
+	public ArrayList<HareketKGS> getSonrakiGunHareketler() {
+		return sonrakiGunHareketler;
+	}
+
+	public void setSonrakiGunHareketler(ArrayList<HareketKGS> sonrakiGunHareketler) {
+		this.sonrakiGunHareketler = sonrakiGunHareketler;
+	}
+
+	@Transient
+	public boolean isBayramAyir() {
+		return bayramAyir;
+	}
+
+	public void setBayramAyir(boolean bayramAyir) {
+		this.bayramAyir = bayramAyir;
+	}
+
+	@Transient
+	public ArrayList<HareketKGS> getGecerliHareketler() {
+		return gecerliHareketler;
+	}
+
+	public void setGecerliHareketler(ArrayList<HareketKGS> gecerliHareketler) {
+		this.gecerliHareketler = gecerliHareketler;
+	}
+
+	@Transient
+	public boolean isGecmisHataliDurum() {
+		return gecmisHataliDurum;
+	}
+
+	public void setGecmisHataliDurum(boolean gecmisHataliDurum) {
+		this.gecmisHataliDurum = gecmisHataliDurum;
+	}
+	@Transient
+	public int getFazlaMesaiYuvarla() {
+		return fazlaMesaiYuvarla;
+	}
+
+	public void setFazlaMesaiYuvarla(int fazlaMesaiYuvarla) {
+		this.fazlaMesaiYuvarla = fazlaMesaiYuvarla;
 	}
 }

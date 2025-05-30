@@ -22,6 +22,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Clob;
 import java.sql.Timestamp;
 import java.text.Collator;
 import java.text.DecimalFormat;
@@ -135,7 +136,32 @@ public class PdksUtil implements Serializable {
 	private static Integer yarimYuvarlaLast = 1, sicilNoUzunluk = null;
 
 	private static boolean sistemDestekVar = false, puantajSorguAltBolumGir = false;
-	
+
+	/**
+	 * @param vardiyaYemekSuresi
+	 * @param toplamYemekSuresi
+	 * @param sure
+	 * @return
+	 */
+	public static double getToplamYemekSuresi(double vardiyaYemekSuresi, double toplamYemekSuresi, double sure) {
+		double kanuniMolaSure = vardiyaYemekSuresi;
+		if (vardiyaYemekSuresi > 0.0d && sure > 0.0d) {
+			kanuniMolaSure = 0.0d;
+			if (sure > 2.0d && sure <= 4.0d)
+				kanuniMolaSure = 0.25d;
+			else if (sure > 4 && sure <= 7.5d)
+				kanuniMolaSure = 0.5d;
+			else if (sure > 7.5d)
+				kanuniMolaSure = 1.0d;
+			if (vardiyaYemekSuresi < kanuniMolaSure)
+				kanuniMolaSure = vardiyaYemekSuresi;
+			if (toplamYemekSuresi < kanuniMolaSure && vardiyaYemekSuresi >= kanuniMolaSure)
+				toplamYemekSuresi = kanuniMolaSure;
+
+		}
+		return toplamYemekSuresi;
+	}
+
 	/**
 	 * @param list
 	 * @param str
@@ -174,7 +200,6 @@ public class PdksUtil implements Serializable {
 			list.add(liste);
 		}
 	}
-
 
 	/**
 	 * @param cmd
@@ -763,6 +788,51 @@ public class PdksUtil implements Serializable {
 	}
 
 	/**
+	 * @param cl
+	 * @return
+	 */
+	public static String StringToByClob(Clob cl) {
+		String value = null;
+		if (cl != null) {
+			try {
+				// value = IOUtils.toString(cl.getAsciiStream(), StandardCharsets.UTF_8);
+				value = StringToByInputStream((BufferedReader) cl.getCharacterStream());
+			} catch (Exception e) {
+				value = null;
+			}
+			try {
+				if (value == null)
+					value = StringToByInputStream(cl.getAsciiStream());
+			} catch (Exception e2) {
+				value = "";
+			}
+		}
+		return value;
+
+	}
+
+	/**
+	 * @param br
+	 * @return
+	 */
+	public static String StringToByInputStream(BufferedReader br) {
+		String read = null;
+		if (br != null) {
+			StringBuilder sb = new StringBuilder();
+			try {
+				while ((read = br.readLine()) != null) {
+					sb.append(read);
+				}
+				br.close();
+			} catch (Exception e) {
+			}
+			read = sb.toString();
+			sb = null;
+		}
+		return read;
+	}
+
+	/**
 	 * @param in
 	 * @return
 	 */
@@ -953,9 +1023,8 @@ public class PdksUtil implements Serializable {
 	public static List<String> getStringListFromFile(File file) throws Exception {
 		List<String> list = null;
 		if (file != null && file.exists()) {
-			BufferedReader reader;
 			InputStream in = new FileInputStream(file);
-			reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+			BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
 			String line = reader.readLine();
 			list = new ArrayList<String>();
 			while (line != null) {
@@ -2841,43 +2910,54 @@ public class PdksUtil implements Serializable {
 	public static double setSureDoubleTypeRounded(Double doubleValue, int yarimYuvarla) {
 		Double yuvarlanmisDeger = null;
 		if (doubleValue != null) {
-			double d = doubleValue.doubleValue();
-			long l = doubleValue.longValue();
-			if (d != 0.0d && d != l) {
-				double fark = 0.0d;
+			long longDeger = doubleValue.longValue();
+			if (doubleValue != 0.0d && doubleValue != longDeger) {
+				double ondalikFark = 0.0d;
 				switch (yarimYuvarla) {
 				case 1:
 					yuvarlanmisDeger = doubleValue.doubleValue() * 2;
-					fark = yuvarlanmisDeger.doubleValue() - yuvarlanmisDeger.longValue();
-					if (fark > 0) {
-						if (fark > 0.5)
-							yuvarlanmisDeger = yuvarlanmisDeger.longValue() + (1.0d);
+					longDeger = yuvarlanmisDeger.longValue();
+					ondalikFark = yuvarlanmisDeger.doubleValue() - longDeger;
+					if (ondalikFark > 0) {
+						if (ondalikFark > 0.5)
+							yuvarlanmisDeger = longDeger + (1.0d);
 						else
-							yuvarlanmisDeger = yuvarlanmisDeger.longValue() + (0.5d);
+							yuvarlanmisDeger = longDeger + (0.5d);
 					}
 					yuvarlanmisDeger = yuvarlanmisDeger / 2;
 					break;
 
 				case 2:
-					fark = doubleValue.doubleValue() - doubleValue.longValue();
+					ondalikFark = doubleValue.doubleValue() - longDeger;
 					double arti = 0;
-					if (fark > 0.0d) {
+					if (ondalikFark > 0.0d) {
 						for (int i = 3; i >= 0; i--) {
 							arti = i * 0.25;
-							if (fark >= arti)
+							if (ondalikFark >= arti)
 								break;
 						}
-					} else if (fark < 0.0d) {
+					} else if (ondalikFark < 0.0d) {
 						for (int i = 3; i >= 0; i--) {
 							arti = -i * 0.25;
-							if (fark < arti) {
+							if (ondalikFark < arti) {
 								arti -= 0.25;
 								break;
 							}
 
 						}
 					}
-					yuvarlanmisDeger = doubleValue.longValue() + arti;
+					yuvarlanmisDeger = longDeger + arti;
+					break;
+
+				case 3:
+					yuvarlanmisDeger = doubleValue.doubleValue();
+					ondalikFark = yuvarlanmisDeger.doubleValue() - longDeger;
+					if (ondalikFark > 0) {
+						if (ondalikFark > 0.5)
+							yuvarlanmisDeger = longDeger + (1.0d);
+						else
+							yuvarlanmisDeger = longDeger + (0.5d);
+					}
 					break;
 
 				default:

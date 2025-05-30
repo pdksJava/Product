@@ -33,6 +33,8 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 	public static final String COLUMN_NAME_ACIKLAMA = "ACIKLAMA";
 	public static final String COLUMN_NAME_SIRA = "SIRA";
 	public static final String COLUMN_NAME_ALAN_TIPI = "ALAN_TIPI";
+	public static final String COLUMN_NAME_FILTER = "FILTER";
+	public static final String COLUMN_NAME_GOSTER = "GOSTER";
 	public static final String COLUMN_NAME_DURUM = "DURUM";
 
 	public static final String COLUMN_NAME_HIZALA = "HIZALA";
@@ -45,7 +47,7 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 
 	private Integer alanTipiId, sira;
 
-	private Boolean durum = Boolean.TRUE;
+	private Boolean durum = Boolean.TRUE, goster = Boolean.TRUE, filter = Boolean.FALSE;
 
 	private Integer hizala = ENumAlanHizalaTipi.SOLA.value();
 	private ENumAlanHizalaTipi alanHizalaTipi = ENumAlanHizalaTipi.SOLA;
@@ -112,6 +114,23 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 		this.hizala = value;
 	}
 
+	@Column(name = COLUMN_NAME_FILTER)
+	public Boolean getFilter() {
+		return filter;
+	}
+
+	public void setFilter(Boolean filter) {
+		this.filter = filter;
+	}
+	@Column(name = COLUMN_NAME_GOSTER)
+	public Boolean getGoster() {
+		return goster;
+	}
+
+	public void setGoster(Boolean goster) {
+		this.goster = goster;
+	}
+
 	@Column(name = COLUMN_NAME_DURUM)
 	public Boolean getDurum() {
 		return durum;
@@ -161,7 +180,6 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 				str = "left";
 			else if (hizala.equals(ENumAlanHizalaTipi.ORTALA.value()))
 				str = "center";
-
 		}
 		return str;
 	}
@@ -219,5 +237,7 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 		}
 		return object;
 	}
+
+
 
 }

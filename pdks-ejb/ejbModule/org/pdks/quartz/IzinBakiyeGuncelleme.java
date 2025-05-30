@@ -108,7 +108,9 @@ public class IzinBakiyeGuncelleme implements Serializable {
 		try {
 			if (session == null)
 				session = PdksUtil.getSession(entityManager, Boolean.TRUE);
-			Date time = ortakIslemler.getBugun();
+			// Calendar cal = getAgentCalistirTime(session);
+			Calendar cal = Calendar.getInstance();
+			Date time = cal.getTime();
 			hataGonder = Boolean.TRUE;
 			hataKonum = "Paramatre okunuyor ";
 			Parameter parameter = ortakIslemler.getParameter(session, PARAMETER_KEY);
@@ -116,18 +118,21 @@ public class IzinBakiyeGuncelleme implements Serializable {
 			String izinERPTableViewAdi = ortakIslemler.getParameterKey(ortakIslemler.getParametreIzinERPTableView());
 			boolean izinBakiye = value != null && (manuel || PdksUtil.zamanKontrol(PARAMETER_KEY, value, time));
 			boolean sunucuDurum = manuel || PdksUtil.getCanliSunucuDurum() || PdksUtil.getTestSunucuDurum();
+
 			zamanDurum = sunucuDurum && (manuel || PdksUtil.zamanKontrol(PARAMETER_KEY, value, time));
+			// zamanDurum = true;
+			// sunucuDurum = true;
 			boolean tableERPOku = PdksUtil.hasStringValue(izinERPTableViewAdi);
 			if (!zamanDurum && tableERPOku) {
 				String parameterUpdateKey = PARAMETER_KEY + "Update";
 				value = ortakIslemler.getParameterKey(parameterUpdateKey);
 				if (PdksUtil.hasStringValue(value)) {
 					guncellemeDBDurum = PdksUtil.zamanKontrol(parameterUpdateKey, value, time);
-					if (guncellemeDBDurum == false && PdksUtil.isSistemDestekVar()) {
-						Calendar cal = Calendar.getInstance();
-						int gun = cal.get(Calendar.DATE), dakika = cal.get(Calendar.MINUTE), saat = cal.get(Calendar.HOUR_OF_DAY), dayOffWeek = cal.get(Calendar.DAY_OF_WEEK);
-						guncellemeDBDurum = dayOffWeek != Calendar.SATURDAY && dayOffWeek != Calendar.SUNDAY && (gun > 25 || gun < 6) && (saat > 7 && saat < 20) && dakika % 15 == 0;
-					}
+//					if (guncellemeDBDurum == false && PdksUtil.isSistemDestekVar()) {
+//						// Calendar cal = Calendar.getInstance();
+//						int gun = cal.get(Calendar.DATE), dakika = cal.get(Calendar.MINUTE), saat = cal.get(Calendar.HOUR_OF_DAY), dayOffWeek = cal.get(Calendar.DAY_OF_WEEK);
+//						guncellemeDBDurum = dayOffWeek != Calendar.SATURDAY && dayOffWeek != Calendar.SUNDAY && (gun > 25 || gun < 6) && (saat > 7 && saat < 20) && dakika % 15 == 0;
+//					}
 				}
 			}
 			hataKonum = "Paramatre okundu ";
@@ -143,6 +148,8 @@ public class IzinBakiyeGuncelleme implements Serializable {
 								logger.info(uygulamaBordro + " izin bilgileri güncelleniyor out " + PdksUtil.getCurrentTimeStampStr());
 							}
 						} catch (Exception e) {
+							logger.error(e);
+							e.printStackTrace();
 						}
 
 						String parameterName = ortakIslemler.getParametreHakEdisIzinERPTableView();
