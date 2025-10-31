@@ -1,6 +1,9 @@
 package org.pdks.session;
 
+import java.awt.Color;
+import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -14,6 +17,10 @@ import javax.faces.model.SelectItem;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -27,6 +34,7 @@ import org.pdks.entity.CalismaModeli;
 import org.pdks.entity.CalismaModeliVardiya;
 import org.pdks.entity.CalismaSekli;
 import org.pdks.entity.Departman;
+import org.pdks.entity.Liste;
 import org.pdks.entity.Sirket;
 import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGun;
@@ -34,6 +42,7 @@ import org.pdks.entity.VardiyaSablonu;
 import org.pdks.entity.VardiyaYemekIzin;
 import org.pdks.entity.YemekIzin;
 import org.pdks.enums.BordroDetayTipi;
+import org.pdks.enums.KatSayiTipi;
 import org.pdks.security.entity.User;
 
 @Name("vardiyaHome")
@@ -72,10 +81,14 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	private List<YemekIzin> yemekIzinList = new ArrayList<YemekIzin>(), yemekIzinKayitliList = new ArrayList<YemekIzin>();
 
 	private List<YemekIzin> yemekList;
+	private Vardiya seciliVardiya;
 	private Long seciliSirketId;
 	private int saat = 13, dakika = 0;
+	private Boolean sirketGoster = Boolean.FALSE, icapVardiyaGoster = Boolean.FALSE, sutIzniGoster = Boolean.FALSE, gebelikGoster = Boolean.FALSE, suaGoster = Boolean.FALSE;
 
 	private boolean pasifGoster = Boolean.FALSE, manuelVardiyaIzinGir = false;
+
+	private boolean yemekMolaKontrolEt = false, erkenGirisKontrolEt = false, erkenCikisKontrolEt = false, gecCikisKontrolEt = false, gecGirisKontrolEt = false;
 	private Session session;
 
 	@Override
@@ -293,7 +306,7 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 			pdksVardiyaYeni.setKisaAdi(pdksVardiya.getKisaAdi() + " kopya");
 		pdksVardiyaYeni.setAdi(pdksVardiya.getAdi() + " kopya");
 
-		setInstance(pdksVardiyaYeni);
+		setSeciliVardiya(pdksVardiyaYeni);
 		return "";
 
 	}
@@ -320,14 +333,14 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 		}
 		vardiyaAlanlariDoldur(pdksVardiya);
 
-		setInstance(pdksVardiya);
+		setSeciliVardiya(pdksVardiya);
 	}
 
 	/**
 	 * @param pdksVardiya
 	 */
 	private void vardiyaAlanlariDoldur(Vardiya pdksVardiya) {
-		setInstance(pdksVardiya);
+		setSeciliVardiya(pdksVardiya);
 		fillSaatler();
 		fillSablonlar();
 		if (authenticatedUser.isAdmin())
@@ -350,7 +363,7 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	@Transactional
 	public String save() {
 		String cikis = "";
-		Vardiya pdksVardiya = getInstance();
+		Vardiya pdksVardiya = getSeciliVardiya();
 		if (pdksVardiya.getId() == null && !authenticatedUser.isAdmin())
 			pdksVardiya.setDepartman(authenticatedUser.getDepartman());
 		boolean yaz = Boolean.TRUE;
@@ -390,6 +403,7 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 					pdksVardiya.setIcapVardiya(Boolean.FALSE);
 					pdksVardiya.setSua(Boolean.FALSE);
 					pdksVardiya.setGebelik(Boolean.FALSE);
+					pdksVardiya.setSutIzni(Boolean.FALSE);
 				}
 				if (pdksVardiya.getSirket() != null)
 					pdksVardiya.setDepartman(pdksVardiya.getSirket().getDepartman());
@@ -478,7 +492,11 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	}
 
 	public void fillVardiyalar() {
-
+		icapVardiyaGoster = Boolean.FALSE;
+		sutIzniGoster = Boolean.FALSE;
+		gebelikGoster = Boolean.FALSE;
+		suaGoster = Boolean.FALSE;
+		sirketGoster = Boolean.FALSE;
 		HashMap parametreMap = new HashMap();
 		try {
 			manuelVardiyaIzinGir = ortakIslemler.getVardiyaIzinGir(session, authenticatedUser.getDepartman());
@@ -500,6 +518,63 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 						iterator.remove();
 				}
 
+			}
+			erkenGirisKontrolEt = false;
+			erkenCikisKontrolEt = false;
+			gecCikisKontrolEt = false;
+			gecGirisKontrolEt = false;
+			if (vardiyalar.isEmpty() == false) {
+				Date bugun = PdksUtil.buGun();
+				HashMap<KatSayiTipi, TreeMap<String, BigDecimal>> allMap = ortakIslemler.getVardiyaKatSayiAllMap(bugun, session);
+				TreeMap<String, BigDecimal> yemekMolaMap = allMap.containsKey(KatSayiTipi.VARDIYA_MOLA) ? allMap.get(KatSayiTipi.VARDIYA_MOLA) : null;
+				TreeMap<String, BigDecimal> erkenGirisMap = allMap.containsKey(KatSayiTipi.ERKEN_GIRIS_TIPI) ? allMap.get(KatSayiTipi.ERKEN_GIRIS_TIPI) : null;
+				TreeMap<String, BigDecimal> erkenCikisMap = allMap.containsKey(KatSayiTipi.ERKEN_CIKIS_TIPI) ? allMap.get(KatSayiTipi.ERKEN_CIKIS_TIPI) : null;
+				TreeMap<String, BigDecimal> gecGirisMap = allMap.containsKey(KatSayiTipi.GEC_GIRIS_TIPI) ? allMap.get(KatSayiTipi.GEC_GIRIS_TIPI) : null;
+				TreeMap<String, BigDecimal> gecCikisMap = allMap.containsKey(KatSayiTipi.GEC_CIKIS_TIPI) ? allMap.get(KatSayiTipi.GEC_CIKIS_TIPI) : null;
+				yemekMolaKontrolEt = yemekMolaMap != null && !yemekMolaMap.isEmpty();
+				erkenGirisKontrolEt = erkenGirisMap != null && !erkenGirisMap.isEmpty();
+				erkenCikisKontrolEt = erkenCikisMap != null && !erkenCikisMap.isEmpty();
+				gecCikisKontrolEt = gecCikisMap != null && !gecCikisMap.isEmpty();
+				gecGirisKontrolEt = gecGirisMap != null && !gecGirisMap.isEmpty();
+				String str = PdksUtil.convertToDateString(bugun, "yyyyMMdd");
+				for (Vardiya vardiya : vardiyalar) {
+					HashMap<Integer, BigDecimal> katSayiMap = null;
+					if (vardiya.isCalisma()) {
+						katSayiMap = new HashMap<Integer, BigDecimal>();
+						Long sirketId = vardiya.getSirket() != null ? vardiya.getSirket().getId() : null, tesisId = null, vardiyaId = vardiya.getId();
+						if (yemekMolaKontrolEt && ortakIslemler.veriKatSayiVar(yemekMolaMap, sirketId, tesisId, vardiyaId, str)) {
+							BigDecimal deger = ortakIslemler.getKatSayiVeriMap(yemekMolaMap, sirketId, tesisId, vardiyaId, str);
+							if (deger != null)
+								katSayiMap.put(KatSayiTipi.VARDIYA_MOLA.value(), deger);
+						}
+						if (erkenGirisKontrolEt && ortakIslemler.veriKatSayiVar(erkenGirisMap, sirketId, tesisId, vardiyaId, str)) {
+							BigDecimal deger = ortakIslemler.getKatSayiVeriMap(erkenGirisMap, sirketId, tesisId, vardiyaId, str);
+							if (deger != null)
+								katSayiMap.put(KatSayiTipi.ERKEN_GIRIS_TIPI.value(), deger);
+						}
+						if (erkenCikisKontrolEt && ortakIslemler.veriKatSayiVar(erkenCikisMap, sirketId, tesisId, vardiyaId, str)) {
+							BigDecimal deger = ortakIslemler.getKatSayiVeriMap(erkenCikisMap, sirketId, tesisId, vardiyaId, str);
+							if (deger != null)
+								katSayiMap.put(KatSayiTipi.ERKEN_CIKIS_TIPI.value(), deger);
+						}
+						if (gecGirisKontrolEt && ortakIslemler.veriKatSayiVar(gecGirisMap, sirketId, tesisId, vardiyaId, str)) {
+							BigDecimal deger = ortakIslemler.getKatSayiVeriMap(gecGirisMap, sirketId, tesisId, vardiyaId, str);
+							if (deger != null)
+								katSayiMap.put(KatSayiTipi.GEC_GIRIS_TIPI.value(), deger);
+						}
+						if (gecCikisKontrolEt && ortakIslemler.veriKatSayiVar(gecCikisMap, sirketId, tesisId, vardiyaId, str)) {
+							BigDecimal deger = ortakIslemler.getKatSayiVeriMap(gecCikisMap, sirketId, tesisId, vardiyaId, str);
+							if (deger != null)
+								katSayiMap.put(KatSayiTipi.GEC_CIKIS_TIPI.value(), deger);
+						}
+						if (katSayiMap.isEmpty())
+							katSayiMap = null;
+						if (katSayiMap == null)
+							logger.info(vardiya.getAdi() + " " + vardiya.getKisaAdi());
+					}
+					vardiya.setKatSayiMap(katSayiMap);
+
+				}
 			}
 			yemekList = ortakIslemler.getYemekList(new Date(), null, session);
 			HashMap<Long, Vardiya> vardiyaMap = new HashMap<Long, Vardiya>();
@@ -590,6 +665,7 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 						iterator.remove();
 						continue;
 					}
+
 					if (vardiya.getDurum()) {
 						if (!vardiya.isCalisma() && vardiya.getDepartman() == null) {
 							vardiyaList.add(vardiya);
@@ -609,6 +685,20 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 
 				if (!vardiyalar.isEmpty())
 					vardiyaList.addAll(vardiyalar);
+			}
+			for (Iterator iterator = vardiyaList.iterator(); iterator.hasNext();) {
+				Vardiya vardiya = (Vardiya) iterator.next();
+				if (icapVardiyaGoster.booleanValue() == false)
+					icapVardiyaGoster = vardiya.isIcapVardiyasi();
+				if (sutIzniGoster.booleanValue() == false)
+					sutIzniGoster = vardiya.isSutIzniMi();
+				if (gebelikGoster.booleanValue() == false)
+					gebelikGoster = vardiya.isGebelikMi();
+				if (suaGoster.booleanValue() == false)
+					suaGoster = vardiya.isSuaMi();
+				if (sirketGoster.booleanValue() == false)
+					sirketGoster = vardiya.getSirket() != null;
+
 			}
 
 			saat = 13;
@@ -645,6 +735,263 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 			parametreMap = null;
 		}
 
+	}
+
+	public String excelAktar() {
+		try {
+
+			ByteArrayOutputStream baosDosya = excelDevam();
+			if (baosDosya != null)
+				PdksUtil.setExcelHttpServletResponse(baosDosya, ortakIslemler.vardiyaAciklama() + (pasifGoster == false ? "Aktif" : "") + "Listesi.xlsx");
+
+		} catch (Exception e) {
+			logger.error("PDKS hata in : \n");
+			e.printStackTrace();
+			logger.error("PDKS hata out : " + e.getMessage());
+
+		}
+
+		return "";
+	}
+
+	private ByteArrayOutputStream excelDevam() {
+		ByteArrayOutputStream baos = null;
+		Workbook wb = new XSSFWorkbook();
+		String vardiyaAciklama = ortakIslemler.vardiyaAciklama();
+		try {
+
+			Sheet sheet = ExcelUtil.createSheet(wb, vardiyaAciklama + (pasifGoster == false ? "Aktif" : "") + " Listesi", false);
+			// Drawing drawing = sheet.createDrawingPatriarch();
+			// CreationHelper helper = wb.getCreationHelper();
+			// ClientAnchor anchor = helper.createClientAnchor();
+			CellStyle header = ExcelUtil.getStyleHeader(wb);
+			CellStyle styleOdd = ExcelUtil.getStyleOdd(null, wb);
+			CellStyle styleOddRed = ExcelUtil.getStyleOdd(null, wb);
+			ExcelUtil.setFontColor(styleOddRed, Color.RED);
+			CellStyle styleOddCenter = ExcelUtil.getStyleOdd(ExcelUtil.ALIGN_CENTER, wb);
+			CellStyle styleOddSayi = ExcelUtil.getStyleOdd(ExcelUtil.FORMAT_DATA_NUMBER, wb);
+			CellStyle styleOddTutar = ExcelUtil.getStyleOdd(ExcelUtil.FORMAT_DATA_TUTAR, wb);
+			CellStyle styleEven = ExcelUtil.getStyleEven(null, wb);
+			CellStyle styleEvenRed = ExcelUtil.getStyleOdd(null, wb);
+			ExcelUtil.setFontColor(styleEvenRed, Color.RED);
+			CellStyle styleEvenCenter = ExcelUtil.getStyleEven(ExcelUtil.ALIGN_CENTER, wb);
+			CellStyle styleEvenSayi = ExcelUtil.getStyleEven(ExcelUtil.FORMAT_DATA_NUMBER, wb);
+			CellStyle styleEvenTutar = ExcelUtil.getStyleEven(ExcelUtil.FORMAT_DATA_TUTAR, wb);
+			int row = 0;
+			int col = 0;
+			boolean admin = authenticatedUser.isAdmin();
+			boolean ikAdmin = admin || authenticatedUser.isIKAdmin() || authenticatedUser.isSistemYoneticisi();
+			// boolean hastane = getParameterKey("uygulamaTipi").equalsIgnoreCase("H");
+			if (admin)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(vardiyaAciklama + " Id");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(vardiyaAciklama + " Adı");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(vardiyaAciklama + " Kısa Adı");
+			if (sirketGoster)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.sirketAciklama());
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Ekran Sıra");
+
+			if (admin)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(vardiyaAciklama + " Sınıf Adı");
+			if (ikAdmin)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.firmaKaynagiAciklama());
+
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue(vardiyaAciklama + " Tipi");
+			if (ikAdmin)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Net Çalışma Süresi");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Toplam Saat");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Çalışma Şekli");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Arife Normal Çalışma Süresi");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Gün Sayısı");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Çalışma Aralığı");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Yemek Süresi (Dakika)");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Tolerans erken giriş dakikası");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Tolerans gecikme giriş dakikası");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Tolerans erken çıkış dakikası");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Tolerans gecikme çıkış dakikası");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Çıkış Mola Süresi(Dakika)");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Akşam " + vardiyaAciklama);
+			if (ikAdmin)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Genel");
+			if (ikAdmin && icapVardiyaGoster)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("İcap " + vardiyaAciklama);
+			if (ikAdmin && suaGoster)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Şua " + vardiyaAciklama);
+			if (ikAdmin && gebelikGoster)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Gebe " + vardiyaAciklama);
+			if (ikAdmin && sutIzniGoster)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Süt İzini " + vardiyaAciklama);
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("FÇS Ödenir");
+			ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Mesai Ödenir");
+			TreeMap<Long, List<CalismaModeli>> cMap = new TreeMap<Long, List<CalismaModeli>>();
+			if (admin) {
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue(ortakIslemler.calismaModeliAciklama());
+				List<Long> idList = new ArrayList<Long>();
+				for (Vardiya vardiya : vardiyaList) {
+					if (vardiya.isCalisma() && vardiya.getGenel())
+						idList.add(vardiya.getId());
+
+				}
+				if (idList.isEmpty() == false) {
+					List<CalismaModeliVardiya> list = pdksEntityController.getSQLParamByFieldList(CalismaModeliVardiya.TABLE_NAME, CalismaModeliVardiya.COLUMN_NAME_VARDIYA, idList, CalismaModeliVardiya.class, session);
+					if (list.isEmpty() == false) {
+						List<Liste> list2 = new ArrayList<Liste>();
+						for (CalismaModeliVardiya cmv : list) {
+							CalismaModeli calismaModeli = cmv.getCalismaModeli();
+							if (calismaModeli != null && calismaModeli.getDurum()) {
+								list2.add(new Liste(cmv.getVardiya().getId() + "_" + calismaModeli.getAciklama(), cmv));
+							}
+
+						}
+						if (list2.isEmpty() == false) {
+							list2 = PdksUtil.sortObjectStringAlanList(list2, "getId", null);
+							for (Liste liste : list2) {
+								CalismaModeliVardiya cmv = (CalismaModeliVardiya) liste.getValue();
+								Long key = cmv.getVardiya().getId();
+								List<CalismaModeli> calismaModeliList = cMap.containsKey(key) ? cMap.get(key) : new ArrayList<CalismaModeli>();
+								if (calismaModeliList.isEmpty())
+									cMap.put(key, calismaModeliList);
+								calismaModeliList.add(cmv.getCalismaModeli());
+							}
+						}
+						list2 = null;
+					}
+					list = null;
+				}
+				idList = null;
+			}
+			if (pasifGoster)
+				ExcelUtil.getCell(sheet, row, col++, header).setCellValue("Aktif");
+			boolean renk = true;
+
+			for (Vardiya vardiya : vardiyaList) {
+				col = 0;
+				row++;
+				CellStyle style = null, styleCenter = null, cellStyleTutar = null, cellStyleSayi = null;
+				if (renk) {
+					cellStyleTutar = styleOddTutar;
+					cellStyleSayi = styleOddSayi;
+					style = styleOdd;
+					styleCenter = styleOddCenter;
+
+				} else {
+					cellStyleTutar = styleEvenTutar;
+					cellStyleSayi = styleEvenSayi;
+					style = styleEven;
+					styleCenter = styleEvenCenter;
+
+				}
+				renk = !renk;
+				boolean calisma = vardiya.isCalisma();
+				if (admin)
+					ExcelUtil.getCell(sheet, row, col++, cellStyleSayi).setCellValue(vardiya.getId());
+				ExcelUtil.getCell(sheet, row, col++, style).setCellValue(vardiya.getAdi());
+				ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(vardiya.getKisaAdi());
+				if (sirketGoster)
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue(vardiya.getSirket() != null ? vardiya.getSirket().getAd() : "");
+				ExcelUtil.getCell(sheet, row, col++, cellStyleSayi).setCellValue(vardiya.getEkranSira());
+
+				if (admin)
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue(vardiya.getStyleClass() != null ? vardiya.getStyleClass().trim() : "");
+				if (ikAdmin)
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue(vardiya.getDepartman() != null ? vardiya.getDepartman().getDepartmanTanim().getAciklama() : "");
+
+				ExcelUtil.getCell(sheet, row, col++, style).setCellValue(vardiya.getVardiyaTipiAciklama());
+				if (ikAdmin) {
+					if (calisma)
+						ExcelUtil.getCell(sheet, row, col++, cellStyleTutar).setCellValue(vardiya.getNetCalismaSuresi());
+					else
+						ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+
+				}
+				if (calisma)
+					ExcelUtil.getCell(sheet, row, col++, cellStyleTutar).setCellValue(vardiya.getCalismaSaati());
+				else
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+				ExcelUtil.getCell(sheet, row, col++, style).setCellValue(vardiya.getCalismaSekli() != null ? vardiya.getCalismaSekli().getAdi() : "");
+				if (calisma && vardiya.getArifeNormalCalismaDakika() != null && vardiya.getArifeNormalCalismaDakika().doubleValue() > 0.0d)
+					ExcelUtil.getCell(sheet, row, col++, cellStyleTutar).setCellValue(vardiya.getArifeNormalCalismaDakika());
+				else
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+				if (calisma)
+					ExcelUtil.getCell(sheet, row, col++, cellStyleSayi).setCellValue(vardiya.getCalismaGun());
+				else
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+
+				if (calisma)
+					ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(authenticatedUser.timeFormatla(vardiya.getBasZaman()) + " - " + authenticatedUser.timeFormatla(vardiya.getBitZaman()));
+				else
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+
+				if (calisma)
+					ExcelUtil.getCell(sheet, row, col++, cellStyleSayi).setCellValue(vardiya.getYemekSuresi());
+				else
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+
+				if (calisma)
+					ExcelUtil.getCell(sheet, row, col++, cellStyleSayi).setCellValue(vardiya.getGirisErkenToleransDakika());
+				else
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+				if (calisma)
+					ExcelUtil.getCell(sheet, row, col++, cellStyleSayi).setCellValue(vardiya.getGirisGecikmeToleransDakika());
+				else
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+				if (calisma)
+					ExcelUtil.getCell(sheet, row, col++, cellStyleSayi).setCellValue(vardiya.getCikisErkenToleransDakika());
+				else
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+				if (calisma)
+					ExcelUtil.getCell(sheet, row, col++, cellStyleSayi).setCellValue(vardiya.getCikisGecikmeToleransDakika());
+				else
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+				if (calisma)
+					ExcelUtil.getCell(sheet, row, col++, cellStyleSayi).setCellValue(vardiya.getCikisMolaSaat());
+				else
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue("");
+
+				ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(authenticatedUser.getYesNo(vardiya.getAksamVardiya()));
+				if (ikAdmin)
+					ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(authenticatedUser.getYesNo(vardiya.getGenel()));
+				if (ikAdmin && icapVardiyaGoster)
+					ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(authenticatedUser.getYesNo(vardiya.isIcapVardiyasi()));
+
+				if (ikAdmin && suaGoster)
+					ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(authenticatedUser.getYesNo(vardiya.isSuaMi()));
+
+				if (ikAdmin && gebelikGoster)
+					ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(authenticatedUser.getYesNo(vardiya.isGebelikMi()));
+
+				if (ikAdmin && sutIzniGoster)
+					ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(authenticatedUser.getYesNo(vardiya.isSutIzniMi()));
+				ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(authenticatedUser.getYesNo(vardiya.isFcsDahil()));
+				ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(authenticatedUser.getYesNo(vardiya.isMesaiOdenir()));
+
+				if (admin) {
+					StringBuffer cmAciklama = new StringBuffer();
+					if (calisma && cMap.containsKey(vardiya.getId())) {
+						List<CalismaModeli> list = cMap.get(vardiya.getId());
+						for (Iterator iterator = list.iterator(); iterator.hasNext();) {
+							CalismaModeli cm = (CalismaModeli) iterator.next();
+							cmAciklama.append(cm.getAciklama());
+							if (iterator.hasNext())
+								cmAciklama.append(", ");
+						}
+						list = null;
+					}
+					ExcelUtil.getCell(sheet, row, col++, style).setCellValue(cmAciklama.toString());
+					cmAciklama = null;
+				}
+				if (pasifGoster)
+					ExcelUtil.getCell(sheet, row, col++, styleCenter).setCellValue(authenticatedUser.getYesNo(vardiya.getDurum()));
+			}
+			for (int i = 0; i < col; i++)
+				sheet.autoSizeColumn(i);
+			baos = new ByteArrayOutputStream();
+			wb.write(baos);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
+		return baos;
 	}
 
 	public void fillCalismaSekilleri() {
@@ -692,10 +1039,9 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	}
 
 	public void instanceRefresh() {
-		Vardiya pdksVardiya = getInstance();
-		if (pdksVardiya.getId() != null)
+		if (seciliVardiya.getId() != null)
 			try {
-				session.refresh(pdksVardiya);
+				session.refresh(seciliVardiya);
 			} catch (Exception e) {
 				logger.error("PDKS hata in : \n");
 				e.printStackTrace();
@@ -952,5 +1298,85 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 
 	public void setIzinTipiList(List<SelectItem> izinTipiList) {
 		this.izinTipiList = izinTipiList;
+	}
+
+	public Boolean getIcapVardiyaGoster() {
+		return icapVardiyaGoster;
+	}
+
+	public void setIcapVardiyaGoster(Boolean icapVardiyaGoster) {
+		this.icapVardiyaGoster = icapVardiyaGoster;
+	}
+
+	public Boolean getSutIzniGoster() {
+		return sutIzniGoster;
+	}
+
+	public void setSutIzniGoster(Boolean sutIzniGoster) {
+		this.sutIzniGoster = sutIzniGoster;
+	}
+
+	public Boolean getGebelikGoster() {
+		return gebelikGoster;
+	}
+
+	public void setGebelikGoster(Boolean gebelikGoster) {
+		this.gebelikGoster = gebelikGoster;
+	}
+
+	public Boolean getSuaGoster() {
+		return suaGoster;
+	}
+
+	public void setSuaGoster(Boolean suaGoster) {
+		this.suaGoster = suaGoster;
+	}
+
+	public Boolean getSirketGoster() {
+		return sirketGoster;
+	}
+
+	public void setSirketGoster(Boolean sirketGoster) {
+		this.sirketGoster = sirketGoster;
+	}
+
+	public boolean isErkenGirisKontrolEt() {
+		return erkenGirisKontrolEt;
+	}
+
+	public void setErkenGirisKontrolEt(boolean erkenGirisKontrolEt) {
+		this.erkenGirisKontrolEt = erkenGirisKontrolEt;
+	}
+
+	public boolean isErkenCikisKontrolEt() {
+		return erkenCikisKontrolEt;
+	}
+
+	public void setErkenCikisKontrolEt(boolean erkenCikisKontrolEt) {
+		this.erkenCikisKontrolEt = erkenCikisKontrolEt;
+	}
+
+	public boolean isGecCikisKontrolEt() {
+		return gecCikisKontrolEt;
+	}
+
+	public void setGecCikisKontrolEt(boolean gecCikisKontrolEt) {
+		this.gecCikisKontrolEt = gecCikisKontrolEt;
+	}
+
+	public boolean isGecGirisKontrolEt() {
+		return gecGirisKontrolEt;
+	}
+
+	public void setGecGirisKontrolEt(boolean gecGirisKontrolEt) {
+		this.gecGirisKontrolEt = gecGirisKontrolEt;
+	}
+
+	public Vardiya getSeciliVardiya() {
+		return seciliVardiya;
+	}
+
+	public void setSeciliVardiya(Vardiya seciliVardiya) {
+ 		this.seciliVardiya = seciliVardiya;
 	}
 }

@@ -612,8 +612,12 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 
 		default:
 			sutIzinSure = this.getHaftaIciSutIzniSure();
+			Double gunSure = this.getGunSure(CalismaModeliGun.GUN_IZIN, dayOfWeek);
+			if (gunSure != null)
+				sutIzinSure = gunSure;
 			break;
 		}
+		
 		if (sutIzinSure == null) {
 			if (this.getDepartman() != null) {
 				Departman dm = this.getDepartman();
@@ -632,8 +636,9 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 					break;
 				}
 			}
-			if (sutIzinSure == null)
+			if ((this.getHaftaTatilGun() != null && dayOfWeek == this.getHaftaTatilGun().intValue()) || sutIzinSure == null)
 				sutIzinSure = 0.0d;
+			 
 		}
 
 		if (sutIzinSure > 0.0d)
@@ -687,11 +692,11 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 
 		default:
 			gunSure = this.getGunSure(CalismaModeliGun.GUN_SAAT, dayOfWeek);
-			if (gunSure == null)
+			if (gunSure == null && (this.getHaftaTatilGun() == null || (dayOfWeek != Calendar.SATURDAY && dayOfWeek != Calendar.SUNDAY)))
 				gunSure = this.getHaftaIci();
 			break;
 		}
-		if (gunSure == null)
+		if ((this.getHaftaTatilGun() != null && dayOfWeek == this.getHaftaTatilGun().intValue()) || gunSure == null)
 			gunSure = 0.0d;
 		if (gunSure > 0.0d)
 			logger.debug(dayOfWeek + " : " + gunSure);

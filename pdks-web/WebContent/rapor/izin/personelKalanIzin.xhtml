@@ -550,6 +550,13 @@
 							<h:outputText
 								value="#{authenticatedUser.getTarihFormatla(personelKalanIzinHome.updateIzin.baslangicZamani,'yyyy')} İzin Hakediş Yılı Kullanılan İzinler" />
 						</f:facet>
+						<rich:column style="text-align:center" rendered="#{personelKalanIzinHome.bakiyeIzinList.size() gt 0}">
+							<f:facet name="header">
+								<h:outputText value="İşlem" />
+							</f:facet>
+							<h:selectBooleanCheckbox value="#{harcananIzin.checkBoxDurum}" />
+
+						</rich:column>
 						<rich:column style="text-align:center" rendered="#{personelKalanIzinHome.manuelIzinGuncelle}">
 							<f:facet name="header"></f:facet>
 							<a4j:commandButton image="/img/edit.gif" title="Güncelle" status="ajaxStatus"
@@ -609,6 +616,21 @@
 					</rich:dataTable>
 
 				</h:panelGrid>
+				<ui:fragment rendered="#{personelKalanIzinHome.bakiyeIzinList.size() gt 0}">
+					<s:decorate template="/layout/edit.xhtml" id="bakiyeIzin">
+						<ui:define name="label">Aktarılacak Yıl</ui:define>
+						<h:selectOneMenu value="#{personelKalanIzinHome.bakiyeIzin}">
+							<s:selectItems var="comp" value="#{personelKalanIzinHome.bakiyeIzinList}" label="#{comp.hakEdisDonem}" noSelectionLabel="Lütfen seçiniz" />
+							<a4j:support event="onchange" action="#{ortakIslemler.emtpyAjaxFunction()}" reRender="bakiyeIzin" status="ajaxStatus" ajaxSingle="true" />
+							<s:convertEntity />
+						</h:selectOneMenu>
+						<a4j:commandButton status="ajaxStatus" action="#{personelKalanIzinHome.harcananIzinlerAktar()}"
+							rendered="#{personelKalanIzinHome.bakiyeIzin!=null}" value="İzin Aktar"
+							oncomplete="if (#{facesContext.maximumSeverity == null}) {#{rich:component('izinHarcamaPanel')}.hide();#{rich:component('izinDetayPanel')}.hide();}" reRender="izinPersonel,secim" />
+					</s:decorate>
+
+				</ui:fragment>
+
 				<a4j:outputPanel id="harcananIzinUpdate">
 					<ui:fragment rendered="#{personelKalanIzinHome.manuelIzin != null}">
 						<h:panelGrid columns="2">
@@ -703,15 +725,14 @@
 									<ui:fragment rendered="#{kalanIzinler.devirIzin == false and ( authenticatedUser.admin or authenticatedUser.IK)}">
 
 										<TD nowrap="nowrap"><ui:fragment>
-
+												<a4j:commandButton image="/img/edit.gif" title="Hakediş Güncelle" status="ajaxStatus" render="#{authenticatedUser.IK}"
+													action="#{personelKalanIzinHome.guncelle(kalanIzinler)}" oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel" />
 												<a4j:commandLink title="İptal Geri Al" status="ajaxStatus" id="iptalGeri"
 													rendered="#{personelKalanIzinHome.iptalIzinleriGetir and kalanIzinler.izinKagidiGeldi == false and kalanIzinler.kullanilanIzinSuresi eq 0}"
 													action="#{personelKalanIzinHome.guncelle(kalanIzinler)}" oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel">
 													<h:graphicImage value="/img/login.png" height="16" for="iptalGeri" />
 												</a4j:commandLink>
-												<a4j:commandButton image="/img/edit.gif" title="Güncelle" status="ajaxStatus"
-													rendered="#{authenticatedUser.IK and kalanIzinler.izinKagidiGeldi == null}" action="#{personelKalanIzinHome.guncelle(kalanIzinler)}"
-													oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel" />
+
 												<a4j:commandButton image="/img/beklemede.gif" title="Sıfırla" status="ajaxStatus"
 													rendered="#{false and kalanIzinler.kontrolIzin == null and (authenticatedUser.admin or ( authenticatedUser.IKAdmin and ortakIslemler.yillikIzinMaxBakiye gt 0) ) and kalanIzinler.izinKagidiGeldi == null and kalanIzinler.harcananIzin le 0.0}"
 													action="#{personelKalanIzinHome.sifirla(kalanIzinler)}" oncomplete="#{rich:component('izinDetayPanel')}.hide()" reRender="izinPanel" />
@@ -875,14 +896,14 @@
 
 
 				</h:panelGrid>
-				<ui:fragment rendered="#{personelKalanIzinHome.updateIzin.izinKagidiGeldi == null}">
-					<a4j:commandButton status="ajaxStatus" value="Kaydet" action="#{personelKalanIzinHome.kaydet(true)}" reRender="izinDetayPanel,izinPanel"
-						oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" />
-				</ui:fragment>
-				<ui:fragment rendered="#{personelKalanIzinHome.updateIzin.izinKagidiGeldi != null}">
-					<a4j:commandButton status="ajaxStatus" value="Geri Al" action="#{personelKalanIzinHome.kaydet(true)}" reRender="izinDetayPanel,izinPanel"
-						oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" />
-				</ui:fragment>
+
+				<a4j:commandButton status="ajaxStatus" value="Kaydet" rendered="#{personelKalanIzinHome.updateIzin.izinKagidiGeldi==null or personelKalanIzinHome.updateIzin.izinSuresi ne 0}"
+					action="#{personelKalanIzinHome.kaydet(true)}" reRender="izinDetayPanel,izinPanel"
+					oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" />
+				<a4j:commandButton status="ajaxStatus" value="Geri Al"
+					rendered="#{personelKalanIzinHome.updateIzin.izinKagidiGeldi!=null and personelKalanIzinHome.updateIzin.izinSuresi==0}"
+					action="#{personelKalanIzinHome.kaydet(false)}" reRender="izinDetayPanel,izinPanel"
+					oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" />
 
 			</h:form>
 		</rich:modalPanel>

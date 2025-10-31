@@ -869,10 +869,12 @@
 									<h:outputText value="#{pdksPersonelHome.instance.personelKGS.kimlikNo}" />
 
 								</s:decorate>
-								<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.kartNoAciklama != ''}">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{pdksPersonelHome.kartNoAciklama != '' or pdksPersonelHome.kgsPersonelSPAdi!=null}">
 									<ui:define name="label">#{pdksPersonelHome.kartNoAciklama}</ui:define>
-									<h:outputText value="#{pdksPersonelHome.instance.personelKGS.kartNo}" />
-
+									<ui:fragment>
+										<h:outputText value="#{pdksPersonelHome.instance.personelKGS.kartNo}" rendered="#{pdksPersonelHome.kgsPersonelSPAdi==null}" />
+										<h:inputText value="#{pdksPersonelHome.kartNo}" size="35" rendered="#{pdksPersonelHome.kgsPersonelSPAdi!=null}" />
+									</ui:fragment>
 								</s:decorate>
 							</h:panelGrid>
 							<s:decorate template="/layout/edit.xhtml">
@@ -896,7 +898,7 @@
 									disabled="#{pdksPersonelHome.sirketList.size() == 1 or ( pdksPersonelHome.instance.sirket.erp and pdksPersonelHome.personelERPGuncelleme != '1' and pdksPersonelHome.personelERPGuncelleme != 'M')}"
 									rendered="#{pdksPersonelHome.sirketList != null}">
 									<s:selectItems var="comp" value="#{pdksPersonelHome.sirketList}" label="#{comp.ad}" noSelectionLabel="Lütfen seçiniz" />
-									<a4j:support event="onchange" action="#{pdksPersonelHome.fillPdksPersonelList}" reRender="sirketDegisti,butonlar" status="ajaxStatus"
+									<a4j:support event="onchange" action="#{pdksPersonelHome.fillPdksPersonelList(false)}" reRender="sirketDegisti,butonlar" status="ajaxStatus"
 										ajaxSingle="true" />
 									<s:convertEntity />
 								</h:selectOneMenu>
@@ -949,11 +951,11 @@
 									</s:decorate>
 									<c:if test="#{pdksPersonelHome.instance.sirket.fazlaMesai}">
 
-										<s:decorate template="/layout/edit.xhtml">
-											<ui:define name="label">Grup'ta Başlama Tarihi</ui:define>
+										<s:decorate template="/layout/edit.xhtml" rendered="#{ortakIslemler.grubaTarihiAciklama()!=ortakIslemler.kidemBasTarihiAciklama()}">
+											<ui:define name="label">#{ortakIslemler.grubaTarihiAciklama()}</ui:define>
 											<rich:calendar enableManualInput="#{authenticatedUser.admin}" value="#{pdksPersonelHome.instance.grubaGirisTarihi}"
 												datePattern="#{authenticatedUser.dateFormat}" disabled="#{authenticatedUser.admin and pdksPersonelHome.instance.id != null}"
-												required="#{pdksPersonelHome.instance.sirket.erp}" requiredMessage="Grup'ta Başlama Tarihi Seçiniz" />
+												required="#{pdksPersonelHome.instance.sirket.erp}" requiredMessage="#{ortakIslemler.grubaTarihiAciklama()} Seçiniz" />
 										</s:decorate>
 										<s:decorate template="/layout/edit.xhtml">
 											<ui:define name="label">Doğum Tarihi</ui:define>

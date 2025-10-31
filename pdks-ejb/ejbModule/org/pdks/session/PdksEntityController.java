@@ -975,7 +975,7 @@ public class PdksEntityController implements Serializable {
 		StringBuffer sp = new StringBuffer("SP_HAREKET_SIL_SIRKET");
 		veriMap.put("kgsId", kgsId);
 		veriMap.put("pdksId", pdksId);
-		veriMap.put("guncelleyenId", guncelleyen.getId());
+		veriMap.put("guncelleyenId", guncelleyen != null ? guncelleyen.getId() : null);
 		veriMap.put("nedenId", nedenId);
 		veriMap.put("aciklama", aciklama);
 		veriMap.put("sirketId", sirketId);
@@ -1572,8 +1572,8 @@ public class PdksEntityController implements Serializable {
 			int size = PdksEntityController.LIST_MAX_SIZE - fieldsOrj.size();
 			List idInputList = new ArrayList(dataIdList);
 			String str = ":" + fieldName, sqlStr = sb.toString();
-			if (dataIdList.size() == 1) {
-				fieldsOrj.put(fieldName, dataIdList);
+			if (idInputList.size() == 1) {
+				fieldsOrj.put(fieldName, idInputList);
 				veriList = getObjectBySQLList(sb, fieldsOrj, class1);
 			} else {
 				int adet = 0;

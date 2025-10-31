@@ -3,7 +3,6 @@ package org.pdks.security.action;
 import java.io.File;
 import java.io.Serializable;
 import java.sql.Clob;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -180,6 +179,9 @@ public class StartupAction implements Serializable {
 	@Out(scope = ScopeType.APPLICATION, required = false)
 	public String projeFooterImageHeight = "83";
 
+	@Out(scope = ScopeType.APPLICATION, required = false)
+	public String projeFooterPowerBy = "font-size: 12px; font-family: sans-serif;";
+
 	private int smtpHostPort;
 
 	public SkinBean skinBean = new SkinBean();
@@ -247,6 +249,26 @@ public class StartupAction implements Serializable {
 		// pdksUtil.setTimeZome();
 		Session session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		startupMethod(session);
+		OrtakIslemler ortakIslemler = new OrtakIslemler();
+		StringBuffer spName = new StringBuffer("SP_DROP_NOT_USED_TABLES");
+		if (ortakIslemler.isExisObject(spName.toString(), "P", session, pdksEntityController)) {
+			LinkedHashMap<String, Object> dataMap = new LinkedHashMap<String, Object>();
+			if (session != null)
+				dataMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+			List<String> list = null;
+			try {
+				list = pdksEntityController.execSPList(dataMap, spName, null);
+			} catch (Exception e) {
+				list = null;
+			}
+			if (list != null) {
+				for (String string : list) {
+					logger.info("drop table " + string + ";");
+				}
+				list = null;
+			}
+		}
+		ortakIslemler = null;
 	}
 
 	/**
@@ -283,7 +305,7 @@ public class StartupAction implements Serializable {
 			list.add(VardiyaHafta.class);
 			list.add(VardiyaYemekIzin.class);
 			list.add(YemekKartsiz.class);
- 			for (Class class1 : list) {
+			for (Class class1 : list) {
 				long adet = pdksEntityController.savePrepareTableID(false, class1, entityManager, session);
 				toplamAdet += adet;
 				if (adet > 0)
@@ -545,6 +567,17 @@ public class StartupAction implements Serializable {
 				MailManager.setHeaderRenk(deger);
 		}
 		String fontSize = "22px";
+		Date saniyeYuvarlaZaman = null;
+		if (parameterMap.containsKey("saniyeYuvarlaZaman")) {
+			String deger = (String) parameterMap.get("saniyeYuvarlaZaman");
+			try {
+				saniyeYuvarlaZaman = PdksUtil.getDateFromString(deger);
+			} catch (Exception e) {
+				saniyeYuvarlaZaman = null;
+			}
+
+		}
+		VardiyaGun.setSaniyeYuvarlaZaman(saniyeYuvarlaZaman);
 		boolean izinHakedisGuncelle = false;
 		if (parameterMap.containsKey("izinHakedisGuncelle"))
 			izinHakedisGuncelle = parameterMap.get("izinHakedisGuncelle").equals("1");
@@ -555,13 +588,14 @@ public class StartupAction implements Serializable {
 		}
 		projePowerURL = null;
 		projeFooterBackgroundColor = "white";
+		if (parameterMap.containsKey("projeFooterBackgroundColor"))
+			projeFooterBackgroundColor = parameterMap.get("projeFooterBackgroundColor");
 		if (parameterMap.containsKey("projePowerBy")) {
+			if (parameterMap.containsKey("projeFooterPowerBy"))
+				projeFooterPowerBy = parameterMap.get("projeFooterPowerBy");
 			projePowerBy = parameterMap.get("projePowerBy");
 			if (parameterMap.containsKey("projePowerURL"))
 				projePowerURL = parameterMap.get("projePowerURL");
-			if (parameterMap.containsKey("projeFooterBackgroundColor"))
-				projeFooterBackgroundColor = parameterMap.get("projeFooterBackgroundColor");
-
 		}
 		if (parameterMap.containsKey("projeHeaderRenk")) {
 			String deger = parameterMap.get("projeHeaderRenk");
@@ -788,30 +822,9 @@ public class StartupAction implements Serializable {
 			}
 		PdksUtil.setSicilNoUzunluk(sicilNoUzunluk);
 		if (parameterMap.containsKey("serverTimeUpdateFromDB")) {
-			if (PdksUtil.getTestSunucuDurum() || PdksUtil.getCanliSunucuDurum()) {
-				try {
-					List<String> strList = PdksUtil.getListByString(parameterMap.get("serverTimeUpdateFromDB"), "|");
-					StringBuffer sb = new StringBuffer();
-					sb.append(strList.get(0));
-					fields.clear();
-					if (session != null)
-						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-					List list = pdksEntityController.getObjectBySQLList(sb, fields, null);
-					if (!list.isEmpty()) {
-						Timestamp tarih = (Timestamp) list.get(0);
-						String replace = PdksUtil.convertToDateString(new Date(tarih.getTime()), "yyyy-MM-dd HH:mm:ss");
-						String cmd = strList.size() == 2 ? PdksUtil.replaceAllManuel(strList.get(1), "$tarih", replace) : "date -s '" + replace + "'";
-						List<String> cmdList = PdksUtil.executeCommand(cmd, true);
-						for (String string : cmdList) {
-							logger.info(string);
-						}
-					}
-					list = null;
-					strList = null;
-				} catch (Exception e) {
-				}
-
-			}
+			OrtakIslemler ortakIslemler = new OrtakIslemler();
+			ortakIslemler.sistemSaatiGuncelle(pdksEntityController, session);
+			ortakIslemler = null;
 		}
 		fillSirketList(session);
 		setHelpDeskParametre(session, pmMap);
@@ -1201,7 +1214,7 @@ public class StartupAction implements Serializable {
 				sessionList = null;
 			}
 		} catch (Exception e) {
-			// TODO: handle exception
+
 		}
 
 	}
@@ -1382,5 +1395,13 @@ public class StartupAction implements Serializable {
 
 	public void setProjeURL(String projeURL) {
 		this.projeURL = projeURL;
+	}
+
+	public String getProjeFooterPowerBy() {
+		return projeFooterPowerBy;
+	}
+
+	public void setProjeFooterPowerBy(String projeFooterPowerBy) {
+		this.projeFooterPowerBy = projeFooterPowerBy;
 	}
 }

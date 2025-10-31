@@ -64,6 +64,7 @@ import org.pdks.entity.VardiyaGun;
 import org.pdks.entity.VardiyaHafta;
 import org.pdks.entity.YemekIzin;
 import org.pdks.enums.BordroDetayTipi;
+import org.pdks.enums.KatSayiTipi;
 import org.pdks.security.action.UserHome;
 import org.pdks.security.entity.User;
 
@@ -446,7 +447,8 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 
 				}
 
-			}
+			} else if (sirketId == null)
+				departmanDegisti(true);
 			linkAdres = null;
 			if (!authenticatedUser.isAdmin() && !authenticatedUser.isIK() && !authenticatedUser.isYoneticiKontratli()) {
 				sirket = authenticatedUser.getPdksPersonel().getSirket();
@@ -552,7 +554,6 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 
 		if (degisti) {
 			setSeciliDenklestirmeAy();
-			sirketId = null;
 			if (tesisList != null)
 				tesisList.clear();
 			if (gorevYeriList != null)
@@ -602,6 +603,7 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 	}
 
 	public void fillSirketList() {
+		Long onceki = sirketId;
 		if (adminRole)
 			fillDepartmanList();
 		List<SelectItem> sirketler = null;
@@ -627,7 +629,7 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 			sirketler = fazlaMesaiOrtakIslemler.getFazlaMesaiSirketList(depId, denklestirmeAy != null ? new AylikPuantaj(denklestirmeAy) : null, true, session);
 			sirket = null;
 			if (!sirketler.isEmpty()) {
-				Long onceki = sirketId;
+
 				if (sirketler.size() == 1) {
 					sirketId = (Long) sirketler.get(0).getValue();
 				} else if (onceki != null) {
@@ -1161,12 +1163,29 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 					calismaPlaniDenklestir(denklestirmeDonemi, puantajDenklestirmeList);
 				Date sonPersonelCikisZamani = null;
 				boolean sirketFazlaMesaiOde = sirket.getFazlaMesaiOde() != null && sirket.getFazlaMesaiOde();
-
+				Double radyolojiFazlaMesaiMaxSure = null;
 				for (Iterator iterator1 = puantajDenklestirmeList.iterator(); iterator1.hasNext();) {
 					AylikPuantaj puantaj = (AylikPuantaj) iterator1.next();
-
+					double mesaiMaxSure = fazlaMesaiMaxSure;
 					PersonelDenklestirme personelDenklestirme = puantaj.getPersonelDenklestirme();
+					Double radyolojiKatsayi = null;
+					if (puantaj.getKatSayiMap() != null) {
 
+						if (puantaj.getKatSayiMap().containsKey(KatSayiTipi.RADYOLOJI_MAX_GUN.value()))
+							radyolojiKatsayi = puantaj.getKatSayiMap().get(KatSayiTipi.RADYOLOJI_MAX_GUN.value()).doubleValue();
+					}
+					if (personelDenklestirme.isSuaDurumu()) {
+						if (radyolojiFazlaMesaiMaxSure == null) {
+							radyolojiFazlaMesaiMaxSure = denklestirmeAy.getRadyolojiFazlaMesaiMaxSure();
+							if (radyolojiFazlaMesaiMaxSure == null)
+								radyolojiFazlaMesaiMaxSure = fazlaMesaiMaxSure;
+						}
+						if (radyolojiKatsayi == null)
+							mesaiMaxSure = radyolojiFazlaMesaiMaxSure;
+						else
+							mesaiMaxSure = radyolojiKatsayi;
+					}
+					puantaj.setFazlaMesaiMaxSure(mesaiMaxSure);
 					puantaj.setDonemBitti(Boolean.TRUE);
 					puantaj.setAyrikHareketVar(false);
 					puantaj.setFiiliHesapla(true);
@@ -1229,8 +1248,11 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 							if (!gebemi && vardiyaGun.getVardiya() != null)
 								gebemi = vardiyaGun.getVardiya().isGebelikMi();
 							if (calisiyor) {
+								// Double d = personelDenklestirme.isSuaDurumu() ? vardiyaGun.getRadyolojiMaxCalismaSaat() : null;
+								// if (d != null)
+								// mesaiMaxSure = d.doubleValue();
 								Double sure = vardiyaGun.getCalismaSuresi();
-								ucretiOdenenMesaiSure += vardiyaGun.isFcsDahil() && sure != null && sure.doubleValue() > fazlaMesaiMaxSure + vardiyaGun.getResmiTatilSure() ? sure.doubleValue() - fazlaMesaiMaxSure - vardiyaGun.getResmiTatilSure() : 0.0d;
+								ucretiOdenenMesaiSure += vardiyaGun.isFcsDahil() && sure != null && sure.doubleValue() > mesaiMaxSure + vardiyaGun.getResmiTatilSure() ? sure.doubleValue() - mesaiMaxSure - vardiyaGun.getResmiTatilSure() : 0.0d;
 								if (vardiyaGun.getHaftaCalismaSuresi() > 0) {
 									if (!haftaTatilVar)
 										haftaTatilVar = Boolean.TRUE;
@@ -1671,7 +1693,7 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 					double devredenSure = ap.getDevredenSure();
 					if (!devredenMesaiKod)
 						devredenMesaiKod = gecenAyFazlaMesai != 0.0d;
-					if (!!devredenBakiyeKod)
+					if (!devredenBakiyeKod)
 						devredenBakiyeKod = devredenSure != 0.0d;
 				}
 			}
@@ -1695,6 +1717,7 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 		// List<PersonelDenklestirme> list = pdksEntityController.getObjectBySQLList(sb, fields, PersonelDenklestirme.class);
 		List<PersonelDenklestirme> list = pdksEntityController.getSQLParamList(idList, sb, fieldName, fields, PersonelDenklestirme.class, session);
+		ortakIslemler.setPersonelDenklestirmeDevir(null, list, session);
 		for (Iterator iterator = list.iterator(); iterator.hasNext();) {
 			PersonelDenklestirme personelDenklestirme = (PersonelDenklestirme) iterator.next();
 			if (!personelDenklestirme.isDenklestirmeDurum())
@@ -1928,7 +1951,7 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 			if (fazlaMesaiVar) {
 				if (yasalFazlaCalismaAsanSaat) {
 					cell = ExcelUtil.getCell(sheet, row, col++, header);
-					ExcelUtil.baslikCell(cell, anchor, helper, drawing, ortakIslemler.yasalFazlaCalismaAsanSaatKod(), "Yasal Çalışmayı Aşan Mesai : Saati aşan çalışma toplam miktarı");
+					ExcelUtil.baslikCell(cell, anchor, helper, drawing, ortakIslemler.yasalFazlaCalismaAsanSaatKod(), "Yasal Çalışmayı Aşan Mesai Toplam Miktarı");
 				}
 			}
 			if (gerceklesenMesaiKod) {
@@ -2198,8 +2221,14 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 						}
 
 						cell.setCellValue(aciklama);
-						if (!titleVardiya.equals(""))
+						if (!titleVardiya.equals("")) {
+							double rtSure = vardiyaGun.getResmiTatilToplamSure(), htSure = vardiyaGun.getHaftaCalismaSuresi();
+							if (htSure > 0.0d)
+								titleVardiya += " HT : " + authenticatedUser.sayiFormatliGoster(htSure);
+							if (rtSure > 0.0d)
+								titleVardiya += " RT : " + authenticatedUser.sayiFormatliGoster(rtSure);
 							ExcelUtil.setCellComment(cell, anchor, helper, drawing, titleVardiya);
+						}
 
 					}
 					if (denklestirmeYap) {
@@ -2216,9 +2245,11 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 						}
 						if (fazlaMesaiVar) {
 							if (yasalFazlaCalismaAsanSaat) {
-								if (aylikPuantaj.getUcretiOdenenMesaiSure() > 0)
-									setCell(sheet, row, col++, styleTutar, aylikPuantaj.getUcretiOdenenMesaiSure());
-								else
+								if (aylikPuantaj.getUcretiOdenenMesaiSure() > 0) {
+									Cell ucretiOdenenMesaiSure = setCell(sheet, row, col++, styleTutar, aylikPuantaj.getUcretiOdenenMesaiSure());
+									ExcelUtil.setCellComment(ucretiOdenenMesaiSure, anchor, helper, drawing, authenticatedUser.sayiFormatliGoster(aylikPuantaj.getFazlaMesaiMaxSure() + " saat fazlası ödenir."));
+								} else
+
 									ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue("");
 							}
 
@@ -2267,6 +2298,13 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 								if (aylikPuantaj.getDevredenSure() != null && aylikPuantaj.getDevredenSure().doubleValue() != 0.0d && commentGuncelleyen == null) {
 									if (olustur)
 										commentGuncelleyen = fazlaMesaiOrtakIslemler.getCommentGuncelleyen(anchor, helper, drawing, personelDenklestirme);
+									if (commentGuncelleyen != null)
+										devredenSureCell.setCellComment(commentGuncelleyen);
+								}
+								if (aylikPuantaj.getEksiBakiyeSuresi() != null && aylikPuantaj.getEksiBakiyeSuresi().doubleValue() != 0 && personelDenklestirme.getDurum()) {
+									devredenSureCell.setCellValue("X");
+									devredenSureCell.setCellStyle(styleCenter);
+									commentGuncelleyen = ExcelUtil.getComment(anchor, helper, drawing, "Denkleştirilmeyen Bakiye(Saat) : " + authenticatedUser.sayiFormatliGoster(aylikPuantaj.getEksiBakiyeSuresi()));
 									if (commentGuncelleyen != null)
 										devredenSureCell.setCellComment(commentGuncelleyen);
 								}

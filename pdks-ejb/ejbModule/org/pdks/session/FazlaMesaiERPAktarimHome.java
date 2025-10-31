@@ -277,6 +277,8 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 						// fields.put("denklestirmeAy", denklestirmeAy.getId());
 						fields.put("pId", personelIdler);
 						TreeMap<String, PersonelDenklestirme> bakiyeMap = ortakIslemler.getDataByIdMap(sb, fields, PersonelDenklestirme.TABLE_NAME, PersonelDenklestirme.class);
+						ortakIslemler.setPersonelDenklestirmeDevir(null, new ArrayList<PersonelDenklestirme>(bakiyeMap.values()), session);
+
 						List<HashMap<Integer, org.apache.poi.ss.usermodel.Cell>> hucreler = new ArrayList<HashMap<Integer, org.apache.poi.ss.usermodel.Cell>>(hucreMap.values());
 						for (Iterator iterator = hucreler.iterator(); iterator.hasNext();) {
 							HashMap<Integer, org.apache.poi.ss.usermodel.Cell> veriMap = (HashMap<Integer, org.apache.poi.ss.usermodel.Cell>) iterator.next();
@@ -510,9 +512,10 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 				erpMesaiList.add(denklestirme.getId());
 		}
 		if (!erpMesaiList.isEmpty()) {
-			PdksSoapVeriAktar service = ortakIslemler.getPdksSoapVeriAktar();
+
 			try {
-				GetFazlaMesaiListResponse.Return rtn = service.getFazlaMesaiList(erpMesaiList);
+				PdksSoapVeriAktar service = ortakIslemler.getPdksSoapVeriAktar();
+				GetFazlaMesaiListResponse.Return rtn = service != null ? service.getFazlaMesaiList(erpMesaiList) : null;
 				if (rtn != null && rtn.getEntry().size() == 3) {
 					TreeMap<String, Object> map = new TreeMap<String, Object>();
 					List<GetFazlaMesaiListResponse.Return.Entry> list = rtn.getEntry();
@@ -1111,9 +1114,7 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			personelDenklestirmeList = ortakIslemler.getDataByIdList(sb, fields, PersonelDenklestirme.TABLE_NAME, PersonelDenklestirme.class);
-			// if (!ikSirket)
-			// personelDenklestirmeList = (ArrayList<pdksPersonelDenklestirme>) pdksUtil.sortObjectStringAlanList(personelDenklestirmeList, "getKontratliSortKey", null);
-
+ 			ortakIslemler.setPersonelDenklestirmeDevir(null, personelDenklestirmeList, session);
 			sb = null;
 			if (denklestirmeAyDurum) {
 				String fieldName = "p";

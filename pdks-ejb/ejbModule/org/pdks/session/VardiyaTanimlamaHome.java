@@ -28,12 +28,15 @@ import org.jboss.seam.framework.EntityHome;
 import org.pdks.entity.CalismaModeli;
 import org.pdks.entity.CalismaModeliAy;
 import org.pdks.entity.DenklestirmeAy;
+import org.pdks.entity.Departman;
 import org.pdks.entity.Dosya;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
 import org.pdks.entity.PersonelDenklestirmeDinamikAlan;
+import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.VardiyaGun;
+import org.pdks.enums.DenklestirmeTipi;
 import org.pdks.enums.KesintiTipi;
 import org.pdks.security.entity.User;
 import org.richfaces.event.UploadEvent;
@@ -70,7 +73,7 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 	private List<DenklestirmeAy> aylikList = null;
 	private String maxYil = null, vardiyaTanimKodu = null;
 	private int yilEdit, yilModal, yilSelect, yil;
-	private boolean aktif;
+	private boolean aktif, denklestirmeTipiVar, taseronVar;
 	private double sure;
 	private Dosya devredenBakiyeDosya = new Dosya();
 	private List<PersonelDenklestirme> personelDenklestirmeler;
@@ -164,8 +167,10 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 		for (String key : modelMap.keySet()) {
 			CalismaModeliAy cma = modelMap.get(key);
 			CalismaModeli cm = modelMap.get(key).getCalismaModeli();
-			if (cma.getDurum() && !cmMap.containsKey(cm.getId()))
+
+			if (cm != null && cma.getDurum() && !cmMap.containsKey(cm.getId()))
 				cmMap.put(cm.getId(), cm);
+
 		}
 
 		if (personelDenklestirmeler != null)
@@ -242,7 +247,27 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 	public void sayfaGirisAction() {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+
 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		denklestirmeTipiVar = false;
+		taseronVar = false;
+		if (authenticatedUser.isAdmin()) {
+			denklestirmeTipiVar = ortakIslemler.getParameterKeyHasStringValue("denklestirmeTipi");
+			if (denklestirmeTipiVar) {
+				HashMap parametreMap = new HashMap();
+				StringBuffer sb = new StringBuffer();
+				sb.append("select S.* from " + Sirket.TABLE_NAME + " S " + PdksEntityController.getSelectLOCK());
+				sb.append(" inner join " + Departman.TABLE_NAME + " D " + PdksEntityController.getJoinLOCK() + " on D." + Departman.COLUMN_NAME_ID + " = S." + Sirket.COLUMN_NAME_DEPARTMAN);
+				sb.append(" and D." + Departman.COLUMN_NAME_ADMIN_DURUM + " <> 1 ");
+				sb.append(" where S." + Sirket.COLUMN_NAME_PDKS + " = 1");
+				if (session != null)
+					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+				List sirketList = pdksEntityController.getObjectBySQLList(sb, parametreMap, Sirket.class);
+				taseronVar = sirketList.isEmpty() == false;
+				sirketList = null;
+			}
+		}
+
 		Calendar calendar = Calendar.getInstance();
 		yil = calendar.get(Calendar.YEAR);
 		calendar.add(Calendar.MONTH, 1);
@@ -398,6 +423,7 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 						TreeMap<String, PersonelDenklestirme> bakiyeMap = new TreeMap<String, PersonelDenklestirme>();
 						List<PersonelDenklestirme> list = pdksEntityController.getSQLParamList(personelIdler, sb, fieldName, fields, PersonelDenklestirme.class, session);
+						ortakIslemler.setPersonelDenklestirmeDevir(null, list, session);
 						for (PersonelDenklestirme pd : list)
 							bakiyeMap.put(pd.getSicilNo(), pd);
 						bakiySonrakiMap = new TreeMap<String, PersonelDenklestirme>();
@@ -409,6 +435,7 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 							if (session != null)
 								fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 							list = pdksEntityController.getSQLParamList(personelIdler, sb, fieldName, fields, PersonelDenklestirme.class, session);
+							ortakIslemler.setPersonelDenklestirmeDevir(null, list, session);
 							for (PersonelDenklestirme pd : list)
 								bakiySonrakiMap.put(pd.getSicilNo(), pd);
 						}
@@ -571,7 +598,8 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 						if (session != null)
 							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 						TreeMap<String, PersonelDenklestirme> bakiyeMap = ortakIslemler.getDataByIdMap(sb, fields, PersonelDenklestirme.TABLE_NAME, PersonelDenklestirme.class);
-
+						if (bakiyeMap != null && bakiyeMap.isEmpty() == false)
+							ortakIslemler.setPersonelDenklestirmeDevir(null, new ArrayList<PersonelDenklestirme>(bakiyeMap.values()), session);
 						List<HashMap<Integer, org.apache.poi.ss.usermodel.Cell>> hucreler = new ArrayList<HashMap<Integer, org.apache.poi.ss.usermodel.Cell>>(hucreMap.values());
 						boolean flush = false;
 						for (Iterator iterator = hucreler.iterator(); iterator.hasNext();) {
@@ -674,11 +702,9 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 			String sicilNo = personelDenklestirme.getSicilNo();
 			PersonelDenklestirme personelDenklestirmeDB = personelDenklestirme.getPersonelDenklestirmeDB() != null ? personelDenklestirme.getPersonelDenklestirmeDB() : personelDenklestirme;
 			if (personelDenklestirmeDB.isOnaylandi() == false || personelDenklestirmeDB.getDurum().equals(Boolean.FALSE) || personelDenklestirmeDB.getDevredenSure() == null || !personelDenklestirmeDB.getDevredenSure().equals(personelDenklestirme.getDevredenSure())) {
-				Personel pdksPersonel = personelDenklestirmeDB.getPersonel();
 				personelDenklestirmeDB.setDevredenSure(personelDenklestirme.getDevredenSure());
 				personelDenklestirmeDB.setOnaylandi(Boolean.TRUE);
 				personelDenklestirmeDB.setDenklestirme(Boolean.TRUE);
-				personelDenklestirmeDB.setDenklestirme(pdksPersonel.getGebeMi() == null || !pdksPersonel.getGebeMi().booleanValue());
 				personelDenklestirmeDB.setDurum(Boolean.TRUE);
 				if (personelDenklestirmeDB.getId() != null) {
 					personelDenklestirmeDB.setGuncellemeTarihi(new Date());
@@ -742,12 +768,41 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 		denklestirmeDevredilenAylar = ortakIslemler.getParameterKeyHasStringValue("denklestirmeDevredilenAylar");
 		Tanim bakiyeSifirla = ortakIslemler.getSQLTanimAktifByTipKodu(Tanim.TIPI_PERSONEL_DENKLESTIRME_DINAMIK_DURUM, PersonelDenklestirmeDinamikAlan.TIPI_BAKIYE_SIFIRLA, session);
 		bakiyeSifirlaDurum = bakiyeSifirla != null && bakiyeSifirla.getDurum();
+		denklestirmeTipiVar = false;
+		taseronVar = false;
 		if (denklestirmeAylar != null && (denklestirmeDevredilenAylar == false || bakiyeSifirlaDurum == false)) {
+
+			DenklestirmeTipi dt = null, taseronDt = null;
+			if (authenticatedUser.isAdmin()) {
+				dt = DenklestirmeTipi.GECEN_AY_ODE;
+				taseronDt = DenklestirmeTipi.GECEN_AY_ODE;
+				denklestirmeTipiVar = ortakIslemler.getParameterKeyHasStringValue("denklestirmeTipi");
+
+			}
+
 			for (DenklestirmeAy dm : denklestirmeAylar) {
+				if (dt != null && denklestirmeTipiVar == false)
+					denklestirmeTipiVar = dm.getTipi() != null && dt.equals(dm.getTipi()) == false;
+				if (taseronDt != null && taseronVar == false)
+					taseronVar = dm.getTaseronTipi() != null && taseronDt.equals(dm.getTaseronTipi());
+
 				if (!denklestirmeDevredilenAylar)
 					denklestirmeDevredilenAylar = dm.getDenklestirmeDevret() != null && dm.getDenklestirmeDevret();
 				if (!bakiyeSifirlaDurum)
 					bakiyeSifirlaDurum = dm.getBakiyeSifirlaDurum() != null && dm.getBakiyeSifirlaDurum();
+			}
+			if (denklestirmeTipiVar && taseronVar == false) {
+				HashMap parametreMap = new HashMap();
+				StringBuffer sb = new StringBuffer();
+				sb.append("select S.* from " + Sirket.TABLE_NAME + " S " + PdksEntityController.getSelectLOCK());
+				sb.append(" inner join " + Departman.TABLE_NAME + " D " + PdksEntityController.getJoinLOCK() + " on D." + Departman.COLUMN_NAME_ID + " = S." + Sirket.COLUMN_NAME_DEPARTMAN);
+				sb.append(" and D." + Departman.COLUMN_NAME_ADMIN_DURUM + " <> 1 ");
+				sb.append(" where S." + Sirket.COLUMN_NAME_PDKS + " = 1");
+				if (session != null)
+					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
+				List sirketList = pdksEntityController.getObjectBySQLList(sb, parametreMap, Sirket.class);
+				taseronVar = sirketList.isEmpty() == false;
+				sirketList = null;
 			}
 		}
 		return "";
@@ -1007,6 +1062,22 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 
 	public void setBakiyeSifirlaDurum(Boolean bakiyeSifirlaDurum) {
 		this.bakiyeSifirlaDurum = bakiyeSifirlaDurum;
+	}
+
+	public boolean isDenklestirmeTipiVar() {
+		return denklestirmeTipiVar;
+	}
+
+	public void setDenklestirmeTipiVar(boolean denklestirmeTipiVar) {
+		this.denklestirmeTipiVar = denklestirmeTipiVar;
+	}
+
+	public boolean isTaseronVar() {
+		return taseronVar;
+	}
+
+	public void setTaseronVar(boolean taseronVar) {
+		this.taseronVar = taseronVar;
 	}
 
 }

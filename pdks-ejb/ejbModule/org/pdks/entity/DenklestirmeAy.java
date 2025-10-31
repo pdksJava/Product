@@ -13,6 +13,7 @@ import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
+import org.pdks.enums.DenklestirmeTipi;
 import org.pdks.enums.KesintiTipi;
 import org.pdks.security.entity.User;
 import org.pdks.session.PdksUtil;
@@ -36,10 +37,15 @@ public class DenklestirmeAy extends BaseObject {
 	public static final String COLUMN_NAME_GUN_MAX_CALISMA_SURESI = "GUN_MAX_CALISMA_SURESI";
 	public static final String COLUMN_NAME_BAKIYE_SIFIRLA = "BAKIYE_SIFIRLA";
 	public static final String COLUMN_NAME_DENKLESTIRME_DEVRET = "DENKLESTIRME_DEVRET";
+	public static final String COLUMN_NAME_RADYOLOJI_GUN_MAX_SURESI = "RADYOLOJI_GUN_MAX_SURESI";
+	public static final String COLUMN_NAME_DENKLESTIRME_TIPI = "DENKLESTIRME_TIPI";
+	public static final String COLUMN_NAME_TASERON_DENKLESTIRME_TIPI = "TASERON_DENKLESTIRME_TIPI";
 
 	private int ay, yil;
+	private Integer denklestirmeTipi, taseronDenklestirmeTipi;
+	private DenklestirmeTipi tipi, taseronTipi;
 	private double sure = 0, toplamIzinSure = 0;
-	private Double yemekMolasiYuzdesi, fazlaMesaiMaxSure;
+	private Double yemekMolasiYuzdesi, fazlaMesaiMaxSure, radyolojiFazlaMesaiMaxSure;
 
 	private Date otomatikOnayIKTarih, otomatikOnayIKBaslangicTarih, basTarih, bitTarih;
 	private String ayAdi = "", trClass;
@@ -75,6 +81,26 @@ public class DenklestirmeAy extends BaseObject {
 		this.yil = value;
 		if (value >= PdksUtil.getSistemBaslangicYili())
 			donemGuncelle();
+	}
+
+	@Column(name = COLUMN_NAME_DENKLESTIRME_TIPI)
+	public Integer getDenklestirmeTipi() {
+		return denklestirmeTipi;
+	}
+
+	public void setDenklestirmeTipi(Integer value) {
+		this.tipi = value != null ? DenklestirmeTipi.fromValue(value) : null;
+		this.denklestirmeTipi = value;
+	}
+
+	@Column(name = COLUMN_NAME_TASERON_DENKLESTIRME_TIPI)
+	public Integer getTaseronDenklestirmeTipi() {
+		return taseronDenklestirmeTipi;
+	}
+
+	public void setTaseronDenklestirmeTipi(Integer value) {
+		this.taseronTipi = value != null ? DenklestirmeTipi.fromValue(value) : null;
+		this.taseronDenklestirmeTipi = value;
 	}
 
 	@Temporal(TemporalType.DATE)
@@ -113,6 +139,15 @@ public class DenklestirmeAy extends BaseObject {
 
 	public void setFazlaMesaiMaxSure(Double fazlaMesaiMaxSure) {
 		this.fazlaMesaiMaxSure = fazlaMesaiMaxSure;
+	}
+
+	@Column(name = COLUMN_NAME_RADYOLOJI_GUN_MAX_SURESI)
+	public Double getRadyolojiFazlaMesaiMaxSure() {
+		return radyolojiFazlaMesaiMaxSure;
+	}
+
+	public void setRadyolojiFazlaMesaiMaxSure(Double radyolojiFazlaMesaiMaxSure) {
+		this.radyolojiFazlaMesaiMaxSure = radyolojiFazlaMesaiMaxSure;
 	}
 
 	@Column(name = "SURE")
@@ -334,6 +369,18 @@ public class DenklestirmeAy extends BaseObject {
 	}
 
 	@Transient
+	public boolean isGecenAyOde() {
+		boolean islemDurum = tipi == null || tipi.value().equals(DenklestirmeTipi.GECEN_AY_ODE.value());
+		return islemDurum;
+	}
+
+	@Transient
+	public boolean isTamamiOde() {
+		boolean islemDurum = tipi != null && tipi.value().equals(DenklestirmeTipi.TAMAMI_ODE.value());
+		return islemDurum;
+	}
+
+	@Transient
 	public Date getBitTarih() {
 		if (bitTarih == null)
 			donemGuncelle();
@@ -346,6 +393,53 @@ public class DenklestirmeAy extends BaseObject {
 
 	public void entityRefresh() {
 
+	}
+
+	/**
+	 * @param value
+	 * @return
+	 */
+	@Transient
+	public String getDenklestirmeTipiAciklama(Integer value) {
+		DenklestirmeTipi denklestirmeTipi = DenklestirmeTipi.fromValue(value);
+		if (denklestirmeTipi == null)
+			denklestirmeTipi = DenklestirmeTipi.GECEN_AY_ODE;
+		String str = "";
+		if (denklestirmeTipi.equals(DenklestirmeTipi.GECEN_AY_ODE))
+			str = "Geçen Ay Öde";
+		else if (denklestirmeTipi.equals(DenklestirmeTipi.TAMAMI_ODE))
+			str = "Tamamı Öde";
+		return str;
+	}
+
+	@Transient
+	public String getDenklestirmeTipiAciklama() {
+		String str = getDenklestirmeTipiAciklama(denklestirmeTipi);
+		return str;
+	}
+
+	@Transient
+	public String getTaseronDenklestirmeTipiAciklama() {
+		String str = getDenklestirmeTipiAciklama(taseronDenklestirmeTipi);
+		return str;
+	}
+
+	@Transient
+	public DenklestirmeTipi getTipi() {
+		return tipi;
+	}
+
+	public void setTipi(DenklestirmeTipi tipi) {
+		this.tipi = tipi;
+	}
+
+	@Transient
+	public DenklestirmeTipi getTaseronTipi() {
+		return taseronTipi;
+	}
+
+	public void setTaseronTipi(DenklestirmeTipi taseronTipi) {
+		this.taseronTipi = taseronTipi;
 	}
 
 }

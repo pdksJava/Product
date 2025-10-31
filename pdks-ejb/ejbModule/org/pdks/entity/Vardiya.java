@@ -3,6 +3,7 @@ package org.pdks.entity;
 import java.math.BigDecimal;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.persistence.CascadeType;
@@ -35,6 +36,7 @@ public class Vardiya extends BaseObject {
 
 	public static final String COLUMN_NAME_SUA = "SUA";
 	public static final String COLUMN_NAME_GEBELIK = "GEBELIK";
+	public static final String COLUMN_NAME_SUT_IZNI = "SUT_IZNI";
 	public static final String COLUMN_NAME_ICAP = "ICAP_VARDIYA";
 	public static final String COLUMN_NAME_KISA_ADI = "KISA_ADI";
 	public static final String COLUMN_NAME_GENEL = "GENEL";
@@ -52,7 +54,7 @@ public class Vardiya extends BaseObject {
 	public static final char TIPI_IZIN = 'I';
 	public static final char TIPI_HASTALIK_RAPOR = 'S';
 
-	public static final String GEBE_KEY = "g", SUA_KEY = "s", ICAP_KEY = "i", FMI_KEY = "f";
+	public static final String GEBE_KEY = "g", SUA_KEY = "s", ICAP_KEY = "i", SUT_IZNI_KEY = "e", FMI_KEY = "f";
 
 	public static Date vardiyaKontrolTarih, vardiyaKontrolTarih2, vardiyaKontrolTarih3, vardiyaAySonuKontrolTarih;
 	private Long sirketId, calismaSekliId, departmanId;
@@ -68,19 +70,20 @@ public class Vardiya extends BaseObject {
 	private Integer yemekSuresi, cikisMolaSaat = 0;
 	private Departman departman;
 	private List<Integer> gunlukList;
-	private Boolean aksamVardiya = Boolean.FALSE, fcsHaric = Boolean.FALSE, icapVardiya = Boolean.FALSE, gebelik = Boolean.FALSE, kopya = Boolean.FALSE, genel = Boolean.FALSE, isKur = Boolean.FALSE;
+	private Boolean aksamVardiya = Boolean.FALSE, fcsHaric = Boolean.FALSE, icapVardiya = Boolean.FALSE, sutIzni = Boolean.FALSE, gebelik = Boolean.FALSE, kopya = Boolean.FALSE, genel = Boolean.FALSE, isKur = Boolean.FALSE;
 	private String tipi;
 	private VardiyaGun islemVardiyaGun;
 	private char vardiyaTipi;
 	private Date vardiyaBasZaman, vardiyaBitZaman, vardiyaTarih, arifeBaslangicTarihi;
 	private Date vardiyaTelorans1BasZaman, vardiyaTelorans2BasZaman, vardiyaTelorans1BitZaman, vardiyaTelorans2BitZaman;
 	private Date vardiyaFazlaMesaiBasZaman, vardiyaFazlaMesaiBitZaman;
-	private boolean farkliGun = Boolean.FALSE, ayinSonGunDurum = Boolean.FALSE;
-
+	private boolean farkliGun = Boolean.FALSE, ayinSonGunDurum = Boolean.FALSE, arifeYarimGun = Boolean.FALSE;
+	private HashMap<Integer, BigDecimal> katSayiMap;
 	private Boolean mesaiOde, sua = Boolean.FALSE, arifeCalismaSaatYokCGSDus;
 	private Vardiya sonrakiVardiya, oncekiVardiya;
 	private CalismaSekli calismaSekli;
 	private List<YemekIzin> yemekIzinList;
+	private Boolean guncellemeDurum;
 	private Integer version = 0;
 
 	@Column(name = "VERSION")
@@ -178,6 +181,15 @@ public class Vardiya extends BaseObject {
 		this.gebelik = gebelik;
 	}
 
+	@Column(name = COLUMN_NAME_SUT_IZNI)
+	public Boolean getSutIzni() {
+		return sutIzni;
+	}
+
+	public void setSutIzni(Boolean sutIzni) {
+		this.sutIzni = sutIzni;
+	}
+
 	@Column(name = COLUMN_NAME_SUA)
 	public Boolean getSua() {
 		return sua;
@@ -210,7 +222,11 @@ public class Vardiya extends BaseObject {
 	@Column(name = "YEMEK_SURESI")
 	@Min(value = 0, message = "Sıfırdan küçük değer giremezsiniz!")
 	public Integer getYemekSuresi() {
-		return yemekSuresi;
+		if (yemekSuresi == null)
+			yemekSuresi = 0;
+		BigDecimal value = getKatSayi(KatSayiTipi.VARDIYA_MOLA.value());
+		return value != null ? value.intValue() : yemekSuresi;
+
 	}
 
 	public void setYemekSuresi(Integer yemekSuresi) {
@@ -1526,7 +1542,7 @@ public class Vardiya extends BaseObject {
 			}
 
 			double vardiyaCalismaDakika = PdksUtil.getDakikaFarkiHesapla(bitZaman, basZaman).doubleValue();
-			sure = (vardiyaCalismaDakika - ((double) (yemekSuresi != null ? yemekSuresi.doubleValue() : 0d))) / 60;
+			sure = (vardiyaCalismaDakika - ((double) (getYemekSuresi() != null ? getYemekSuresi().doubleValue() : 0d))) / 60;
 
 		}
 		return sure;
@@ -1544,7 +1560,11 @@ public class Vardiya extends BaseObject {
 	@Column(name = "GIRISERKENTOLERANSDAKIKA")
 	public short getGirisErkenToleransDakika() {
 		BigDecimal value = getKatSayi(KatSayiTipi.ERKEN_GIRIS_TIPI.value());
-		return value != null ? value.shortValue() : girisErkenToleransDakika;
+		short s = value != null ? value.shortValue() : girisErkenToleransDakika;
+		if (value == null)
+			logger.debug(KatSayiTipi.ERKEN_GIRIS_TIPI + " " + s);
+		return s;
+
 	}
 
 	public void setGirisErkenToleransDakika(short girisErkenToleransDakika) {
@@ -1554,7 +1574,11 @@ public class Vardiya extends BaseObject {
 	@Column(name = "GIRISGECIKMETOLERANSDAKIKA")
 	public short getGirisGecikmeToleransDakika() {
 		BigDecimal value = getKatSayi(KatSayiTipi.GEC_GIRIS_TIPI.value());
-		return value != null ? value.shortValue() : girisGecikmeToleransDakika;
+		short s = value != null ? value.shortValue() : girisGecikmeToleransDakika;
+		if (value != null)
+			logger.debug(KatSayiTipi.GEC_GIRIS_TIPI + " " + s);
+		return s;
+
 	}
 
 	public void setGirisGecikmeToleransDakika(short girisGecikmeToleransDakika) {
@@ -1563,8 +1587,11 @@ public class Vardiya extends BaseObject {
 
 	@Column(name = "CIKISERKENTOLERANSDAKIKA")
 	public short getCikisErkenToleransDakika() {
-		BigDecimal value = getKatSayi(KatSayiTipi.ERKEN_GIRIS_TIPI.value());
-		return value != null ? value.shortValue() : cikisErkenToleransDakika;
+		BigDecimal value = getKatSayi(KatSayiTipi.ERKEN_CIKIS_TIPI.value());
+		short s = value != null ? value.shortValue() : cikisErkenToleransDakika;
+		if (value != null)
+			logger.debug(KatSayiTipi.ERKEN_CIKIS_TIPI + " " + s);
+		return s;
 	}
 
 	public void setCikisErkenToleransDakika(short cikisErkenToleransDakika) {
@@ -1574,7 +1601,10 @@ public class Vardiya extends BaseObject {
 	@Column(name = "CIKISGECIKMETOLERANSDAKIKA")
 	public short getCikisGecikmeToleransDakika() {
 		BigDecimal value = getKatSayi(KatSayiTipi.GEC_CIKIS_TIPI.value());
-		return value != null ? value.shortValue() : cikisGecikmeToleransDakika;
+		short s = value != null ? value.shortValue() : cikisGecikmeToleransDakika;
+		if (value != null)
+			logger.debug(KatSayiTipi.GEC_CIKIS_TIPI + " " + s);
+		return s;
 	}
 
 	public void setCikisGecikmeToleransDakika(short cikisGecikmeToleransDakika) {
@@ -1643,7 +1673,9 @@ public class Vardiya extends BaseObject {
 				String pattern = PdksUtil.getSaatFormat();
 				Vardiya tmpVardiya = tmp.getIslemVardiya();
 				String ek = "";
-				if (tmpVardiya.isSuaMi())
+				if (tmpVardiya.isSutIzniMi())
+					ek = " - Süt İzni";
+				else if (tmpVardiya.isSuaMi())
 					ek = " - Şua";
 				else if (tmpVardiya.isGebelikMi())
 					ek = " - Gebe";
@@ -1667,6 +1699,11 @@ public class Vardiya extends BaseObject {
 	}
 
 	@Transient
+	public boolean isSutIzniMi() {
+		return sutIzni != null && sutIzni.booleanValue();
+	}
+
+	@Transient
 	public String getKisaAdiSort() {
 		String kod = "20";
 		if (genel) {
@@ -1685,6 +1722,25 @@ public class Vardiya extends BaseObject {
 		String ozelAdi = vg.getVardiyaAdi(this);
 		vg = null;
 		return ozelAdi;
+	}
+
+	@Transient
+	public Boolean getGuncellemeDurum() {
+		if (guncellemeDurum == null) {
+			guncellemeDurum = this.getId() == null;
+			if (guncellemeDurum == false) {
+				Date bugun = new Date();
+				String pattern = "yyyyMM";
+				String bugunDeger = PdksUtil.convertToDateString(bugun, pattern);
+				String olusturmaDeger = PdksUtil.convertToDateString(this.getOlusturmaTarihi() != null ? this.getOlusturmaTarihi() : bugun, pattern);
+				guncellemeDurum = bugunDeger.equals(olusturmaDeger);
+			}
+		}
+		return guncellemeDurum;
+	}
+
+	public void setGuncellemeDurum(Boolean guncellemeDurum) {
+		this.guncellemeDurum = guncellemeDurum;
 	}
 
 	@Transient
@@ -1843,8 +1899,11 @@ public class Vardiya extends BaseObject {
 	public BigDecimal getKatSayi(Integer tipi) {
 		BigDecimal katSayi = null;
 		try {
-			if (kopya) {
-				if (tipi != null && islemVardiyaGun != null && islemVardiyaGun.getKatSayiMap() != null) {
+			if (kopya && tipi != null) {
+				if (this.getKatSayiMap() != null) {
+					if (this.getKatSayiMap().containsKey(tipi))
+						katSayi = this.getKatSayiMap().get(tipi);
+				} else if (islemVardiyaGun != null && islemVardiyaGun.getKatSayiMap() != null) {
 					if (islemVardiyaGun.getKatSayiMap().containsKey(tipi))
 						katSayi = islemVardiyaGun.getKatSayiMap().get(tipi);
 				}
@@ -1918,6 +1977,66 @@ public class Vardiya extends BaseObject {
 	@Transient
 	public boolean isArifeCalismaSaatYokCGSDussun() {
 		return arifeCalismaSaatYokCGSDus != null && arifeCalismaSaatYokCGSDus;
+	}
+
+	@Transient
+	public boolean isArifeYarimGun() {
+		return arifeYarimGun;
+	}
+
+	public void setArifeYarimGun(boolean arifeYarimGun) {
+		this.arifeYarimGun = arifeYarimGun;
+	}
+
+	@Transient
+	public HashMap<Integer, BigDecimal> getKatSayiMap() {
+		return katSayiMap;
+	}
+
+	public void setKatSayiMap(HashMap<Integer, BigDecimal> katSayiMap) {
+		this.kopya = katSayiMap != null;
+		this.katSayiMap = katSayiMap;
+	}
+
+	@Transient
+	public boolean isYemekSuresiKontrolEt() {
+		boolean kontrolDurum = this.getGuncellemeDurum();
+		if (kontrolDurum)
+			kontrolDurum = katSayiMap == null || katSayiMap.containsKey(KatSayiTipi.VARDIYA_MOLA.value()) == false;
+		return kontrolDurum;
+	}
+
+	@Transient
+	public boolean isGirisErkenKontrolEt() {
+		boolean kontrolDurum = this.getGuncellemeDurum();
+		if (kontrolDurum)
+			kontrolDurum = katSayiMap == null || katSayiMap.containsKey(KatSayiTipi.ERKEN_GIRIS_TIPI.value()) == false;
+		return kontrolDurum;
+	}
+
+	@Transient
+	public boolean isGirisGecikmeKontrolEt() {
+		boolean kontrolDurum = this.getGuncellemeDurum();
+		if (kontrolDurum)
+			kontrolDurum = katSayiMap == null || katSayiMap.containsKey(KatSayiTipi.GEC_GIRIS_TIPI.value()) == false;
+		return kontrolDurum;
+	}
+
+	@Transient
+	public boolean isCikisErkenKontrolEt() {
+		boolean kontrolDurum = this.getGuncellemeDurum();
+		if (kontrolDurum)
+			kontrolDurum = katSayiMap == null || katSayiMap.containsKey(KatSayiTipi.ERKEN_CIKIS_TIPI.value()) == false;
+		return kontrolDurum;
+	}
+
+	@Transient
+	public boolean isCikisGecikmeKontrolEt() {
+		boolean kontrolDurum = this.getGuncellemeDurum();
+		if (kontrolDurum)
+			kontrolDurum = katSayiMap == null || katSayiMap.containsKey(KatSayiTipi.GEC_CIKIS_TIPI.value()) == false;
+
+		return kontrolDurum;
 	}
 
 	public void entityRefresh() {

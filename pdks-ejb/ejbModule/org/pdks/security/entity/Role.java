@@ -7,8 +7,6 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -17,7 +15,6 @@ import javax.persistence.UniqueConstraint;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.jboss.seam.annotations.security.management.RoleConditional;
-import org.jboss.seam.annotations.security.management.RoleGroups;
 import org.jboss.seam.annotations.security.management.RoleName;
 import org.pdks.entity.BasePDKSObject;
 import org.pdks.entity.Departman;
@@ -99,9 +96,10 @@ public class Role extends BasePDKSObject implements Serializable {
 		this.departman = departman;
 	}
 
-	@RoleGroups
-	@ManyToMany(targetEntity = Role.class)
-	@JoinTable(name = "ROLEGROUPS", joinColumns = @JoinColumn(name = "ROLEID"), inverseJoinColumns = @JoinColumn(name = "GROUPID"))
+	// @RoleGroups
+	// @ManyToMany(targetEntity = Role.class)
+	// @JoinTable(name = "ROLEGROUPS", joinColumns = @JoinColumn(name = "ROLEID"), inverseJoinColumns = @JoinColumn(name = "GROUPID"))
+	@Transient
 	public Set<Role> getGroups() {
 		return groups;
 	}

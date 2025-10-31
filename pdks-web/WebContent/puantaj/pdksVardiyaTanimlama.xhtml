@@ -101,6 +101,14 @@
 									<f:facet name="header">Denkleştirme Kesinti Yap</f:facet>
 									#{vardiyaView.kesintiAciklama}
 								</rich:column>
+								<rich:column style="text-align: center;width: 50px;" rendered="#{vardiyaTanimlaHome.denklestirmeTipiVar}">
+									<f:facet name="header">Denkleştirme Tipi</f:facet>
+									#{vardiyaView.denklestirmeTipiAciklama}
+								</rich:column>
+								<rich:column style="text-align: center;width: 50px;" rendered="#{vardiyaTanimlaHome.taseronVar}">
+									<f:facet name="header">Taşeron Denkleştirme Tipi</f:facet>
+									#{vardiyaView.taseronDenklestirmeTipiAciklama}
+								</rich:column>
 								<rich:column style="text-align: center;width: 50px;">
 									<f:facet name="header">Aktif</f:facet>
 									#{authenticatedUser.getYesNo(vardiyaView.durum)}
@@ -216,7 +224,29 @@
 										<ui:define name="label">Yemek Molası Net Çalışma Yüzdesi</ui:define>
 										<h:inputText value="#{vardiyaTanimlaHome.denklestirmeAy.yemekMolasiYuzdesi}" disabled="#{vardiyaTanimlaHome.denklestirmeAy.durum == false}" />
 									</s:decorate>
-
+									<s:decorate template="/layout/edit.xhtml" rendered="#{ortakIslemler.getParameterKeyHasStringValue('radyolojiFazlaMesaiMaxSure')}">
+										<ui:define name="label">Radyoloji Günlük  Çalışma Saat Sonrası Öde</ui:define>
+										<h:inputText value="#{vardiyaTanimlaHome.denklestirmeAy.radyolojiFazlaMesaiMaxSure}"
+											disabled="#{vardiyaTanimlaHome.denklestirmeAy.durum == false}" />
+									</s:decorate>
+									<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaTanimlaHome.denklestirmeTipiVar}">
+										<ui:define name="label">Denkleştirme Tipi</ui:define>
+										<h:selectOneMenu value="#{vardiyaTanimlaHome.denklestirmeAy.denklestirmeTipi}" required="true" requiredMessage="Denkleştirme Tipi seçiniz"
+											disabled="#{vardiyaTanimlaHome.denklestirmeAy.durum == false}">
+											<f:selectItem itemLabel="Lütfen seçiniz" />
+											<f:selectItem itemLabel="#{vardiyaTanimlaHome.denklestirmeAy.getDenklestirmeTipiAciklama(1)}" itemValue="1" />
+											<f:selectItem itemLabel="#{vardiyaTanimlaHome.denklestirmeAy.getDenklestirmeTipiAciklama(2)}" itemValue="2" />
+										</h:selectOneMenu>
+									</s:decorate>
+									<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaTanimlaHome.taseronVar}">
+										<ui:define name="label">Taşeron Denkleştirme Tipi</ui:define>
+										<h:selectOneMenu value="#{vardiyaTanimlaHome.denklestirmeAy.taseronDenklestirmeTipi}"
+											disabled="#{vardiyaTanimlaHome.denklestirmeAy.durum == false}">
+											<f:selectItem itemLabel="Lütfen seçiniz" />
+											<f:selectItem itemLabel="#{vardiyaTanimlaHome.denklestirmeAy.getDenklestirmeTipiAciklama(1)}" itemValue="1" />
+											<f:selectItem itemLabel="#{vardiyaTanimlaHome.denklestirmeAy.getDenklestirmeTipiAciklama(2)}" itemValue="2" />
+										</h:selectOneMenu>
+									</s:decorate>
 								</c:if>
 								<c:if test="#{authenticatedUser.admin or (userHome.hasPermission('pdksVardiyaTanimlama','guncelIK'))}">
 									<s:decorate template="/layout/edit.xhtml">
@@ -253,7 +283,7 @@
 										</h:selectBooleanCheckbox>
 									</s:decorate>
 								</c:if>
- 
+
 							</h:panelGrid>
 							<s:decorate template="/layout/edit.xhtml">
 								<ui:define name="label">Aktif</ui:define>

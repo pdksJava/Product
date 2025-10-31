@@ -1004,8 +1004,8 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 											Double sure = vardiyaGun.getCalismaNetSuresi();
 											if (gunMaxCalismaOdenir)
 												ucretiOdenenMesaiSure += sure != null && sure.doubleValue() > vardiyaGun.getYasalMaxSure() ? sure.doubleValue() - vardiyaGun.getYasalMaxSure() : 0.0d;
-											if (vardiyaSaatDB.getResmiTatilSure() > 0.0d)
-												puantajResmiTatil += vardiyaSaatDB.getResmiTatilSure();
+											if (vardiyaSaatDB.getResmiTatilToplamSure() > 0.0d)
+												puantajResmiTatil += vardiyaSaatDB.getResmiTatilToplamSure();
 											else if (vardiyaGun.getVardiya().isHaftaTatil()) {
 												if (puantaj.getCalismaModeli().getHaftaTatilMesaiOde()) {
 													haftaTatilDurum = true;
@@ -1018,6 +1018,8 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 												puantajSaatToplami += vardiyaSaatDB.getCalismaSuresi() - vardiyaSaatDB.getResmiTatilSure();
 											vardiyaGun.setCalismaSuresi(vardiyaSaatDB.getCalismaSuresi());
 											vardiyaGun.setResmiTatilSure(vardiyaSaatDB.getResmiTatilSure());
+											if (vardiyaSaatDB.getResmiTatilKanunenEklenenSure() != null)
+												vardiyaGun.setResmiTatilKanunenEklenenSure(vardiyaSaatDB.getResmiTatilKanunenEklenenSure());
 										}
 
 									}
@@ -1391,7 +1393,7 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 		ExcelUtil.baslikCell(cell, anchor, helper, drawing, "ÇGS", "Çalışılması Gereken Saat: Çalışanın bu listede çalışması gereken saat");
 		if (yasalFazlaCalismaAsanSaat) {
 			cell = ExcelUtil.getCell(sheet, row, col++, header);
-			ExcelUtil.baslikCell(cell, anchor, helper, drawing, ortakIslemler.yasalFazlaCalismaAsanSaatKod(), "Yasal Çalışmayı Aşan Mesai : " + authenticatedUser.sayiFormatliGoster(denklestirmeAy.getFazlaMesaiMaxSure()) + " saati aşan çalışma toplam miktarı");
+			ExcelUtil.baslikCell(cell, anchor, helper, drawing, ortakIslemler.yasalFazlaCalismaAsanSaatKod(), "Yasal Çalışmayı Aşan Mesai Toplam Miktarı");
 		}
 		cell = ExcelUtil.getCell(sheet, row, col++, header);
 		ExcelUtil.baslikCell(cell, anchor, helper, drawing, "GM", "Gerçekleşen Mesai : Çalışanın bu listedeki eksi/fazla çalışma saati");
@@ -1418,15 +1420,15 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 			try {
 				boolean help = helpPersonel(aylikPuantaj.getPdksPersonel());
 				try {
-					CellStyle styleTutarRed = null;
+
 					if (row % 2 != 0) {
 						styleTutarDay = styleTutarOddDay;
-						styleTutarRed = styleTutarOddRed;
+
 						styleGenel = styleOdd;
 						styleCenter = styleOddCenter;
 					} else {
 						styleTutarDay = styleTutarEvenDay;
-						styleTutarRed = styleTutarEvenRed;
+
 						styleGenel = styleEven;
 						styleCenter = styleEvenCenter;
 					}
@@ -1476,7 +1478,11 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 						if (title != null) {
 							if (vardiyaGun.getVardiya() != null && (vardiyaGun.getCalismaSuresi() > 0 || (vardiyaGun.getVardiya().isCalisma() && styleGenel == styleCalisma)))
 								title = vardiyaGun.getVardiya().getKisaAdi() + " --> " + title;
-
+							double rtSure = vardiyaGun.getResmiTatilToplamSure(), htSure = vardiyaGun.getHaftaCalismaSuresi();
+							if (htSure > 0.0d)
+								title += " HT : " + authenticatedUser.sayiFormatliGoster(htSure);
+							if (rtSure > 0.0d)
+								title += " RT : " + authenticatedUser.sayiFormatliGoster(rtSure);
 							ExcelUtil.setCellComment(cell, anchor, helper, drawing, title);
 
 						}
@@ -1501,9 +1507,10 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 							ExcelUtil.setCellComment(planlananCell, anchor, helper, drawing, title);
 						}
 						if (yasalFazlaCalismaAsanSaat) {
-							if (aylikPuantaj.getUcretiOdenenMesaiSure() > 0)
-								setCell(sheet, row, col++, styleTutarRed, aylikPuantaj.getUcretiOdenenMesaiSure());
-							else
+							if (aylikPuantaj.getUcretiOdenenMesaiSure() > 0) {
+								Cell ucretiOdenenMesaiSure = setCell(sheet, row, col++, styleGenel, aylikPuantaj.getUcretiOdenenMesaiSure());
+								ExcelUtil.setCellComment(ucretiOdenenMesaiSure, anchor, helper, drawing, ortakIslemler.getUcretiOdenenMesaiSureStr(aylikPuantaj));
+							} else
 								ExcelUtil.getCell(sheet, row, col++, styleGenel).setCellValue("");
 						}
 						setCell(sheet, row, col++, styleGenel, aylikPuantaj.getAylikNetFazlaMesai());

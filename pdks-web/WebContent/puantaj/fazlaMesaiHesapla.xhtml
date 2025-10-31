@@ -84,6 +84,15 @@
 								<h:selectOneMenu value="#{fazlaMesaiHesaplaHome.seciliEkSaha4Id}" requiredMessage="#{fazlaMesaiHesaplaHome.ekSaha4Tanim.aciklama} giriniz!"
 									required="#{fazlaMesaiHesaplaHome.altBolumList.size()>1}">
 									<f:selectItems value="#{fazlaMesaiHesaplaHome.altBolumList}" />
+									<a4j:support event="onchange" status="ajaxStatus" action="#{fazlaMesaiHesaplaHome.yoneticiDoldur(null)}" ajaxSingle="true"
+										reRender="denklestirmeDonemiTable,girisler" />
+								</h:selectOneMenu>
+							</s:decorate>
+							<s:decorate template="/layout/edit.xhtml" rendered="#{fazlaMesaiHesaplaHome.yoneticiList.size()>0}">
+								<ui:define name="label">#{ortakIslemler.yoneticiAciklama()}</ui:define>
+								<f:selectItem itemLabel="Lütfen seçiniz" />
+								<h:selectOneMenu value="#{fazlaMesaiHesaplaHome.seciliYoneticiId}">
+									<f:selectItems value="#{fazlaMesaiHesaplaHome.yoneticiList}" />
 									<a4j:support event="onchange" status="ajaxStatus" action="#{fazlaMesaiHesaplaHome.aylikPuantajList.clear()}" ajaxSingle="true"
 										reRender="denklestirmeDonemiTable,girisler" />
 								</h:selectOneMenu>
@@ -137,9 +146,8 @@
 												oncomplete="#{rich:component('wait')}.hide()" /></TD>
 
 										<TD width="35%" valign="top"><ui:fragment rendered="#{not empty fazlaMesaiHesaplaHome.aylikPuantajList}">
-												<ui:fragment rendered="#{fazlaMesaiHesaplaHome.denklestirmeAyDurum and fazlaMesaiHesaplaHome.gecenAyDurum == false}">
-
-													<ui:fragment rendered="#{fazlaMesaiHesaplaHome.fazlaMesaiOnayDurumu()}">
+												<ui:fragment rendered="#{fazlaMesaiHesaplaHome.denklestirmeAyDurum }">
+													<ui:fragment rendered="#{fazlaMesaiHesaplaHome.gecenAyDurum == false and fazlaMesaiHesaplaHome.fazlaMesaiOnayDurumu()}">
 														<a4j:commandButton value="Fazla Mesai Onayla" action="#{fazlaMesaiHesaplaHome.fazlaMesaiOnayKontrol()}"
 															onclick="#{rich:component('wait')}.show()" reRender="onayPanel"
 															oncomplete="#{rich:component('wait')}.hide();if (#{fazlaMesaiHesaplaHome.onayla}) #{rich:component('onayPanel')}.show() ; " />
@@ -460,7 +468,7 @@
 												<TR class="acik">
 													<TD nowrap="nowrap" align="left"><b>Onay Zamanı</b></TD>
 													<TD nowrap="nowrap" align="left"><b> : </b> <h:outputText
-															value="#{authenticatedUser.dateTimeFormatla(hareket.islem.olusturmaTarihi)}" /></TD>
+															value="#{authenticatedUser.dateTimeFormatla(hareket.islem.olusturmaZamani)}" /></TD>
 												</TR>
 												<ui:fragment rendered="#{fazlaMesaiHesaplaHome.denklestirmeAyDurum and hareket.islem.orjinalId != null}">
 													<TR class="koyu">
@@ -489,7 +497,7 @@
 							</f:facet>
 							<h:outputText value="#{hareket.kapiView.kapi.tipi.aciklama}" />
 						</rich:column>
-						
+
 						<rich:column style="text-align:center;" rendered="#{fazlaMesaiHesaplaHome.ikRole and fazlaMesaiHesaplaHome.birdenFazlaKGSSirketSQL != ''}">
 							<f:facet name="header">
 								<h:outputText value="KGS Şirket" />
@@ -498,8 +506,8 @@
 								<h:outputText value="#{hareket.kapiSirket.aciklama}" />
 							</ui:fragment>
 						</rich:column>
-						
-						
+
+
 						<rich:column rendered="#{fazlaMesaiHesaplaHome.toplamFazlamMesai != 0}" style="text-align:center;">
 							<f:facet name="header">
 								<h:outputText value="Fazla Çalışma (Saat)" />
@@ -540,7 +548,7 @@
 							</ui:fragment>
 
 						</rich:column>
-						<c:if test="#{authenticatedUser.admin or authenticatedUser.sistemYoneticisi}">
+						<c:if test="#{authenticatedUser.admin or authenticatedUser.sistemYoneticisi or authenticatedUser.IK }">
 							<rich:column style="text-align:center;">
 								<f:facet name="header">
 									<h:outputText value="Oluşturulma Zamanı" />

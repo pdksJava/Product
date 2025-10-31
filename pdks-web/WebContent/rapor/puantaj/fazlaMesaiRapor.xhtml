@@ -349,13 +349,16 @@
 											<ui:fragment>
 												<h:outputText value="#{ortakIslemler.yasalFazlaCalismaAsanSaatKod()}" id="yfmc" />
 												<rich:toolTip for="yfmc">
-													<SPAN class="rich-table-subheader"><b>Yasal Çalışmayı Aşan Mesai : </b>#{authenticatedUser.sayiFormatliGoster(fazlaMesaiRaporHome.denklestirmeAy.fazlaMesaiMaxSure)}
-														saati aşan çalışma toplam miktarı</SPAN>
+													<SPAN class="rich-table-subheader">Yasal Çalışmayı Aşan Mesai Toplam Miktarı</SPAN>
 												</rich:toolTip>
 											</ui:fragment>
 										</f:facet>
 										<ui:fragment rendered="#{aylikPuantaj.fazlaMesaiHesapla and aylikPuantaj.ucretiOdenenMesaiSure != 0}">
-											<span style="color: red;"> <h:outputText value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.ucretiOdenenMesaiSure)}" /></span>
+											<span style="color: red;" id="ucretiOdenenMesaiSure#{aylikPuantaj.personelDenklestirme.id}"> <h:outputText
+													value="#{authenticatedUser.sayiFormatliGoster(aylikPuantaj.ucretiOdenenMesaiSure)}" /></span>
+											<rich:toolTip for="ucretiOdenenMesaiSure#{aylikPuantaj.personelDenklestirme.id}">
+												<span style="color: black; font-size: 13px;">#{ortakIslemler.getUcretiOdenenMesaiSureStr(aylikPuantaj)}</span>
+											</rich:toolTip>
 										</ui:fragment>
 
 									</rich:column>
@@ -491,7 +494,7 @@
 											</TR>
 											<TR>
 												<TD nowrap="nowrap" align="left"><b>Onay Zamanı : </b> <h:outputText
-														value="#{authenticatedUser.dateTimeFormatla(hareket.islem.olusturmaTarihi)}" /></TD>
+														value="#{authenticatedUser.dateTimeFormatla(hareket.islem.olusturmaZamani)}" /></TD>
 											</TR>
 
 										</TABLE>

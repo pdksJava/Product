@@ -25,6 +25,7 @@ public abstract class BasePDKSObject implements Serializable, Cloneable, PdksInt
 	protected User loginUser;
 
 	protected Boolean guncellendi;
+	protected boolean degisti = Boolean.FALSE, checkBoxDurum = Boolean.FALSE;
 
 	@Id
 	@GeneratedValue
@@ -81,6 +82,24 @@ public abstract class BasePDKSObject implements Serializable, Cloneable, PdksInt
 	}
 
 	@Transient
+	public boolean isDegisti() {
+		return degisti;
+	}
+
+	public void setDegisti(boolean degisti) {
+		this.degisti = degisti;
+	}
+
+	@Transient
+	public boolean isCheckBoxDurum() {
+		return checkBoxDurum;
+	}
+
+	public void setCheckBoxDurum(boolean checkBoxDurum) {
+		this.checkBoxDurum = checkBoxDurum;
+	}
+
+	@Transient
 	public Object cloneEmpty() {
 		BasePDKSObject object = null;
 		try {
@@ -91,5 +110,4 @@ public abstract class BasePDKSObject implements Serializable, Cloneable, PdksInt
 		}
 		return object;
 	}
-
 }

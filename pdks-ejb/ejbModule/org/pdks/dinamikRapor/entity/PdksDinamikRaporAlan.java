@@ -14,8 +14,10 @@ import javax.persistence.UniqueConstraint;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.pdks.dinamikRapor.enums.ENumAlanHizalaTipi;
+import org.pdks.dinamikRapor.enums.ENumBaslik;
 import org.pdks.dinamikRapor.enums.ENumRaporAlanTipi;
 import org.pdks.entity.BasePDKSObject;
+import org.pdks.session.PdksUtil;
 
 @Entity(name = PdksDinamikRaporAlan.TABLE_NAME)
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = { PdksDinamikRaporAlan.COLUMN_NAME_DINAMIK_RAPOR, PdksDinamikRaporAlan.COLUMN_NAME_DB_TANIM }) })
@@ -51,6 +53,7 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 
 	private Integer hizala = ENumAlanHizalaTipi.SOLA.value();
 	private ENumAlanHizalaTipi alanHizalaTipi = ENumAlanHizalaTipi.SOLA;
+	private ENumBaslik baslik;
 
 	@ManyToOne(cascade = CascadeType.REFRESH)
 	@JoinColumn(name = COLUMN_NAME_DINAMIK_RAPOR, nullable = false)
@@ -77,8 +80,10 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 		return aciklama;
 	}
 
-	public void setAciklama(String aciklama) {
-		this.aciklama = aciklama;
+	public void setAciklama(String value) {
+		if (PdksUtil.hasStringValue(value))
+			baslik = ENumBaslik.fromValue(value);
+		this.aciklama = value;
 	}
 
 	@Column(name = COLUMN_NAME_DB_TANIM)
@@ -122,6 +127,7 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 	public void setFilter(Boolean filter) {
 		this.filter = filter;
 	}
+
 	@Column(name = COLUMN_NAME_GOSTER)
 	public Boolean getGoster() {
 		return goster;
@@ -163,6 +169,11 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 	@Transient
 	public boolean isTarihSaat() {
 		return alanTipiId != null && alanTipiId.equals(ENumRaporAlanTipi.TARIH_SAAT.value());
+	}
+
+	@Transient
+	public boolean isMantiksal() {
+		return alanTipiId != null && alanTipiId.equals(ENumRaporAlanTipi.MANTIKSAL.value());
 	}
 
 	@Transient
@@ -222,6 +233,15 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 		this.alanHizalaTipi = alanHizalaTipi;
 	}
 
+	@Transient
+	public ENumBaslik getBaslik() {
+		return baslik;
+	}
+
+	public void setBaslik(ENumBaslik baslik) {
+		this.baslik = baslik;
+	}
+
 	public void entityRefresh() {
 
 	}
@@ -237,7 +257,5 @@ public class PdksDinamikRaporAlan extends BasePDKSObject implements Serializable
 		}
 		return object;
 	}
-
-
 
 }

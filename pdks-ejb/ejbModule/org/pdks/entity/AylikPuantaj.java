@@ -1,6 +1,7 @@
 package org.pdks.entity;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -12,6 +13,7 @@ import java.util.TreeMap;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
+import org.pdks.enums.DenklestirmeTipi;
 import org.pdks.security.entity.User;
 import org.pdks.session.OrtakIslemler;
 import org.pdks.session.PdksUtil;
@@ -83,9 +85,11 @@ public class AylikPuantaj implements Serializable, Cloneable {
 
 	private boolean donemBitti = Boolean.TRUE, ayrikHareketVar = Boolean.FALSE, fazlaMesaiIzinKontrol = Boolean.TRUE, gebeDurum = Boolean.FALSE, sutIzniDurumu = Boolean.FALSE;
 
-	private Double saatToplami = 0d, resmiTatilToplami = 0d, haftaCalismaSuresi = 0d, ucretiOdenenMesaiSure = 0d, fazlaMesaiSure = 0d, odenenSure = 0d, planlananSure = 0d, offSure = 0.0d;
+	private Double saatToplami = 0d, resmiTatilKanunenEklenenSure = 0d, resmiTatilToplami = 0d, haftaCalismaSuresi = 0d, ucretiOdenenMesaiSure = 0d, fazlaMesaiSure = 0d, odenenSure = 0d, planlananSure = 0d, offSure = 0.0d;
 
-	private Double izinSuresi = 0d, saatlikIzinSuresi = 0d, eksikCalismaSure = 0d, gecenAyFazlaMesai = 0d, hesaplananSure = 0d, devredenSure = 0d, aksamVardiyaSaatSayisi = 0d, kesilenSure = 0d;
+	private Double izinSuresi = 0d, saatlikIzinSuresi = 0d, fazlaMesaiMaxSure = 0d, eksikCalismaSure = 0d, gecenAyFazlaMesai = 0d, hesaplananSure = 0d, devredenSure = 0d, aksamVardiyaSaatSayisi = 0d, kesilenSure = 0d;
+
+	private Double eksiBakiyeSuresi = 0d;
 
 	private boolean fazlaMesaiHesapla = Boolean.FALSE, vardiyaSua = Boolean.FALSE, eksikGunVar = Boolean.FALSE, denklestirilmeyenDevredenVar = Boolean.FALSE;
 
@@ -105,6 +109,8 @@ public class AylikPuantaj implements Serializable, Cloneable {
 	private PersonelDenklestirmeDinamikAlan personelDenklestirmeDinamikAlan;
 
 	private PersonelDinamikAlan personelDinamikAlan;
+
+	private HashMap<Integer, BigDecimal> katSayiMap;
 
 	private User loginUser;
 
@@ -172,6 +178,7 @@ public class AylikPuantaj implements Serializable, Cloneable {
 	public void degerSifirla() {
 		this.setSaatlikIzinSuresi(0.0d);
 		this.setResmiTatilToplami(0.0d);
+		this.setResmiTatilKanunenEklenenSure(0.0d);
 		this.setHaftaCalismaSuresi(0.0d);
 		this.setAksamVardiyaSaatSayisi(0.0d);
 		this.setAksamVardiyaSayisi(0);
@@ -398,10 +405,6 @@ public class AylikPuantaj implements Serializable, Cloneable {
 		return saatToplami;
 	}
 
-	public double getResmiTatilToplami() {
-		return resmiTatilToplami;
-	}
-
 	public VardiyaPlan getVardiyaPlan() {
 		return vardiyaPlan;
 	}
@@ -516,11 +519,10 @@ public class AylikPuantaj implements Serializable, Cloneable {
 								if (tatil.getArifeSonraVardiyaDenklestirmeVar() != null && tatil.getArifeSonraVardiyaDenklestirmeVar()) {
 									if (tatil.getVardiyaMap() != null && tatil.getVardiyaMap().containsKey(vardiya.getId())) {
 										Vardiya vardiyaTatil = tatil.getVardiyaMap().get(vardiya.getId());
-										vardiya.setArifeBaslangicTarihi(vardiyaTatil.getArifeBaslangicTarihi());
-										if (vg.getPdksPersonel().getPdksSicilNo().equals("2737"))
-											logger.debug("");
-										if (vardiyaTatil.getArifeBaslangicTarihi() != null && vardiyaTatil.getArifeCalismaSure() != null) {
-											if (vardiyaTatil.getArifeBaslangicTarihi().getTime() <= vardiya.getVardiyaBasZaman().getTime()) {
+										Date arifeBaslangicTarihi = vardiyaTatil.getArifeBaslangicTarihi();
+										vardiya.setArifeBaslangicTarihi(arifeBaslangicTarihi);
+										if (arifeBaslangicTarihi != null && vardiyaTatil.getArifeCalismaSure() != null) {
+											if (arifeBaslangicTarihi.getTime() <= vardiya.getVardiyaBasZaman().getTime()) {
 												if (vg.getResmiTatilSure() > 0.0d) {
 													saatToplami -= vg.getCalismaSuresi() - vg.getResmiTatilSure();
 													vg.setResmiTatilSure(vg.getCalismaSuresi());
@@ -528,17 +530,25 @@ public class AylikPuantaj implements Serializable, Cloneable {
 												if (vardiyaTatil.isArifeCalismaSaatYokCGSDussun())
 													arifeSure = 0.0d;
 												// yarimGun = 0.0d;
-											} else if (vardiyaTatil.getArifeBaslangicTarihi().getTime() >= vardiya.getVardiyaBitZaman().getTime()) {
+											} else if (arifeBaslangicTarihi.getTime() >= vardiya.getVardiyaBitZaman().getTime()) {
 												// arifeSure = 0.0d;
 												if (vg.getCalismaSuresi() > 0.0d) {
 													yarimGun = 0.0d;
 												} else if (vardiyaTatil.isArifeCalismaSaatYokCGSDussun())
 													arifeSure = 0.0d;
 
-											} else if (vg.getCalismaSuresi() <= 0.0d) {
-												// TODO Arife çalışmıyorsa ÇGS sayma
-												if (vardiyaTatil.isArifeCalismaSaatYokCGSDussun())
-													arifeSure = 0.0d;
+											} else {
+												if (vg.getCalismaSuresi() <= 0.0d) {
+													// TODO Arife çalışmıyorsa ÇGS sayma
+													if (vardiyaTatil.isArifeCalismaSaatYokCGSDussun())
+														arifeSure = 0.0d;
+												} else if (vg.getCalismaSuresi() == vardiya.getNetCalismaSuresi() && vg.getResmiTatilSure() > calSure) {
+													double fark = (vg.getResmiTatilSure() - calSure) / 2.0;
+													vg.addResmiTatilSure(-fark);
+													saatToplami += fark;
+													// arifeSure = 0.0d;
+													// yarimGun = 0.0d;
+												}
 											}
 										}
 									}
@@ -683,50 +693,29 @@ public class AylikPuantaj implements Serializable, Cloneable {
 		this.gecenAylikPuantaj = gecenAylikPuantaj;
 	}
 
-	private double getGecenAyDenklestirmeHesapla() {
-		Double fark = null;
-		PersonelDenklestirme pdksPersonelDenklestirmeGecenAy = null;
-		if (personelDenklestirme != null && personelDenklestirme.getPersonelDenklestirmeGecenAy() != null) {
-			pdksPersonelDenklestirmeGecenAy = personelDenklestirme.getPersonelDenklestirmeGecenAy();
-			if (pdksPersonelDenklestirmeGecenAy != null)
-				if ((pdksPersonelDenklestirmeGecenAy.getDurum() || pdksPersonelDenklestirmeGecenAy.isErpAktarildi()) && pdksPersonelDenklestirmeGecenAy.getDevredenSure() != null)
-					fark = pdksPersonelDenklestirmeGecenAy.getKalanSure();
-		}
-
-		if (fark == null)
-			fark = 0d;
-		return fark;
-	}
-
 	public Double getGecenAyFazlaMesai() {
-		// if (gecenAyFazlaMesai == null)
-		double deger = getGecenAyDenklestirmeHesapla();
-		gecenAyFazlaMesai = deger;
+		gecenAyFazlaMesai = getGecenAyFazlaMesai(null);
 		return gecenAyFazlaMesai;
 	}
 
 	public Double getGecenAyFazlaMesai(User user) {
-		// if (gecenAyFazlaMesai == null)
-		double deger = getGecenAyDenklestirmeHesapla(user);
-		gecenAyFazlaMesai = deger;
-		return gecenAyFazlaMesai;
-	}
-
-	private double getGecenAyDenklestirmeHesapla(User user) {
-		Double fark = null;
+		Double kalanSure = null;
 		PersonelDenklestirme personelDenklestirmeGecenAy = null;
-		if (personelDenklestirme != null && personelDenklestirme.getPersonelDenklestirmeGecenAy() != null) {
-			personelDenklestirmeGecenAy = personelDenklestirme.getPersonelDenklestirmeGecenAy();
-			if (personelDenklestirmeGecenAy != null && personelDenklestirmeGecenAy.getDurum() && personelDenklestirmeGecenAy.isOnaylandi()) {
-				// if ((!personelDenklestirmeGecenAy.getDenklestirmeAy().isDurum(user) || personelDenklestirmeGecenAy.isErpAktarildi()) && personelDenklestirmeGecenAy.getDevredenSure() != null)
-				if (personelDenklestirmeGecenAy.getDevredenSure() != null)
-					fark = personelDenklestirmeGecenAy.getKalanSure();
+		if (personelDenklestirme != null) {
+			if (personelDenklestirme.getPersonelDenklestirmeDevir() != null)
+				kalanSure = personelDenklestirme.getPersonelDenklestirmeDevir().getGecenAyDevirSaat();
+			if (kalanSure == null && personelDenklestirme.getPersonelDenklestirmeGecenAy() != null) {
+				personelDenklestirmeGecenAy = personelDenklestirme.getPersonelDenklestirmeGecenAy();
+				if (personelDenklestirmeGecenAy.getDurum() && personelDenklestirmeGecenAy.isOnaylandi()) {
+					if (personelDenklestirmeGecenAy.getDevredenSure() != null)
+						kalanSure = personelDenklestirmeGecenAy.getKalanSure();
+				}
 			}
 		}
+		if (kalanSure == null)
+			kalanSure = 0d;
+		return kalanSure;
 
-		if (fark == null)
-			fark = 0d;
-		return fark;
 	}
 
 	public void setGecenAyFazlaMesai(Double gecenAyFazlaMesai) {
@@ -785,6 +774,10 @@ public class AylikPuantaj implements Serializable, Cloneable {
 		if (value != null && value.doubleValue() > 0.0d)
 			logger.debug(value);
 		this.saatToplami = value;
+	}
+
+	public double getResmiTatilToplami() {
+		return resmiTatilToplami;
 	}
 
 	public void setResmiTatilToplami(Double value) {
@@ -984,15 +977,22 @@ public class AylikPuantaj implements Serializable, Cloneable {
 	/**
 	 * @param fazlaMesaiOde
 	 * @param hesaplananBuAySure
-	 * @param gecenAydevredenSure
+	 * @param gecenAyDevredenSure
+	 * @param denklestirmeAy
+	 * @param departman
+	 * @param dt
 	 * @return
 	 */
-
-	public PersonelDenklestirme getPersonelDenklestirme(Boolean fazlaMesaiOde, double hesaplananBuAySure, double gecenAyDevredenSure) {
+	public PersonelDenklestirme getPersonelDenklestirme(Boolean fazlaMesaiOde, double hesaplananBuAySure, double gecenAyDevredenSure, DenklestirmeAy denklestirmeAy, Departman departman, DenklestirmeTipi dt) {
+		if (dt == null)
+			dt = departman == null || departman.isAdminMi() ? denklestirmeAy.getTipi() : denklestirmeAy.getTaseronTipi();
+		if (dt == null)
+			dt = DenklestirmeTipi.GECEN_AY_ODE;
+		eksiBakiyeSuresi = 0.0d;
 		PersonelDenklestirme personelDenklestirme = new PersonelDenklestirme();
 		double devredenSure = 0;
-		double hesaplananSure = gecenAyDevredenSure + hesaplananBuAySure;
 		Double odenenSure = 0d;
+		double hesaplananSure = gecenAyDevredenSure + hesaplananBuAySure;
 		Double odenenFazlaMesaiSaati = PdksUtil.getOdenenFazlaMesaiSaati();
 		Double barajOdeme = odenenFazlaMesaiSaati;
 		if (odenenFazlaMesaiSaati <= 0.0) {
@@ -1018,6 +1018,20 @@ public class AylikPuantaj implements Serializable, Cloneable {
 			personelDenklestirme.setOdenenSure(odenenSure);
 		else
 			devredenSure = hesaplananSure;
+
+		if (dt.equals(DenklestirmeTipi.TAMAMI_ODE)) {
+			if (denklestirmeAy == null || denklestirmeAy.getAy() % 2 == 0) {
+				if (hesaplananSure > 0)
+					odenenSure = hesaplananSure;
+				else if (hesaplananSure < 0)
+					eksiBakiyeSuresi = -hesaplananSure;
+				devredenSure = 0;
+			}
+			personelDenklestirme.setOdenenSure(odenenSure);
+
+		}
+		if (PdksUtil.getCanliSunucuDurum() == false && PdksUtil.getTestSunucuDurum() == false)
+			logger.debug(dt.toString() + " : GM = " + hesaplananBuAySure + " DM = " + gecenAyDevredenSure + " --> HS = " + hesaplananSure + " UOC = " + odenenSure + " B = " + devredenSure);
 		// if (personelDenklestirme.g personelDenklestirme.isOnaylandi())
 		personelDenklestirme.setDevredenSure(devredenSure);
 		personelDenklestirme.setHesaplananSure(hesaplananSure);
@@ -1451,6 +1465,38 @@ public class AylikPuantaj implements Serializable, Cloneable {
 
 	public void setIsAramaDurum(Boolean isAramaDurum) {
 		this.isAramaDurum = isAramaDurum;
+	}
+
+	public HashMap<Integer, BigDecimal> getKatSayiMap() {
+		return katSayiMap;
+	}
+
+	public void setKatSayiMap(HashMap<Integer, BigDecimal> katSayiMap) {
+		this.katSayiMap = katSayiMap;
+	}
+
+	public Double getFazlaMesaiMaxSure() {
+		return fazlaMesaiMaxSure;
+	}
+
+	public void setFazlaMesaiMaxSure(Double fazlaMesaiMaxSure) {
+		this.fazlaMesaiMaxSure = fazlaMesaiMaxSure;
+	}
+
+	public Double getEksiBakiyeSuresi() {
+		return eksiBakiyeSuresi;
+	}
+
+	public void setEksiBakiyeSuresi(Double eksiBakiyeSuresi) {
+		this.eksiBakiyeSuresi = eksiBakiyeSuresi;
+	}
+
+	public Double getResmiTatilKanunenEklenenSure() {
+		return resmiTatilKanunenEklenenSure;
+	}
+
+	public void setResmiTatilKanunenEklenenSure(Double resmiTatilKanunenEklenenSure) {
+		this.resmiTatilKanunenEklenenSure = resmiTatilKanunenEklenenSure;
 	}
 
 }

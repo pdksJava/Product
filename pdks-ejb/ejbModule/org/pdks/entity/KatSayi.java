@@ -4,14 +4,18 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.pdks.enums.KatSayiTipi;
 
 @Entity
@@ -35,12 +39,16 @@ public class KatSayi extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_BAS_TARIH = "BAS_TARIH";
 	public static final String COLUMN_NAME_BIT_TARIH = "BIT_TARIH";
 	public static final String COLUMN_NAME_DEGER = "DEGER";
+	public static final String COLUMN_NAME_SIRKET = "SIRKET_ID";
+	public static final String COLUMN_NAME_TESIS = "TESIS_ID";
 	public static final String COLUMN_NAME_VARDIYA = "VARDIYA_ID";
 
 	private Date basTarih, bitTarih;
 	private KatSayiTipi tipi;
-	private BigDecimal deger;
+	private Sirket sirket;
+	private Tanim tesis;
 	private Vardiya vardiya;
+	private BigDecimal deger;
 	private Boolean durum;
 
 	public KatSayi() {
@@ -85,10 +93,31 @@ public class KatSayi extends BasePDKSObject implements Serializable {
 		this.deger = deger;
 	}
 
-//	@ManyToOne(cascade = CascadeType.REFRESH)
-//	@JoinColumn(name = COLUMN_NAME_VARDIYA)
-//	@Fetch(FetchMode.JOIN)
-	@Transient
+	@ManyToOne(cascade = CascadeType.REFRESH)
+	@JoinColumn(name = COLUMN_NAME_SIRKET)
+	@Fetch(FetchMode.JOIN)
+	public Sirket getSirket() {
+		return sirket;
+	}
+
+	public void setSirket(Sirket sirket) {
+		this.sirket = sirket;
+	}
+
+	@ManyToOne(cascade = CascadeType.REFRESH)
+	@JoinColumn(name = COLUMN_NAME_TESIS)
+	@Fetch(FetchMode.JOIN)
+	public Tanim getTesis() {
+		return tesis;
+	}
+
+	public void setTesis(Tanim tesis) {
+		this.tesis = tesis;
+	}
+
+	@ManyToOne(cascade = CascadeType.REFRESH)
+	@JoinColumn(name = COLUMN_NAME_VARDIYA)
+	@Fetch(FetchMode.JOIN)
 	public Vardiya getVardiya() {
 		return vardiya;
 	}

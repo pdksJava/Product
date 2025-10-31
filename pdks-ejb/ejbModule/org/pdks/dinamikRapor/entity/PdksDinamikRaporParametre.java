@@ -15,6 +15,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.pdks.dinamikRapor.enums.ENumBaslik;
@@ -31,9 +32,11 @@ public class PdksDinamikRaporParametre extends BasePDKSObject implements Seriali
 	 * 
 	 */
 	private static final long serialVersionUID = 7408349167376237472L;
+	static Logger logger = Logger.getLogger(PdksDinamikRaporParametre.class);
 
 	public static final String TABLE_NAME = "PDKS_DINAMIK_RAPOR_PARAMETRE";
 	public static final String COLUMN_NAME_DINAMIK_RAPOR = "DINAMIK_RAPOR_ID";
+	public static final String COLUMN_NAME_DINAMIK_BAGLI_ALAN = "DINAMIK_BAGLI_ALAN_ID";
 	public static final String COLUMN_NAME_DB_TANIM = "DB_TANIM";
 	public static final String COLUMN_NAME_ACIKLAMA = "ACIKLAMA";
 	public static final String COLUMN_NAME_SIRA = "SIRA";
@@ -45,13 +48,15 @@ public class PdksDinamikRaporParametre extends BasePDKSObject implements Seriali
 
 	private PdksDinamikRapor pdksDinamikRapor;
 
+	private PdksDinamikRaporAlan bagliDinamikAlan;
+
 	private String aciklama, dbTanim, esitlik = "";
 
 	private ENumRaporAlanTipi raporAlanTipi;
 
 	private Integer alanTipiId, sira;
 
-	private Boolean parametreDurum = Boolean.TRUE, durum = Boolean.TRUE;
+	private Boolean parametreDurum = Boolean.TRUE, durum = Boolean.TRUE, mantiksalDurum;
 
 	private Date tarihDeger;
 
@@ -60,6 +65,8 @@ public class PdksDinamikRaporParametre extends BasePDKSObject implements Seriali
 	private Boolean zorunlu = Boolean.TRUE;
 
 	private ENumEsitlik eNumEsitlik;
+
+	private ENumBaslik baslik;
 
 	private Object value;
 
@@ -76,6 +83,17 @@ public class PdksDinamikRaporParametre extends BasePDKSObject implements Seriali
 		this.pdksDinamikRapor = pdksDinamikRapor;
 	}
 
+	@ManyToOne(cascade = CascadeType.REFRESH)
+	@JoinColumn(name = COLUMN_NAME_DINAMIK_BAGLI_ALAN)
+	@Fetch(FetchMode.JOIN)
+	public PdksDinamikRaporAlan getBagliDinamikAlan() {
+		return bagliDinamikAlan;
+	}
+
+	public void setBagliDinamikAlan(PdksDinamikRaporAlan bagliDinamikAlan) {
+		this.bagliDinamikAlan = bagliDinamikAlan;
+	}
+
 	@Column(name = COLUMN_NAME_SIRA)
 	public Integer getSira() {
 		return sira;
@@ -90,8 +108,10 @@ public class PdksDinamikRaporParametre extends BasePDKSObject implements Seriali
 		return aciklama;
 	}
 
-	public void setAciklama(String aciklama) {
-		this.aciklama = aciklama;
+	public void setAciklama(String value) {
+		if (PdksUtil.hasStringValue(value))
+			baslik = ENumBaslik.fromValue(value);
+		this.aciklama = value;
 	}
 
 	@Column(name = COLUMN_NAME_DB_TANIM)
@@ -167,6 +187,11 @@ public class PdksDinamikRaporParametre extends BasePDKSObject implements Seriali
 	@Transient
 	public boolean isSayisal() {
 		return alanTipiId != null && alanTipiId.equals(ENumRaporAlanTipi.SAYISAL.value());
+	}
+
+	@Transient
+	public boolean isMantiksal() {
+		return alanTipiId != null && alanTipiId.equals(ENumRaporAlanTipi.MANTIKSAL.value());
 	}
 
 	@Transient
@@ -255,7 +280,7 @@ public class PdksDinamikRaporParametre extends BasePDKSObject implements Seriali
 	public boolean isSirketBilgisi() {
 		boolean baslikDurum = false;
 		try {
-			ENumBaslik baslik = ENumBaslik.fromValue(this.getAciklama());
+
 			if (baslik != null)
 				baslikDurum = baslik.value().equals(ENumBaslik.SIRKET.value());
 		} catch (Exception e) {
@@ -269,11 +294,11 @@ public class PdksDinamikRaporParametre extends BasePDKSObject implements Seriali
 	public boolean isTesisBilgisi() {
 		boolean baslikDurum = false;
 		try {
-			ENumBaslik baslik = ENumBaslik.fromValue(this.getAciklama());
 			if (baslik != null)
 				baslikDurum = baslik.value().equals(ENumBaslik.TESIS.value());
 		} catch (Exception e) {
-			// TODO: handle exception
+			logger.error(e);
+			e.printStackTrace();
 		}
 
 		return baslikDurum;
@@ -289,14 +314,32 @@ public class PdksDinamikRaporParametre extends BasePDKSObject implements Seriali
 	public boolean isYilSpinner() {
 		boolean baslikDurum = false;
 		try {
-			ENumBaslik baslik = ENumBaslik.fromValue(this.getAciklama());
 			if (baslik != null)
 				baslikDurum = baslik.value().equals(ENumBaslik.YIL.value());
 		} catch (Exception e) {
-			// TODO: handle exception
+			logger.error(e);
+			e.printStackTrace();
 		}
 
 		return baslikDurum;
+	}
+
+	@Transient
+	public Boolean getMantiksalDurum() {
+		return mantiksalDurum;
+	}
+
+	public void setMantiksalDurum(Boolean mantiksalDurum) {
+		this.mantiksalDurum = mantiksalDurum;
+	}
+
+	@Transient
+	public ENumBaslik getBaslik() {
+		return baslik;
+	}
+
+	public void setBaslik(ENumBaslik baslik) {
+		this.baslik = baslik;
 	}
 
 	public void entityRefresh() {

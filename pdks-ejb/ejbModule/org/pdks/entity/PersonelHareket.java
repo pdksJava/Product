@@ -14,10 +14,8 @@ import javax.persistence.Transient;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.Immutable;
 
 @Entity(name = PersonelHareket.TABLE_NAME)
-@Immutable
 public class PersonelHareket extends BasePDKSObject implements Serializable {
 
 	/**
@@ -30,16 +28,17 @@ public class PersonelHareket extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_PER_NO = "PER_NO";
 	public static final String COLUMN_NAME_PERSONEL = "PERSONEL";
 	public static final String COLUMN_NAME_KGS_ID = "KGS_ID";
+	public static final String COLUMN_NAME_GUNCELLEME_ZAMANI = "GUNCELLEME_ZAMANI";
 
 	private PersonelView personel;
 	private PersonelKGS personelKGS;
 	private KapiView kapiView;
 	private KapiKGS kapiKGS;
-	private Date zaman;
+	private Date zaman, guncellemeZamani;
 	private PersonelHareketIslem islem;
 	private String personelNo;
 
-	private Integer durum = 1;
+	private Boolean durum = Boolean.TRUE;
 	private Long kgsHareket;
 
 	public PersonelHareket() {
@@ -92,7 +91,7 @@ public class PersonelHareket extends BasePDKSObject implements Serializable {
 	}
 
 	@ManyToOne(cascade = CascadeType.REFRESH)
-	@JoinColumn(name = "ISLEM_ID", nullable = false)
+	@JoinColumn(name = "ISLEM_ID")
 	@Fetch(FetchMode.JOIN)
 	public PersonelHareketIslem getIslem() {
 		return islem;
@@ -102,18 +101,29 @@ public class PersonelHareket extends BasePDKSObject implements Serializable {
 		this.islem = islem;
 	}
 
-	@Column(name = "DURUM", columnDefinition = "default '1'")
-	public int getDurum() {
+	@Column(name = "DURUM")
+	public Boolean getDurum() {
 		return durum;
 	}
 
-	public void setDurum(int durum) {
+	public void setDurum(Boolean durum) {
 		this.durum = durum;
 	}
 
 	@Column(name = COLUMN_NAME_KGS_ID)
 	public Long getKgsHareket() {
 		return kgsHareket;
+	}
+
+	// @Temporal(value = TemporalType.TIMESTAMP)
+	// @Column(name = COLUMN_NAME_GUNCELLEME_ZAMANI)
+	@Transient
+	public Date getGuncellemeZamani() {
+		return guncellemeZamani;
+	}
+
+	public void setGuncellemeZamani(Date guncellemeZamani) {
+		this.guncellemeZamani = guncellemeZamani;
 	}
 
 	public void setKgsHareket(Long value) {
