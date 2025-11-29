@@ -133,10 +133,25 @@ public class WSLoggingInInterceptor extends AbstractSoapInterceptor {
 					// xml = PdksUtil.getXMLConvert(xml);
 					if (soapAction.length() > 1)
 						soapAction = PdksUtil.setTurkishStr(soapAction.substring(0, 1)).toUpperCase(Locale.ENGLISH) + soapAction.substring(1);
+					String[] actions = new String[] { "saveIzinHakedisler", "getMesaiPDKS", "SavePersoneller", "SaveIzinler" };
+					if (xml.indexOf("&") > 0) {
+						if (xml.indexOf("&amp;") > 0)
+							xml = PdksUtil.replaceAll(xml, "&amp;", "&");
+						xml = PdksUtil.replaceAll(xml, "&", "&amp;");
+					}
 
-					if (soapAction.equalsIgnoreCase("saveIzinHakedisler") || soapAction.equalsIgnoreCase("getMesaiPDKS") || soapAction.equalsIgnoreCase("SavePersoneller") || soapAction.equalsIgnoreCase("SaveIzinler"))
-						ekKey = getParseKey(xml, soapAction);
+					for (int i = 0; i < actions.length; i++) {
+						if (soapAction.equalsIgnoreCase(actions[i])) {
+							ekKey = getParseKey(xml, soapAction);
+							break;
+						}
+					}
+					actions = null;
+					// if (soapAction.equalsIgnoreCase("saveIzinHakedisler") || soapAction.equalsIgnoreCase("getMesaiPDKS") || soapAction.equalsIgnoreCase("SavePersoneller") || soapAction.equalsIgnoreCase("SaveIzinler"))
+					// ekKey = getParseKey(xml, soapAction);
+				
 					String xmlStr = xml;
+
 					InputStream oss = PdksUtil.getInputStreamByString(xmlStr);
 					message.setContent(InputStream.class, oss);
 					StringBuffer sb = new StringBuffer();

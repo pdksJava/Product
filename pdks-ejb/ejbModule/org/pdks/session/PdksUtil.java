@@ -138,6 +138,38 @@ public class PdksUtil implements Serializable {
 	private static boolean sistemDestekVar = false, puantajSorguAltBolumGir = false;
 
 	/**
+	 * @param sqlObject
+	 * @return
+	 */
+	public static StringBuffer getStringBuffer(Object sqlObject) {
+		StringBuffer sb = null;
+		if (sqlObject != null) {
+			if (sqlObject instanceof String) {
+				String sqlObjectStr = (String) sqlObject;
+				sb = new StringBuffer(sqlObjectStr);
+			} else if (sqlObject instanceof StringBuffer)
+				sb = (StringBuffer) sqlObject;
+		}
+		if (sb == null)
+			sb = new StringBuffer();
+		return sb;
+	}
+
+	/**
+	 * @param sbu
+	 * @return
+	 */
+	public static String getStringBuffer(StringBuilder sbu) {
+		String str = "";
+		if (sbu != null) {
+			str = sbu.toString();
+
+			sbu = null;
+		}
+		return str;
+	}
+
+	/**
 	 * @param zaman
 	 * @return
 	 */
@@ -2099,46 +2131,54 @@ public class PdksUtil implements Serializable {
 
 	/**
 	 * @param str
-	 * @param pattern
+	 * @param findStr
 	 * @param replace
 	 * @return
 	 */
-	public static String replaceAll(String str, String pattern, String replace) {
-		if (str != null && pattern != null && replace != null)
-			str = str.replaceAll(pattern, replace);
+	public static String replaceAll(String str, String findStr, String replace) {
+		if (str != null && findStr != null && replace != null && str.contains(findStr)) {
+			if (replace.contains(findStr))
+				str = str.replaceAll(findStr, replace);
+			else
+				str = replaceAllManuel(str, findStr, replace);
+		}
 		return str;
 	}
 
 	/**
 	 * @param str
-	 * @param pattern
+	 * @param findStr
 	 * @param replace
 	 * @return
 	 */
-	public static String replaceAllManuel(String str, String pattern, String replace) {
-		StringBuffer lSb = new StringBuffer();
-		if ((str != null) && (pattern != null) && (pattern.length() > 0) && (replace != null)) {
-			int i = 0;
-			int j = str.indexOf(pattern, i);
-			int l = pattern.length();
-			int m = str.length();
-			if (j > -1) {
-				while (j > -1) {
-					if (i != j) {
-						lSb.append(str.substring(i, j));
+	public static String replaceAllManuel(String str, String findStr, String replace) {
+		if ((str != null) && (findStr != null) && (findStr.length() > 0) && (replace != null)) {
+			int l = findStr.length();
+			while (str.indexOf(findStr) >= 0) {
+				StringBuffer lSb = new StringBuffer();
+				int i = 0;
+				int j = str.indexOf(findStr, i);
+				int m = str.length();
+				if (j > -1) {
+					while (j > -1) {
+						if (i != j)
+							lSb.append(str.substring(i, j));
+						lSb.append(replace);
+						i = j + l;
+						j = (i > m) ? -1 : str.indexOf(findStr, i);
 					}
-					lSb.append(replace);
-					i = j + l;
-					j = (i > m) ? -1 : str.indexOf(pattern, i);
-				}
-				if (i < m) {
-					lSb.append(str.substring(i));
-				}
-			} else {
-				lSb.append(str);
-			}
-			str = lSb.toString();
+					if (i < m)
+						lSb.append(str.substring(i));
 
+				} else
+					lSb.append(str);
+
+				str = lSb.toString();
+				if (replace.contains(findStr))
+					break;
+				// if (replace.indexOf(findStr) >= 0)
+				// break;
+			}
 		}
 
 		return str;

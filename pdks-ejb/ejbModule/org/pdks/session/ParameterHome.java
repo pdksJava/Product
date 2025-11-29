@@ -138,7 +138,14 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 			MailStatu mailStatu = null;
 			boolean gonderildi = false;
 			try {
-				mailStatu = ortakIslemler.mailSoapServisGonder(false, mailObject, renderer, "/email/testMail.xhtml", session);
+				// mailStatu = ortakIslemler.mailSoapServisGonder(false, mailObject, renderer, "/email/testMail.xhtml", session);
+				HashMap<String, Object> veriMap = new HashMap<String, Object>();
+				veriMap.put("temizleTOCCList", false);
+				veriMap.put("mailObject", mailObject);
+				veriMap.put("homeRenderer", renderer);
+				veriMap.put("sayfaAdi", "/email/testMail.xhtml");
+				mailStatu = ortakIslemler.mailSoapServisGonder(veriMap, session);
+				veriMap = null;
 				if (mailStatu != null) {
 					gonderildi = mailStatu.getDurum();
 					if (!gonderildi)
@@ -226,7 +233,7 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 		helpDesk = false;
 		// List<Parameter> list = pdksEntityController.getObjectByInnerObjectList(parametreMap, Parameter.class);
 		//
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		sb.append("select T.* from " + Parameter.TABLE_NAME + " T " + PdksEntityController.getSelectLOCK() + " ");
 		if (!authenticatedUser.isAdmin()) {
 			sb.append(" where T." + Parameter.COLUMN_NAME_GUNCELLE + " = 1 and T." + Parameter.COLUMN_NAME_HELP_DESK + " = 0 ");
@@ -235,7 +242,7 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 
 		if (session != null)
 			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<Parameter> list = pdksEntityController.getObjectBySQLList(sb, parametreMap, Parameter.class);
+		List<Parameter> list = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), parametreMap, Parameter.class);
 
 		list = PdksUtil.sortListByAlanAdi(list, "id", admin);
 		if (authenticatedUser.isAdmin()) {

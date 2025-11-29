@@ -316,7 +316,7 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 								try {
 									MailObject mail = new MailObject();
 									mail.setSubject("Tatil Tanımlama");
-									StringBuffer body = new StringBuffer("<p>Girdiğiniz izin ile aynı tarihe resmi yada genel tatil tanımlaması yapılmıştır. İzni silip, tekrardan yaratınız.</p><p></p>");
+									StringBuilder body = new StringBuilder("<p>Girdiğiniz izin ile aynı tarihe resmi yada genel tatil tanımlaması yapılmıştır. İzni silip, tekrardan yaratınız.</p><p></p>");
 									body.append("<table><thead><tr>");
 									body.append("<th><b>" + ortakIslemler.personelNoAciklama() + "</b></th>");
 									body.append("<th><b>İzin Sahibi</b></th>");
@@ -337,9 +337,14 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 									mail.setBody(body.toString());
 
 									ortakIslemler.addMailPersonelUserList(userList, mail.getToList());
-
-									ortakIslemler.mailSoapServisGonder(true, mail, renderer, "/email/tatilUyariMail.xhtml", session);
-
+									// ortakIslemler.mailSoapServisGonder(true, mail, renderer, "/email/tatilUyariMail.xhtml", session);
+									HashMap<String, Object> veriMap = new HashMap<String, Object>();
+									veriMap.put("temizleTOCCList", true);
+									veriMap.put("mailObject", mail);
+									veriMap.put("homeRenderer", renderer);
+									veriMap.put("sayfaAdi", "/email/tatilUyariMail.xhtml");
+									ortakIslemler.mailSoapServisGonder(veriMap, session);
+									veriMap = null;
 								} catch (Exception e) {
 									logger.error("PDKS hata in : \n");
 									e.printStackTrace();

@@ -131,7 +131,7 @@ public class FazlaMesaiDonemselRaporHome extends EntityHome<DepartmanDenklestirm
 	public String tesisDoldur() {
 		personelList.clear();
 		tesisler.clear();
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 
 		try {
 			boolean idVar = false;
@@ -156,7 +156,7 @@ public class FazlaMesaiDonemselRaporHome extends EntityHome<DepartmanDenklestirm
 
 				if (session != null)
 					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				List<Tanim> list = pdksEntityController.getObjectBySQLList(sb, fields, Tanim.class);
+				List<Tanim> list = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), fields, Tanim.class);
 
 				if (list.isEmpty()) {
 					tesisId = null;
@@ -184,7 +184,7 @@ public class FazlaMesaiDonemselRaporHome extends EntityHome<DepartmanDenklestirm
 		perDenkMap.clear();
 		sirketler.clear();
 		denklestirmeAyList.clear();
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		try {
 			HashMap fields = new HashMap();
 			sb.append("select distinct S.* from " + DenklestirmeAy.TABLE_NAME + " D " + PdksEntityController.getSelectLOCK() + " ");
@@ -207,7 +207,7 @@ public class FazlaMesaiDonemselRaporHome extends EntityHome<DepartmanDenklestirm
 			sb.append(" order by S." + Sirket.COLUMN_NAME_ID);
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-			List<Sirket> sirketList = pdksEntityController.getObjectBySQLList(sb, fields, Sirket.class);
+			List<Sirket> sirketList = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), fields, Sirket.class);
 			if (!sirketList.isEmpty()) {
 				if (sirketList.size() == 1)
 					sirketId = sirketList.get(0).getId();
@@ -235,7 +235,7 @@ public class FazlaMesaiDonemselRaporHome extends EntityHome<DepartmanDenklestirm
 		perDenkMap.clear();
 		denklestirmeAyList.clear();
 		HashMap fields = new HashMap();
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		sb.append("select distinct PD.* from " + DenklestirmeAy.TABLE_NAME + " PD " + PdksEntityController.getSelectLOCK() + " ");
 		sb.append(" where PD." + DenklestirmeAy.COLUMN_NAME_YIL + " = :y");
 		sb.append(" and ((PD." + DenklestirmeAy.COLUMN_NAME_YIL + "*100)+ PD." + DenklestirmeAy.COLUMN_NAME_AY + ") <= :s");
@@ -247,7 +247,7 @@ public class FazlaMesaiDonemselRaporHome extends EntityHome<DepartmanDenklestirm
 		try {
 			donemler.clear();
 			sirketler.clear();
-			List<DenklestirmeAy> denkList = pdksEntityController.getObjectBySQLList(sb, fields, DenklestirmeAy.class);
+			List<DenklestirmeAy> denkList = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), fields, DenklestirmeAy.class);
 			List<Long> idList = new ArrayList<Long>();
 			for (DenklestirmeAy denklestirmeAy : denkList) {
 				idList.add(denklestirmeAy.getId());
@@ -255,7 +255,7 @@ public class FazlaMesaiDonemselRaporHome extends EntityHome<DepartmanDenklestirm
 			}
 			if (!idList.isEmpty()) {
 				String fieldName = "d";
-				sb = new StringBuffer();
+				sb = new StringBuilder();
 				sb.append("select distinct S.* from " + PersonelDenklestirme.TABLE_NAME + " PD " + PdksEntityController.getSelectLOCK() + " ");
 				sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksEntityController.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_ID + " = PD." + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
 				ortakIslemler.addIKSirketTesisKriterleri(fields, sb);
@@ -264,7 +264,7 @@ public class FazlaMesaiDonemselRaporHome extends EntityHome<DepartmanDenklestirm
 				sb.append(" order by S." + Sirket.COLUMN_NAME_ID);
 				fields.put(fieldName, idList);
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				List<Sirket> sirketList = pdksEntityController.getSQLParamList(idList, sb, fieldName, fields, Sirket.class, session);
+				List<Sirket> sirketList = pdksEntityController.getSQLParamList(idList, PdksUtil.getStringBuffer(sb), fieldName, fields, Sirket.class, session);
 				if (!sirketList.isEmpty()) {
 					if (sirketList.size() == 1) {
 						sirketId = sirketList.get(0).getId();
@@ -515,7 +515,7 @@ public class FazlaMesaiDonemselRaporHome extends EntityHome<DepartmanDenklestirm
 		personelList.clear();
 		perDenkMap.clear();
 		denklestirmeAyList.clear();
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		HashMap fields = new HashMap();
 		sb.append("select PD.* from " + DenklestirmeAy.TABLE_NAME + " D " + PdksEntityController.getSelectLOCK() + " ");
 		sb.append(" inner join " + PersonelDenklestirme.TABLE_NAME + " PD " + PdksEntityController.getJoinLOCK() + " on PD." + PersonelDenklestirme.COLUMN_NAME_DONEM + " = D." + DenklestirmeAy.COLUMN_NAME_ID);
@@ -537,7 +537,7 @@ public class FazlaMesaiDonemselRaporHome extends EntityHome<DepartmanDenklestirm
 
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<PersonelDenklestirme> list = pdksEntityController.getObjectBySQLList(sb, fields, PersonelDenklestirme.class);
+		List<PersonelDenklestirme> list = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), fields, PersonelDenklestirme.class);
 
 		if (!list.isEmpty()) {
 			ortakIslemler.setPersonelDenklestirmeDevir(null, list, session);

@@ -629,8 +629,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 				KapiView terminalKapi = terminalKapiManuelUpdate(kgsHareket.getTerminalKapi());
 				String name = "SP_HAREKET_TERMINAL_SIRKET";
 				if (ortakIslemler.isExisStoreProcedure(name, session)) {
-					StringBuffer sb = new StringBuffer(name);
-					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+ 					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 					veriMap.put("kgsId", kgsId);
 					veriMap.put("pdksId", pdksId);
 					veriMap.put("kapi", terminalKapi.getId());
@@ -642,7 +641,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 					veriMap.put("sirketId", kgsHareket.getKgsSirketId());
 					if (session != null)
 						veriMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-					pdksEntityController.execSP(veriMap, sb);
+					pdksEntityController.execSP(veriMap, name);
 				} else {
 					pdksEntityController.hareketSil(kgsId, pdksId, authenticatedUser, neden.getId(), "", kgsHareket.getKgsSirketId(), session);
 					pdksId = pdksEntityController.hareketEkle(terminalKapi, kgsHareket.getPersonel(), kgsHareket.getZaman(), authenticatedUser, neden.getId(), aciklama, session);
@@ -854,14 +853,14 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 					String fieldName = "p";
 					HashMap parametreMap = new HashMap();
 					HashMap map = new HashMap();
-					StringBuffer sb = new StringBuffer();
+					StringBuilder sb = new StringBuilder();
 					sb.append("select P." + Personel.COLUMN_NAME_KGS_PERSONEL + " from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK() + " ");
 					sb.append(" where P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " :" + fieldName);
 					map.put(fieldName, sicilNoList);
 					if (session != null)
 						map.put(PdksEntityController.MAP_KEY_SESSION, session);
-					// List<BigDecimal> idList = pdksEntityController.getObjectBySQLList(sb, map, null);
-					List<BigDecimal> idList = pdksEntityController.getSQLParamList(sicilNoList, sb, fieldName, map, null, session);
+					// List<BigDecimal> idList = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), map, null);
+					List<BigDecimal> idList = pdksEntityController.getSQLParamList(sicilNoList, PdksUtil.getStringBuffer(sb), fieldName, map, null, session);
 
 					ArrayList<Long> personeller = new ArrayList<Long>();
 					for (BigDecimal bigDecimal : idList) {

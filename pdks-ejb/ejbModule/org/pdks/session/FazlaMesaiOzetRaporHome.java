@@ -341,14 +341,14 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 				} else {
 					Tanim parent = ortakIslemler.getSQLTanimByTipKodu(Tanim.TIPI_PERSONEL_EK_SAHA, "ekSaha3", session);
 					if (parent != null) {
-						StringBuffer sb = new StringBuffer();
+						StringBuilder sb = new StringBuilder();
 						fields = new HashMap();
 						sb.append("select  * from " + Tanim.TABLE_NAME + "  " + PdksEntityController.getSelectLOCK() + " ");
 						sb.append(" where " + Tanim.COLUMN_NAME_PARENT_ID + " = :t and " + Tanim.COLUMN_NAME_DURUM + " = 1 ");
 						fields.put("t", parent.getId());
 						if (session != null)
 							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-						statuTanimList = pdksEntityController.getObjectBySQLList(sb, fields, Tanim.class);
+						statuTanimList = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), fields, Tanim.class);
 					}
 
 				}
@@ -625,13 +625,13 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			if (denklestirmeAy != null) {
 				if (denklestirmeAy.getFazlaMesaiMaxSure() == null)
 					fazlaMesaiOrtakIslemler.setFazlaMesaiMaxSure(denklestirmeAy, session);
-				StringBuffer sb = new StringBuffer();
+				StringBuilder sb = new StringBuilder();
 				sb.append("select " + PersonelDenklestirme.COLUMN_NAME_ID + "  from " + PersonelDenklestirme.TABLE_NAME + "  " + PdksEntityController.getSelectLOCK());
 				sb.append(" where " + PersonelDenklestirme.COLUMN_NAME_DONEM + " = :t and " + PersonelDenklestirme.COLUMN_NAME_DENKLESTIRME_DURUM + " = 1");
 				fields.put("t", denklestirmeAy.getId());
 				if (session != null)
 					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				List idList = pdksEntityController.getObjectBySQLList(sb, fields, null);
+				List idList = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), fields, null);
 				if (idList.isEmpty()) {
 					denklestirmeAy = null;
 					PdksUtil.addMessageAvailableWarn((ay > 0 ? yil + " " + (aylar.get(ay - 1).getLabel()) : "") + " döneme ait denkleştirme verisi tanımlanmamıştır!");
@@ -1079,7 +1079,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			if (!personelDenklestirmeler.isEmpty()) {
 				if (sirket != null && denklestirmeAyDurum && userHome.hasPermission("personelIzinGirisi", "view")) {
 					map.clear();
-					StringBuffer sb = new StringBuffer();
+					StringBuilder sb = new StringBuilder();
 					sb.append("select * from " + IzinTipi.TABLE_NAME + " " + PdksEntityController.getSelectLOCK());
 					sb.append(" where " + IzinTipi.COLUMN_NAME_DEPARTMAN + " = :d and " + IzinTipi.COLUMN_NAME_GIRIS_TIPI + " <> :g ");
 					sb.append(" and " + IzinTipi.COLUMN_NAME_DURUM + " = 1 and " + IzinTipi.COLUMN_NAME_BAKIYE_IZIN_TIPI + " is null ");
@@ -1089,7 +1089,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 					// map.put("bakiyeIzinTipi=", null);
 					if (session != null)
 						map.put(PdksEntityController.MAP_KEY_SESSION, session);
-					List<IzinTipi> izinTipiList = pdksEntityController.getObjectBySQLList(sb, map, IzinTipi.class);
+					List<IzinTipi> izinTipiList = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), map, IzinTipi.class);
 					sirketIzinGirisDurum = !izinTipiList.isEmpty();
 				}
 				fazlaMesaiMap = ortakIslemler.getFazlaMesaiMap(session);
@@ -1544,12 +1544,16 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 								logger.debug(key);
 
 							if (vardiyaGun.getVardiyaSaatDB() != null && vardiyaGun.getDurum()) {
+								VardiyaSaat vardiyaSaatDB = vardiyaGun.getVardiyaSaatDB();
+								aksamVardiyaSayisi += (int) vardiyaSaatDB.getAksamVardiyaSaatSayisi();
+ 								if (aksamGun == false)
+									aksamGun = aksamVardiyaSayisi > 0;
 								vardiyaGun.setPlanHareketEkle(false);
 								vardiyaGun.setHareketler(null);
 								vardiyaGun.setGirisHareketleri(null);
 								vardiyaGun.setCikisHareketleri(null);
 								if (fazlaMesaiHesapla) {
-									VardiyaSaat vardiyaSaatDB = vardiyaGun.getVardiyaSaatDB();
+
 									if (vardiyaSaatDB.getResmiTatilToplamSure() > 0.0d) {
 										vardiyaGun.setResmiTatilSure(vardiyaSaatDB.getResmiTatilToplamSure());
 										if (vardiyaSaatDB.getResmiTatilKanunenEklenenSure() != null)
@@ -1619,7 +1623,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 						puantaj.setVardiyalar(vardiyaGunList);
 						if (vardiyaGunSon != null)
 							ayBitti = bugun.after(vardiyaGunSon.getIslemVardiya().getVardiyaTelorans1BitZaman());
-
+						puantaj.setAksamVardiyaSayisi(aksamVardiyaSayisi);
 					}
 					if (!isAramaDurum)
 						isAramaDurum = personelDenklestirme != null && (personelDenklestirme.getIsAramaPersonelDonemselDurum() != null && personelDenklestirme.getIsAramaPersonelDonemselDurum().getIsAramaIzni());
@@ -1826,7 +1830,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 							if (!ayrikHareketVar)
 								ayrikHareketVar = ayrikKontrol;
 							if (!PdksUtil.getTestDurum()) {
-								StringBuffer sb = new StringBuffer(personel.getPdksSicilNo() + " " + personel.getAdSoyad() + " ");
+								StringBuilder sb = new StringBuilder(personel.getPdksSicilNo() + " " + personel.getAdSoyad() + " ");
 								for (Iterator iterator = ayrikList.iterator(); iterator.hasNext();) {
 									String string = (String) iterator.next();
 									sb.append(string);
@@ -2147,7 +2151,7 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 	private List<PersonelDenklestirme> getPdksPersonelDenklestirmeler(List<Long> idList) {
 		String fieldName = "p";
 		HashMap fields = new HashMap();
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		sb.append("select S.* from " + PersonelDenklestirme.TABLE_NAME + " S " + PdksEntityController.getSelectLOCK() + " ");
 		// sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksEntityController.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_ID + " = S." + PersonelDenklestirme.COLUMN_NAME_PERSONEL);
 		// sb.append(" and P." + Personel.getIseGirisTarihiColumn() + " is not null and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " is not null ");
@@ -2155,8 +2159,8 @@ public class FazlaMesaiOzetRaporHome extends EntityHome<DepartmanDenklestirmeDon
 		fields.put(fieldName, idList);
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		// List<PersonelDenklestirme> list = pdksEntityController.getObjectBySQLList(sb, fields, PersonelDenklestirme.class);
-		List<PersonelDenklestirme> list = pdksEntityController.getSQLParamList(idList, sb, fieldName, fields, PersonelDenklestirme.class, session);
+		// List<PersonelDenklestirme> list = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), fields, PersonelDenklestirme.class);
+		List<PersonelDenklestirme> list = pdksEntityController.getSQLParamList(idList, PdksUtil.getStringBuffer(sb), fieldName, fields, PersonelDenklestirme.class, session);
 		ortakIslemler.setPersonelDenklestirmeDevir(null, list, session);
 		for (Iterator iterator = list.iterator(); iterator.hasNext();) {
 			PersonelDenklestirme personelDenklestirme = (PersonelDenklestirme) iterator.next();

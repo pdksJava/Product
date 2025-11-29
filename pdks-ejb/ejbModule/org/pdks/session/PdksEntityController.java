@@ -82,7 +82,7 @@ public class PdksEntityController implements Serializable {
 	private String getStringParse(Object fieldValue) {
 		String stringParse = "";
 		if (fieldValue != null) {
-			StringBuilder str = new StringBuilder();
+			StringBuffer str = new StringBuffer();
 			if (fieldValue instanceof Collection) {
 				for (Iterator iter = ((Collection) fieldValue).iterator(); iter.hasNext();) {
 					String element = (String) iter.next();
@@ -98,6 +98,7 @@ public class PdksEntityController implements Serializable {
 			}
 			if (str.length() > 0)
 				stringParse = str.toString();
+			str = null;
 		}
 		return stringParse;
 	}
@@ -239,10 +240,10 @@ public class PdksEntityController implements Serializable {
 			session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		List list = new ArrayList((Collection) parametreMap.get(keyAlan));
 		ArrayList parametreList = new ArrayList();
-		StringBuilder strArray = null;
+		StringBuffer strArray = null;
 		String select = parametreMap.containsKey(MAP_KEY_SELECT) ? (String) parametreMap.get(MAP_KEY_SELECT) : "";
 		while (session != null && !list.isEmpty()) {
-			strArray = new StringBuilder();
+			strArray = new StringBuffer();
 			for (Iterator iterator = list.iterator(); iterator.hasNext();) {
 				Object object = (Object) iterator.next();
 				strArray.append((!parametreList.isEmpty() ? "," : "") + "?");
@@ -320,7 +321,7 @@ public class PdksEntityController implements Serializable {
 		Session session = null;
 		if (class1 != null) {
 			ArrayList parametreList = new ArrayList();
-			StringBuilder query = new StringBuilder();
+			StringBuffer query = new StringBuffer();
 			String order = "";
 			String select = "";
 			String or = null;
@@ -355,7 +356,7 @@ public class PdksEntityController implements Serializable {
 				}
 				if (session == null)
 					session = PdksUtil.getSession(pEntityManager == null ? entityManager : pEntityManager, Boolean.FALSE);
-				StringBuilder strArray = null;
+				StringBuffer strArray = null;
 
 				for (Iterator iter = fields.keySet().iterator(); iter.hasNext();) {
 					String fieldNameReal = (String) iter.next();
@@ -384,7 +385,7 @@ public class PdksEntityController implements Serializable {
 						order = " " + MAP_KEY_ORDER + " by " + getStringParse(fieldValue);
 					} else {
 						boolean listeBos = Boolean.FALSE;
-						StringBuilder str = new StringBuilder();
+						StringBuffer str = new StringBuffer();
 						if (fieldValue != null) {
 							if (fieldValue instanceof Collection) {
 								listeBos = ((Collection) fieldValue).isEmpty();
@@ -392,7 +393,7 @@ public class PdksEntityController implements Serializable {
 									query.append((query.length() > 0 ? " and " : " where ") + "1=2");
 									continue;
 								}
-								strArray = new StringBuilder();
+								strArray = new StringBuffer();
 								for (Iterator iter1 = ((List) fieldValue).iterator(); iter1.hasNext();) {
 									Object fieldListValue = iter1.next();
 									strArray.append((session == null ? (parametreSayac++) : "?") + (iter1.hasNext() ? "," : ""));
@@ -416,7 +417,7 @@ public class PdksEntityController implements Serializable {
 				session = PdksUtil.getSession(pEntityManager == null ? entityManager : pEntityManager, Boolean.FALSE);
 			String sql = MAP_KEY_SELECT + " " + (PdksUtil.hasStringValue(select) == false ? " " + SELECT_KARAKTER + " " : select.trim()) + " from " + class1.getName() + " " + SELECT_KARAKTER + " " + query.toString() + order;
 			if (query.indexOf(" and ") > 0 && or != null)
-				sql = replaceAll(sql, " and ", or);
+				sql = PdksUtil.replaceAll(sql, " and ", or);
 			select = null;
 			order = null;
 
@@ -482,32 +483,6 @@ public class PdksEntityController implements Serializable {
 			fields.put(MAP_KEY_SESSION, session);
 		return list;
 
-	}
-
-	public static String replaceAll(String str, String pattern, String replace) {
-		StringBuilder lSb = new StringBuilder();
-		if ((str != null) && (pattern != null) && (pattern.length() > 0) && (replace != null)) {
-			int i = 0;
-			int j = str.indexOf(pattern, i);
-			int l = pattern.length();
-			int m = str.length();
-			if (j > -1) {
-				while (j > -1) {
-					if (i != j)
-						lSb.append(str.substring(i, j));
-
-					lSb.append(replace);
-					i = j + l;
-					j = (i > m) ? -1 : str.indexOf(pattern, i);
-				}
-				if (i < m)
-					lSb.append(str.substring(i));
-
-			} else
-				lSb.append(str);
-
-		}
-		return lSb.toString();
 	}
 
 	public Object save(Object object, Session session) {
@@ -655,7 +630,7 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 * @throws Exception
 	 */
-	public List execFNList(LinkedHashMap<String, Object> veriMap, StringBuffer sp) throws Exception {
+	public List execFNList(LinkedHashMap<String, Object> veriMap, String sp) throws Exception {
 		List sonucList = null;
 		boolean manuelReadUnCommitted = false;
 		try {
@@ -695,7 +670,7 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 * @throws Exception
 	 */
-	public List execSPList(LinkedHashMap<String, Object> veriMap, StringBuffer sp, Class class1) throws Exception {
+	public List execSPList(LinkedHashMap<String, Object> veriMap, String sp, Class class1) throws Exception {
 		List sonucList = null;
 		boolean manuelReadUnCommitted = false;
 		try {
@@ -735,7 +710,7 @@ public class PdksEntityController implements Serializable {
 	 * @param sp
 	 */
 	@Transactional
-	public int execSP(LinkedHashMap<String, Object> veriMap, StringBuffer sp) throws Exception {
+	public int execSP(LinkedHashMap<String, Object> veriMap, String sp) throws Exception {
 		Integer sonuc = null;
 		boolean manuelReadUnCommitted = false;
 		try {
@@ -780,8 +755,8 @@ public class PdksEntityController implements Serializable {
 	 * @param sp
 	 * @return
 	 */
-	private SQLQuery prepareProcedure(LinkedHashMap<String, Object> veriMap, StringBuffer sp) {
-		String queryStr = "exec " + sp.toString();
+	private SQLQuery prepareProcedure(LinkedHashMap<String, Object> veriMap, String sp) {
+		String queryStr = "exec " + sp;
 		Session session = veriMap.containsKey(MAP_KEY_SESSION) ? (Session) veriMap.get(MAP_KEY_SESSION) : PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		if (veriMap.containsKey(MAP_KEY_SESSION))
 			veriMap.remove(MAP_KEY_SESSION);
@@ -811,8 +786,8 @@ public class PdksEntityController implements Serializable {
 	 * @param sp
 	 * @return
 	 */
-	private SQLQuery prepareFunction(LinkedHashMap<String, Object> veriMap, StringBuffer sp) {
-		String queryStr = "select dbo." + sp.toString() + " ( ";
+	private SQLQuery prepareFunction(LinkedHashMap<String, Object> veriMap, String sp) {
+		String queryStr = "select dbo." + sp + " ( ";
 		Session session = veriMap.containsKey(MAP_KEY_SESSION) ? (Session) veriMap.get(MAP_KEY_SESSION) : PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		if (veriMap.containsKey(MAP_KEY_SESSION))
 			veriMap.remove(MAP_KEY_SESSION);
@@ -858,7 +833,7 @@ public class PdksEntityController implements Serializable {
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 		if (session != null)
 			veriMap.put(MAP_KEY_SESSION, session);
-		StringBuffer sp = new StringBuffer("SP_SISTEM_HAREKET_EKLE_RETURN");
+		String sp = "SP_SISTEM_HAREKET_EKLE_RETURN";
 		veriMap.put("kapi", kapi.getId());
 		veriMap.put("personel", personel.getId());
 		veriMap.put("zaman", zaman);
@@ -875,7 +850,7 @@ public class PdksEntityController implements Serializable {
 				sb.append("select 'K' + CAST(Z." + HareketKGS.COLUMN_NAME_ID + " as VARCHAR(12)) as ID, 'K' as SIRKET, Z." + HareketKGS.COLUMN_NAME_ID + " as TABLE_ID, Z.USERID as " + HareketKGS.COLUMN_NAME_PERSONEL + " ,");
 				sb.append(" Z.KAPIID as " + HareketKGS.COLUMN_NAME_KAPI + ", Z.HAREKET_ZAMANI as ZAMAN, Z.DURUM, Z.ISLEM_ID, NULL as ORJ_ZAMAN,Z.OLUSTURMA_ZAMANI,Z.KGS_SIRKET_ID from " + HareketKGS.TABLE_NAME + " as Z " + selectLOCK);
 				sb.append(" where " + HareketKGS.COLUMN_NAME_ID + " = :hareketId");
-				List<HareketKGS> list1 = getObjectBySQLList(sb, fields, HareketKGS.class);
+				List<HareketKGS> list1 = getObjectBySQLList(sb.toString(), fields, HareketKGS.class);
 				if (!list1.isEmpty())
 					id = list1.get(0);
 			}
@@ -900,7 +875,7 @@ public class PdksEntityController implements Serializable {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		StringBuffer sp = new StringBuffer("SP_HAREKET_EKLE");
+		String sp = "SP_HAREKET_EKLE";
 		veriMap.put("kapi", kapi.getId());
 		veriMap.put("personel", personel.getId());
 		veriMap.put("zaman", zaman);
@@ -935,7 +910,7 @@ public class PdksEntityController implements Serializable {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		StringBuffer sp = new StringBuffer("SP_HAREKET_GUNCELLE_SIRKET");
+		String sp = "SP_HAREKET_GUNCELLE_SIRKET";
 		veriMap.put("kgsId", kgsId);
 		veriMap.put("pdksId", pdksId);
 		veriMap.put("zaman", zaman);
@@ -972,7 +947,7 @@ public class PdksEntityController implements Serializable {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		StringBuffer sp = new StringBuffer("SP_HAREKET_SIL_SIRKET");
+		String sp = "SP_HAREKET_SIL_SIRKET";
 		veriMap.put("kgsId", kgsId);
 		veriMap.put("pdksId", pdksId);
 		veriMap.put("guncelleyenId", guncelleyen != null ? guncelleyen.getId() : null);
@@ -1043,7 +1018,7 @@ public class PdksEntityController implements Serializable {
 					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 					if (session != null)
 						veriMap.put(MAP_KEY_SESSION, session);
-					StringBuffer sp = new StringBuffer("SP_CHECKIDENT_VIEW");
+					String sp = "SP_CHECKIDENT_VIEW";
 					execSP(veriMap, sp);
 					session.flush();
 					session.clear();
@@ -1063,7 +1038,7 @@ public class PdksEntityController implements Serializable {
 					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 					if (session != null)
 						veriMap.put(MAP_KEY_SESSION, session);
-					StringBuffer sp = new StringBuffer("SP_CHECKIDENT_VIEW");
+					String sp = "SP_CHECKIDENT_VIEW";
 					execSP(veriMap, sp);
 					session.flush();
 				}
@@ -1087,7 +1062,7 @@ public class PdksEntityController implements Serializable {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		StringBuffer sp = new StringBuffer("SP_HAREKET_ONAYLA");
+		String sp = "SP_HAREKET_ONAYLA";
 		veriMap.put("islemId", islemId);
 		veriMap.put("guncelleyen", guncelleyen.getId());
 		if (session != null)
@@ -1112,7 +1087,7 @@ public class PdksEntityController implements Serializable {
 		if (session == null)
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		StringBuffer sp = new StringBuffer("SP_HAREKET_ONAYLAMA");
+		String sp = "SP_HAREKET_ONAYLAMA";
 		veriMap.put("kgsId", kgsId);
 		veriMap.put("pdksId", pdksId);
 		veriMap.put("guncelleyen", guncelleyen.getId());
@@ -1129,12 +1104,13 @@ public class PdksEntityController implements Serializable {
 	}
 
 	/**
-	 * @param sb
+	 * @param sqlObject
 	 * @param fields
 	 * @param class1
 	 * @return
 	 */
-	public Object getObjectBySQL(StringBuffer sb, HashMap fields, Class class1) {
+	public Object getObjectBySQL(Object sqlObject, HashMap fields, Class class1) {
+		StringBuffer sb = PdksUtil.getStringBuffer(sqlObject);
 		StringBuffer sbOrj = new StringBuffer(sb.toString());
 		HashMap fieldsOrj = new HashMap();
 		fieldsOrj.putAll(fields);
@@ -1147,31 +1123,33 @@ public class PdksEntityController implements Serializable {
 			}
 		} catch (Exception e) {
 		}
-		List list = getObjectBySQLList(sb, fields, class1);
+		List list = getObjectBySQLList(sb.toString(), fields, class1);
 		if (list == null)
-			list = getObjectBySQLList(sbOrj, fieldsOrj, class1);
+			list = getObjectBySQLList(sbOrj.toString(), fieldsOrj, class1);
 		Object object = list != null && !list.isEmpty() ? list.get(0) : null;
 		fieldsOrj = null;
-		sb = new StringBuffer(sbOrj.toString());
+		sb = null;
 		return object;
 	}
 
 	/**
-	 * @param sb
+	 * @param sqlObject
 	 * @param fields
 	 * @param class1
 	 * @param uzerineYaz
 	 * @return
 	 */
-	public TreeMap getObjectBySQLMap(StringBuffer sb, HashMap fields, Class class1, Boolean uzerineYaz) {
+	public TreeMap getObjectBySQLMap(Object sqlObject, HashMap fields, Class class1, Boolean uzerineYaz) {
+		StringBuffer sb = PdksUtil.getStringBuffer(sqlObject);
 		TreeMap treeMap = null;
 		if (fields.containsKey(MAP_KEY_MAP)) {
 			String method = (String) fields.get(MAP_KEY_MAP);
 			fields.remove(MAP_KEY_MAP);
-			List list = getObjectBySQLList(sb, fields, class1);
+			List list = getObjectBySQLList(sb.toString(), fields, class1);
 			treeMap = getTreeMapByList(list, method, uzerineYaz);
 		} else
 			treeMap = new TreeMap();
+		sb = null;
 		return treeMap;
 	}
 
@@ -1318,7 +1296,7 @@ public class PdksEntityController implements Serializable {
 				if (session != null)
 					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			}
-			list = getObjectBySQLList(sb, fields, class1);
+			list = getObjectBySQLList(sb.toString(), fields, class1);
 
 		}
 		return list;
@@ -1362,12 +1340,13 @@ public class PdksEntityController implements Serializable {
 	}
 
 	/**
-	 * @param sb
+	 * @param sqlObject
 	 * @param fields
 	 * @param class1
 	 * @return
 	 */
-	public List getObjectBySQLList(StringBuffer sb, HashMap fields, Class class1) {
+	public List getObjectBySQLList(Object sqlObject, HashMap fields, Class class1) {
+		StringBuffer sb = PdksUtil.getStringBuffer(sqlObject);
 		List list = null;
 		// Integer ti = null;
 		// Connection cn = null;
@@ -1469,7 +1448,7 @@ public class PdksEntityController implements Serializable {
 	public List getDataByIdList(StringBuffer sb, HashMap map, String tableName, Class class1, String idColumn) {
 		List list = null;
 		Session session = map.containsKey(PdksEntityController.MAP_KEY_SESSION) ? (Session) map.get(PdksEntityController.MAP_KEY_SESSION) : PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		List idler = getObjectBySQLList(sb, map, null);
+		List idler = getObjectBySQLList(sb.toString(), map, null);
 		if (idler != null && !idler.isEmpty()) {
 			String fieldName = "id";
 			if (idColumn == null)
@@ -1494,14 +1473,15 @@ public class PdksEntityController implements Serializable {
 	 * @param method
 	 * @param uzerineYaz
 	 * @param dataIdList
-	 * @param sb
+	 * @param sqlObject
 	 * @param fieldName
 	 * @param fieldsOrj
 	 * @param class1
 	 * @param session
 	 * @return
 	 */
-	public TreeMap getSQLParamTreeMap(String method, boolean uzerineYaz, List dataIdList, StringBuffer sb, String fieldName, HashMap<String, Object> fieldsOrj, Class class1, Session session) {
+	public TreeMap getSQLParamTreeMap(String method, boolean uzerineYaz, List dataIdList, Object sqlObject, String fieldName, HashMap<String, Object> fieldsOrj, Class class1, Session session) {
+		StringBuffer sb = PdksUtil.getStringBuffer(sqlObject);
 		TreeMap treeMap = null;
 		if (fieldsOrj != null && fieldsOrj.containsKey(PdksEntityController.MAP_KEY_MAP)) {
 			if (PdksUtil.hasStringValue(method) == false)
@@ -1511,6 +1491,7 @@ public class PdksEntityController implements Serializable {
 		List veriList = getSQLParamList(dataIdList, sb, fieldName, fieldsOrj, class1, session);
 		if (veriList != null)
 			treeMap = getTreeMapByList(veriList, method, uzerineYaz);
+		sb = null;
 		return treeMap;
 	}
 
@@ -1534,7 +1515,7 @@ public class PdksEntityController implements Serializable {
 
 		if (session != null)
 			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List list = getObjectBySQLList(sb, parametreMap, class1);
+		List list = getObjectBySQLList(sb.toString(), parametreMap, class1);
 
 		Object object = list != null && !list.isEmpty() ? list.get(0) : null;
 		if (object == null && class1 != null) {
@@ -1556,14 +1537,15 @@ public class PdksEntityController implements Serializable {
 
 	/**
 	 * @param dataIdList
-	 * @param sb
+	 * @param sqlObject
 	 * @param fieldName
 	 * @param fieldsOrj
 	 * @param class1
 	 * @param session
 	 * @return
 	 */
-	public List getSQLParamList(List dataIdList, StringBuffer sb, String fieldName, HashMap<String, Object> fieldsOrj, Class class1, Session session) {
+	public List getSQLParamList(List dataIdList, Object sqlObject, String fieldName, HashMap<String, Object> fieldsOrj, Class class1, Session session) {
+		StringBuffer sb = PdksUtil.getStringBuffer(sqlObject);
 		List idList = new ArrayList();
 		List veriList = new ArrayList();
 		try {
@@ -1574,7 +1556,7 @@ public class PdksEntityController implements Serializable {
 			String str = ":" + fieldName, sqlStr = sb.toString();
 			if (idInputList.size() == 1) {
 				fieldsOrj.put(fieldName, idInputList);
-				veriList = getObjectBySQLList(sb, fieldsOrj, class1);
+				veriList = getObjectBySQLList(sb.toString(), fieldsOrj, class1);
 			} else {
 				int adet = 0;
 				for (String key : fieldsOrj.keySet()) {
@@ -1607,7 +1589,7 @@ public class PdksEntityController implements Serializable {
 					if (session != null)
 						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 					try {
-						List list = getObjectBySQLList(sb, fields, class1);
+						List list = getObjectBySQLList(sb.toString(), fields, class1);
 						if (!list.isEmpty())
 							veriList.addAll(list);
 						list = null;
@@ -1625,7 +1607,7 @@ public class PdksEntityController implements Serializable {
 			logger.error(sb + "\n" + ex);
 
 		}
-
+		sb = null;
 		return veriList;
 	}
 

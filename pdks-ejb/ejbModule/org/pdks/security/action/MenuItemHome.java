@@ -1,8 +1,10 @@
 package org.pdks.security.action;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
@@ -19,6 +21,8 @@ import org.jboss.seam.annotations.Transactional;
 import org.jboss.seam.annotations.web.RequestParameter;
 import org.jboss.seam.framework.EntityHome;
 import org.pdks.entity.MenuItem;
+import org.pdks.entity.Personel;
+import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
 import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.User;
@@ -50,6 +54,10 @@ public class MenuItemHome extends EntityHome<MenuItem> implements Serializable {
 	OrtakIslemler ortakIslemler;
 
 	private Session session;
+	private boolean tesisYetki = false, paramDurum = false;
+	private String bolumAciklama;
+
+	private List<UserMenuItemTime> userMenuItemTimeList;
 
 	// SampleDAO sampleDAO=new SampleDAO();
 
@@ -68,9 +76,52 @@ public class MenuItemHome extends EntityHome<MenuItem> implements Serializable {
 		super.create();
 	}
 
-	public String guncelle(MenuItem item) {
-		if (item == null)
+	/**
+	 * @param item
+	 * @param userDurum
+	 * @return
+	 */
+	public String guncelle(MenuItem item, boolean userDurum) {
+		tesisYetki = false;
+		paramDurum = false;
+		bolumAciklama = null;
+		if (authenticatedUser.isAdmin() == false || item == null)
+			userDurum = false;
+		if (userMenuItemTimeList == null)
+			userMenuItemTimeList = new ArrayList<UserMenuItemTime>();
+		else
+			userMenuItemTimeList.clear();
+		if (item == null) {
 			item = new MenuItem();
+		} else {
+			if (item.getDurum().booleanValue() == false || item.getTopMenu() == null || item.getTopMenu().booleanValue())
+				userDurum = false;
+			if (userDurum) {
+				userMenuItemTimeList = ortakIslemler.getUserMenuItemTimeList(item.getId(), null, getSession());
+				for (Iterator iterator = userMenuItemTimeList.iterator(); iterator.hasNext();) {
+					UserMenuItemTime userMenuItemTime = (UserMenuItemTime) iterator.next();
+					User user = userMenuItemTime.getUser();
+					Personel personel = user.getPdksPersonel();
+					Sirket sirket = personel.getSirket();
+					Tanim bolum = personel.getEkSaha3();
+					if (bolumAciklama == null && sirket.getDepartman().isAdminMi() && bolum != null) {
+						if (bolum.getParentTanim() != null)
+							bolumAciklama = bolum.getParentTanim().getAciklama();
+					}
+					if (tesisYetki == false && personel.getTesis() != null)
+						tesisYetki = sirket.isTesisDurumu();
+					if (!paramDurum)
+						paramDurum = userMenuItemTime.getParametreJSON() != null && userMenuItemTime.getParametreJSON().indexOf("}") > 3;
+
+				}
+				if (userMenuItemTimeList.isEmpty() == false) {
+					if (bolumAciklama == null)
+						bolumAciklama = "Bölüm";
+				}
+
+			}
+		}
+
 		setInstance(item);
 		return "";
 	}
@@ -78,28 +129,28 @@ public class MenuItemHome extends EntityHome<MenuItem> implements Serializable {
 	@Transactional
 	public String deleteItem() {
 		MenuItem item = getInstance();
-		session = getSession();
+		Session sessionx = getSession();
 
 		HashMap fields = new HashMap();
 		fields.put("menu.id", item.getId());
-		if (session != null)
-			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+		if (sessionx != null)
+			fields.put(PdksEntityController.MAP_KEY_SESSION, sessionx);
 		List<UserMenuItemTime> list = pdksEntityController.getObjectByInnerObjectList(fields, UserMenuItemTime.class);
 		for (UserMenuItemTime userMenuItemTime : list) {
 			pdksEntityController.deleteObject(session, entityManager, userMenuItemTime);
 		}
-		pdksEntityController.deleteObject(session, entityManager, item);
+		pdksEntityController.deleteObject(sessionx, entityManager, item);
 
-		session.flush();
-		session.clear();
-		startupAction.fillMenuItemList(session);
+		sessionx.flush();
+		sessionx.clear();
+		startupAction.fillMenuItemList(sessionx);
 		return "";
 	}
 
 	@Override
 	@Begin(join = true)
 	public String update() {
-		session = getSession();
+		Session sessionx = getSession();
 		MenuItem item = getInstance();
 		Tanim description = item.getDescription();
 		if (!description.getTipi().equals(Tanim.TIPI_MENU_BILESENI) || description.getKodu() == null || !description.getKodu().equals(item.getName())) {
@@ -107,13 +158,13 @@ public class MenuItemHome extends EntityHome<MenuItem> implements Serializable {
 			description.setTipi(Tanim.TIPI_MENU_BILESENI);
 			description.setIslemTarihi(new Date());
 			description.setIslemYapan(authenticatedUser);
-			pdksEntityController.saveOrUpdate(session, entityManager, description);
+			pdksEntityController.saveOrUpdate(sessionx, entityManager, description);
 		}
 
-		pdksEntityController.saveOrUpdate(session, entityManager, item);
-		session.flush();
+		pdksEntityController.saveOrUpdate(sessionx, entityManager, item);
+		sessionx.flush();
 		PdksUtil.addMessageInfo("İşlem Başarı ile gerçekleştirildi.");
-		startupAction.fillMenuItemList(session);
+		startupAction.fillMenuItemList(sessionx);
 		return "";
 
 	}
@@ -122,7 +173,7 @@ public class MenuItemHome extends EntityHome<MenuItem> implements Serializable {
 	@Begin(join = true)
 	@Transactional
 	public String persist() {
-		session = getSession();
+		Session sessionx = getSession();
 		String method = "";
 		String adres;
 		String cikis = "";
@@ -154,9 +205,9 @@ public class MenuItemHome extends EntityHome<MenuItem> implements Serializable {
 			item.getDescription().setTipi(Tanim.TIPI_MENU_BILESENI);
 			item.getDescription().setKodu(item.getName());
 
-			pdksEntityController.saveOrUpdate(session, entityManager, instance);
-			session.flush();
-			startupAction.fillMenuItemList(session);
+			pdksEntityController.saveOrUpdate(sessionx, entityManager, instance);
+			sessionx.flush();
+			startupAction.fillMenuItemList(sessionx);
 			PdksUtil.addMessageInfo("İşlem Başarı ile gerçekleştirildi.");
 			cikis = "ok";
 		}
@@ -190,12 +241,46 @@ public class MenuItemHome extends EntityHome<MenuItem> implements Serializable {
 			session = authenticatedUser.getSessionSQL();
 			if (session == null)
 				session = PdksUtil.getSession(entityManager, false);
+			if (session != null)
+				session.clear();
 		}
 		return session;
 	}
 
 	public void setSession(Session session) {
 		this.session = session;
+	}
+
+	public List<UserMenuItemTime> getUserMenuItemTimeList() {
+		return userMenuItemTimeList;
+	}
+
+	public void setUserMenuItemTimeList(List<UserMenuItemTime> userMenuItemTimeList) {
+		this.userMenuItemTimeList = userMenuItemTimeList;
+	}
+
+	public boolean isTesisYetki() {
+		return tesisYetki;
+	}
+
+	public void setTesisYetki(boolean tesisYetki) {
+		this.tesisYetki = tesisYetki;
+	}
+
+	public String getBolumAciklama() {
+		return bolumAciklama;
+	}
+
+	public void setBolumAciklama(String bolumAciklama) {
+		this.bolumAciklama = bolumAciklama;
+	}
+
+	public boolean isParamDurum() {
+		return paramDurum;
+	}
+
+	public void setParamDurum(boolean paramDurum) {
+		this.paramDurum = paramDurum;
 	}
 
 }
