@@ -131,9 +131,9 @@ public class FazlaMesaiUpdate implements Serializable {
 		Date oncekiDonem = PdksUtil.tariheAyEkleCikar(bugun, -2);
 		HashMap fields = new HashMap();
 		int d1 = Integer.parseInt(PdksUtil.convertToDateString(oncekiDonem, "yyyyMM")), d2 = Integer.parseInt(PdksUtil.convertToDateString(bugun, "yyyyMM"));
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		sb.append("select * from " + DenklestirmeAy.TABLE_NAME + " " + PdksEntityController.getSelectLOCK());
-		sb.append(" where " + DenklestirmeAy.COLUMN_NAME_DURUM + " = 1 and ( ( " + DenklestirmeAy.COLUMN_NAME_YIL + " * 100 + " + DenklestirmeAy.COLUMN_NAME_AY + " ) between " + d1 + " and " + d2 + " )");
+		sb.append(" where " + DenklestirmeAy.COLUMN_NAME_DURUM + " = 1 and ( " + DenklestirmeAy.COLUMN_NAME_DONEM_KODU + "  between " + d1 + " and " + d2 + " )");
 		sb.append(" order by " + DenklestirmeAy.COLUMN_NAME_YIL + ", " + DenklestirmeAy.COLUMN_NAME_AY);
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);

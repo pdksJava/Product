@@ -72,6 +72,7 @@ import org.xml.sax.InputSource;
 import com.Ostermiller.util.Base64;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.thoughtworks.xstream.XStream;
@@ -630,9 +631,14 @@ public class PdksUtil implements Serializable {
 		String prettyJson = null;
 		try {
 			JsonParser parser = new JsonParser();
-			JsonObject json = parser.parse(jsonString).getAsJsonObject();
 			Gson gson = new GsonBuilder().setPrettyPrinting().create();
-			prettyJson = gson.toJson(json);
+			if (jsonString.startsWith("{")) {
+				JsonObject json = parser.parse(jsonString).getAsJsonObject();
+				prettyJson = gson.toJson(json);
+			} else {
+				JsonArray array = parser.parse(jsonString).getAsJsonArray();
+				prettyJson = gson.toJson(array);
+			}
 			if (prettyJson.lastIndexOf("\\u0026") > 0)
 				prettyJson = replaceAll(prettyJson, "\\u0026", "&");
 			if (prettyJson.lastIndexOf("\\u003d") > 0)
@@ -2506,7 +2512,7 @@ public class PdksUtil implements Serializable {
 		if (devam) {
 			Writer printWriter = null;
 			FileOutputStream fos = null;
-			String dosyaAdi = path + "/" + fileName + ".xml";
+			String dosyaAdi = path + "/" + fileName + (fileName.lastIndexOf(".") > 0 ? "" : ".xml");
 			File file = new File(dosyaAdi);
 			if (!file.exists()) {
 				try {
@@ -2561,6 +2567,69 @@ public class PdksUtil implements Serializable {
 	public static Long getLongFromBigInteger(BigInteger bi) {
 		Long long1 = bi != null ? bi.longValue() : null;
 		return long1;
+	}
+
+	/**
+	 * @param indis
+	 * @param veri
+	 * @return
+	 */
+	public static List<Long> getLongListFromBigDecimal(Integer indis, Object veri) {
+		List<Long> list = null;
+		if (veri != null) {
+			list = new ArrayList<Long>();
+			try {
+
+				if (veri instanceof List) {
+					if (indis == null) {
+						List bdList = (List) veri;
+						for (Iterator iterator = bdList.iterator(); iterator.hasNext();) {
+							Object object = (Object) iterator.next();
+							if (object == null)
+								continue;
+							if (object instanceof BigDecimal) {
+								BigDecimal bd = (BigDecimal) object;
+								list.add(bd.longValue());
+							} else if (object instanceof Long) {
+								Long l = (Long) object;
+								list.add(l);
+							} else if (object instanceof Double) {
+								Double d = (Double) object;
+								list.add(d.longValue());
+							}
+
+						}
+					} else {
+						List<Object[]> bdList = (List) veri;
+						for (Object[] objects : bdList) {
+							if (indis < objects.length) {
+								Object object = objects[indis];
+								if (object == null)
+									continue;
+								if (object instanceof BigDecimal) {
+									BigDecimal bd = (BigDecimal) object;
+									list.add(bd.longValue());
+								} else if (object instanceof Long) {
+									Long l = (Long) object;
+									list.add(l);
+								} else if (object instanceof Double) {
+									Double d = (Double) object;
+									list.add(d.longValue());
+								}
+
+							}
+
+						}
+					}
+
+				}
+			} catch (Exception e) {
+				// TODO: handle exception
+			}
+
+		}
+
+		return list;
 	}
 
 	public static Locale getLocale() {

@@ -590,7 +590,7 @@ public class FazlaMesaiOnayRaporHome extends EntityHome<DepartmanDenklestirmeDon
 			denklestirmeDonemi.setBitisTarih(bitTarih);
 
 			TreeMap<String, Tatil> tatilGunleriMap = ortakIslemler.getTatilGunleri(null, basTarih, bitTarih, session);
-			for (Iterator iterator = aylikPuantaj.getVardiyalar().iterator(); iterator.hasNext();) {
+ 			for (Iterator iterator = aylikPuantaj.getVardiyalar().iterator(); iterator.hasNext();) {
 				VardiyaGun vardiyaGun = (VardiyaGun) iterator.next();
 				vardiyaGun.setTatil(tatilGunleriMap.containsKey(vardiyaGun.getVardiyaDateStr()) ? tatilGunleriMap.get(vardiyaGun.getVardiyaDateStr()) : null);
 			}
@@ -671,7 +671,7 @@ public class FazlaMesaiOnayRaporHome extends EntityHome<DepartmanDenklestirmeDon
 				map.put("bitTarih", PdksUtil.getDate(bitTarih));
 				if (session != null)
 					map.put(PdksEntityController.MAP_KEY_SESSION, session);
-				List<PersonelFazlaMesai> idList = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), map, PersonelFazlaMesai.class);
+				List<PersonelFazlaMesai> idList = pdksEntityController.getObjectBySQLList(sb, map, PersonelFazlaMesai.class);
 				TreeMap<String, Liste> listeMap = new TreeMap<String, Liste>();
 				HashMap<Long, String> vardiyaAciklamaMap = new HashMap<Long, String>();
 				for (Iterator iterator = idList.iterator(); iterator.hasNext();) {

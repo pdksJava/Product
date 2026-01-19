@@ -123,6 +123,8 @@ public class MenuItemConstant implements Serializable {
 	public static String detaysizPersonelTanimlama = "/tanimlama/detaysizPersonelTanimlama.xhtml";
 	public static String izinHakedisHakkiTanimlama = "/tanimlama/izinHakedisHakkiTanimlama.xhtml";
 	public static String izinTipiTanimlama = "/tanimlama/izinTipiTanimlama.xhtml";
+	public static String fazlaMesaiERPTanimlama = "/tanimlama/fazlaMesaiERPTanimlama.xhtml";
+	
 	public static String kapiTanimlama = "/tanimlama/kapiTanimlama.xhtml";
 	public static String personelGeciciYonetici = "/tanimlama/personelGeciciYonetici.xhtml";
 	public static String personelKullaniciExcelGuncelle = "/tanimlama/personelKullaniciExcelGuncelle.xhtml";
@@ -132,6 +134,7 @@ public class MenuItemConstant implements Serializable {
 	public static String sirketTanimlama = "/tanimlama/sirketTanimlama.xhtml";
 	public static String taseronPersonelKopyala = "/tanimlama/taseronPersonelKopyala.xhtml";
 	public static String tatilTanimlama = "/tanimlama/tatilTanimlama.xhtml";
+ 	public static String tesisBaglantiTanimlama = "/tanimlama/tesisBaglantiTanimlama.xhtml";
 	public static String sablonTanimlama = "/tanimlama/sablonTanimlama.xhtml";
 	public static String vardiyaSablonTanimlama = "/tanimlama/vardiyaSablonTanimlama.xhtml";
 	public static String vekilTanimlama = "/tanimlama/vekilTanimlama.xhtml";
@@ -1034,6 +1037,22 @@ public class MenuItemConstant implements Serializable {
 
 	public static void setPdksAgentTanimlama(String pdksAgentTanimlama) {
 		MenuItemConstant.pdksAgentTanimlama = pdksAgentTanimlama;
+	}
+
+	public static String getTesisBaglantiTanimlama() {
+		return tesisBaglantiTanimlama;
+	}
+
+	public static void setTesisBaglantiTanimlama(String tesisBaglantiTanimlama) {
+		MenuItemConstant.tesisBaglantiTanimlama = tesisBaglantiTanimlama;
+	}
+
+	public static String getFazlaMesaiERPTanimlama() {
+		return fazlaMesaiERPTanimlama;
+	}
+
+	public static void setFazlaMesaiERPTanimlama(String fazlaMesaiERPTanimlama) {
+		MenuItemConstant.fazlaMesaiERPTanimlama = fazlaMesaiERPTanimlama;
 	}
 
 }

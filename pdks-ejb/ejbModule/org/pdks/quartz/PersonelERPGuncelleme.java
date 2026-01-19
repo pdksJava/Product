@@ -81,6 +81,7 @@ public class PersonelERPGuncelleme implements Serializable {
 	private static boolean calisiyor = Boolean.FALSE;
 
 	public static final String PARAMETER_KEY = "personelERPZamani";
+	public static final String PARAMETER_HAREKET_KEY = "hareketVardiyaZamani";
 	private String hataKonum, aciklama;
 	private ByteArrayOutputStream bo = null;
 	private Dosya dosya = null;
@@ -185,8 +186,11 @@ public class PersonelERPGuncelleme implements Serializable {
 			boolean sunucuDurum = PdksUtil.getCanliSunucuDurum() || PdksUtil.getTestSunucuDurum();
 			// sunucuDurum = true;
 			if (sunucuDurum) {
+				Date tarih = ortakIslemler.getBugun();
 				guncellemeDBDurum = Boolean.FALSE;
+
 				hataKonum = "Paramatre okunuyor ";
+
 				Parameter parameter = ortakIslemler.getParameter(session, PARAMETER_KEY);
 				String value = (parameter != null) ? parameter.getValue() : null;
 				hataKonum = "Paramatre okundu ";
@@ -195,7 +199,7 @@ public class PersonelERPGuncelleme implements Serializable {
 				if (value != null || tableERPOku) {
 					hataGonder = Boolean.TRUE;
 					hataKonum = "Zaman kontrolu yapılıyor ";
-					Date tarih = ortakIslemler.getBugun();
+
 					zamanDurum = value != null && PdksUtil.zamanKontrol(PARAMETER_KEY, value, tarih);
 					if (!zamanDurum & tableERPOku) {
 						String parameterUpdateKey = PARAMETER_KEY + "Update";
@@ -208,6 +212,7 @@ public class PersonelERPGuncelleme implements Serializable {
 							personelERPGuncellemeCalistir(session, tarih, true);
 					}
 				}
+
 			}
 		} catch (Exception e) {
 			logger.error(e);
@@ -362,7 +367,7 @@ public class PersonelERPGuncelleme implements Serializable {
 						kisaKullanici = null;
 					if (kisaKullanici != null) {
 						if (!kullanici.getUsername().equals(kisaKullanici.getUsername()) || kullanici.getShortUsername() == null || !kullanici.getShortUsername().equals(kisaKullanici.getShortUsername())) {
-							logger.info(kullanici.getId() + " : " + kisaKullanici.getUsername() + " --> " + kisaKullanici.getShortUsername() + " - " + kisaKullanici.getEmail());
+							logger.info(kullanici.getId() + " : " + kisaKullanici.getUsername() + " --> " + kisaKullanici.getShortUsername() + " - " + kisaKullanici.getEmail() + " " + PdksUtil.getCurrentTimeStampStr());
 							kullanici.setUsername(kisaKullanici.getUsername());
 							kullanici.setShortUsername(kisaKullanici.getShortUsername());
 							if (!emailBozuk)
@@ -531,7 +536,7 @@ public class PersonelERPGuncelleme implements Serializable {
 
 		}
 
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		sb.append("select P.* from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK() + " ");
 		sb.append(" inner join " + Sirket.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET + " and S." + Sirket.COLUMN_NAME_DURUM + " = 1 and S." + Sirket.COLUMN_NAME_ERP_DURUM + " = 1 ");
 		sb.append(" and S." + Sirket.COLUMN_NAME_PDKS + " = 1 and S." + Sirket.COLUMN_NAME_FAZLA_MESAI + " = 1   ");
@@ -556,7 +561,7 @@ public class PersonelERPGuncelleme implements Serializable {
 		if (parameter != null && parameter.getActive() != null && parameter.getActive()) {
 			String sapKodu = parameter.getValue();
 			if (sapKodu != null && sapKodu.trim().length() == 4) {
-				StringBuffer sb = new StringBuffer();
+				StringBuilder sb = new StringBuilder();
 				sb.append("select P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK() + " ");
 				sb.append(" inner join " + Sirket.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET + " and S." + Sirket.COLUMN_NAME_DURUM + " = 1 and S." + Sirket.COLUMN_NAME_DURUM + " = 1 ");
 				sb.append(" and S." + Sirket.COLUMN_NAME_PDKS + " = 1 and S." + Sirket.COLUMN_NAME_FAZLA_MESAI + " = 1 and S.ERP_KODU= :sapKodu ");
@@ -583,7 +588,7 @@ public class PersonelERPGuncelleme implements Serializable {
 	@Transactional
 	public String aktifMailAdressGuncelle(Session session) {
 		HashMap fields = new HashMap();
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		sb.append("select distinct P.* from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK() + " ");
 		sb.append(" where P." + Personel.COLUMN_NAME_DURUM + " = 1 and (" + Personel.COLUMN_NAME_MAIL_CC_ID + " is not null or " + Personel.COLUMN_NAME_MAIL_BCC_ID + " is not null or " + Personel.COLUMN_NAME_HAREKET_MAIL_ID + " is not null)");
 		sb.append(" and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >=convert(date,GETDATE())   ");

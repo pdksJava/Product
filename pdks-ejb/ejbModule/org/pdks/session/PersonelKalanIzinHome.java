@@ -162,7 +162,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<PersonelIzin> list = pdksEntityController.getSQLParamList(dataIdList, PdksUtil.getStringBuffer(sb), fieldName, fields, PersonelIzin.class, session);
+		List<PersonelIzin> list = pdksEntityController.getSQLParamList(dataIdList, sb, fieldName, fields, PersonelIzin.class, session);
 		dataIdList = null;
 		fields = null;
 		return list;
@@ -981,7 +981,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		fields.put(fieldName, tipler);
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<IzinTipi> list = pdksEntityController.getSQLParamList(tipler, PdksUtil.getStringBuffer(sb), fieldName, fields, IzinTipi.class, session);
+		List<IzinTipi> list = pdksEntityController.getSQLParamList(tipler, sb, fieldName, fields, IzinTipi.class, session);
 
 		return list;
 	}
@@ -1638,7 +1638,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 								}
 								pdksEntityController.saveOrUpdate(session, entityManager, personel);
-								logger.info(personel.getPdksSicilNo() + " " + personel.getAdSoyad() + " sıfırlandı!");
+								logger.info(personel.getPdksSicilNo() + " " + personel.getAdSoyad() + " sıfırlandı! " + PdksUtil.getCurrentTimeStampStr());
 								flush = Boolean.TRUE;
 							}
 						}
@@ -1983,7 +1983,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 			Personel pdksPersonel = tempIzin.getPersonel();
 			Long personelId = pdksPersonel.getId();
 			Date tarih = new Date();
-			logger.info((sayi--) + " " + pdksPersonel.getPdksSicilNo() + " " + pdksPersonel.getAdSoyad());
+			logger.info((sayi--) + " " + pdksPersonel.getPdksSicilNo() + " " + pdksPersonel.getAdSoyad() + " " + PdksUtil.getCurrentTimeStampStr());
 
 			// session.clear();
 			fields.clear();
@@ -2076,18 +2076,19 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 				}
 				if (!izinERPList.isEmpty()) {
+					PdksSoapVeriAktar service = null;
+					List<IzinERP> izinERPReturnList = null;
 					try {
-						PdksSoapVeriAktar service = ortakIslemler.getPdksSoapVeriAktar();
-						List<IzinERP> izinERPReturnList = service != null ? service.saveIzinler(izinERPList) : null;
-						if (izinERPReturnList != null) {
-
-						}
+						service = ortakIslemler.getPdksSoapVeriAktar(true);
+						izinERPReturnList = service != null ? service.saveIzinler(izinERPList) : null;
 
 					} catch (Exception e) {
-						logger.error(e);
-						e.printStackTrace();
+						service = ortakIslemler.getPdksSoapVeriAktar(false);
+						izinERPReturnList = service != null ? service.saveIzinler(izinERPList) : null;
 					}
+					if (izinERPReturnList != null) {
 
+					}
 				} else if (!izinMap.isEmpty()) {
 					bakiyeIzinler = new ArrayList<PersonelIzin>(izinMap.values());
 					for (Iterator iterator = bakiyeIzinler.iterator(); iterator.hasNext();) {

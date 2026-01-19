@@ -57,7 +57,7 @@ public class PersonelFazlaMesai extends BaseObject implements Cloneable {
 	public void setHareketId(String hareketId) {
 		this.hareketId = hareketId;
 	}
-
+ 
 	@Transient
 	// @OneToOne(cascade = CascadeType.REFRESH)
 	// @JoinColumn(name = COLUMN_NAME_HAREKET)

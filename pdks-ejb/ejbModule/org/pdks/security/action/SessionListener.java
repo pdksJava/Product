@@ -42,7 +42,9 @@ public class SessionListener implements HttpSessionListener, Serializable {
 
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see javax.servlet.http.HttpSessionListener#sessionCreated(javax.servlet.http.HttpSessionEvent)
 	 */
 	public void sessionCreated(HttpSessionEvent se) {
@@ -59,12 +61,14 @@ public class SessionListener implements HttpSessionListener, Serializable {
 
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see javax.servlet.http.HttpSessionListener#sessionDestroyed(javax.servlet.http.HttpSessionEvent)
 	 */
 	public void sessionDestroyed(HttpSessionEvent se) {
 		HttpSession session = se.getSession();
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		User authenticatedUser = (User) session.getAttribute(SESSION_USER_NAME);
 		if (authenticatedUser != null) {
 			PdksUtil.getSessionUser(null, authenticatedUser);
@@ -80,7 +84,7 @@ public class SessionListener implements HttpSessionListener, Serializable {
 			sb.append("PDKS are now : " + sessionList.size());
 		String message = sb.toString();
 		if (authenticatedUser != null)
-			logger.info(message);
+			logger.info(message + " " + PdksUtil.getCurrentTimeStampStr());
 		message = null;
 		sb = null;
 

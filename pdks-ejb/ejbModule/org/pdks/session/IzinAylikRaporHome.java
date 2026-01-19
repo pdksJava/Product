@@ -143,7 +143,7 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 
 		if (session != null)
 			map.put(PdksEntityController.MAP_KEY_SESSION, session);
-		List<Sirket> list = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), map, Sirket.class);
+		List<Sirket> list = pdksEntityController.getObjectBySQLList(sb, map, Sirket.class);
 
 		if (list.size() > 1)
 			list = PdksUtil.sortObjectStringAlanList(list, "getAd", null);
@@ -420,10 +420,10 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 				}
 
 			}
+			TreeMap<String, Tatil> tatilGunleriMap = ortakIslemler.getTatilGunleri(null, basDate, bitDate, session);
 
-			vardiyaMap = ortakIslemler.getVardiyalar((List<Personel>) personelList.clone(), basDate, bitDate, izinMap, Boolean.FALSE, session, Boolean.TRUE);
+			vardiyaMap = ortakIslemler.getVardiyalar((List<Personel>) personelList.clone(), tatilGunleriMap, basDate, bitDate, izinMap, Boolean.FALSE, session, Boolean.TRUE);
 			if (!personelizinList.isEmpty()) {
-				TreeMap<String, Tatil> tatilGunleriMap = ortakIslemler.getTatilGunleri(personelList, basDate, bitDate, session);
 
 				for (Iterator iterator = personelizinList.iterator(); iterator.hasNext();) {
 					PersonelIzin personelIzin = (PersonelIzin) iterator.next();

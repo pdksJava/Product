@@ -56,6 +56,8 @@ public class Zamanlayici implements Serializable {
 	SertifikaSSLKontrol sertifikaSSLKontrol;
 	@In
 	KapiGirisGuncelleme kapiGirisGuncelleme;
+	@In
+	PlanVardiyaHareketGuncelleme planVardiyaHareketGuncelleme;
 	@In(required = false, create = true)
 	OrtakIslemler ortakIslemler;
 	@In(required = false, create = true)
@@ -78,8 +80,11 @@ public class Zamanlayici implements Serializable {
 	}
 
 	public void schedulePersonelERPGuncellemeTimer() {
-		personelERPGuncelleme.personelERPGuncellemeTimer(new Date(), "0 0/5 3-23 ? * *");
+		personelERPGuncelleme.personelERPGuncellemeTimer(new Date(), "0 0/5 0-23 ? * *");
 		logger.info("schedulePersonelERPGuncellemeTimer start : " + PdksUtil.getCurrentTimeStampStr());
+		planVardiyaHareketGuncelleme.planVardiyaHareketGuncellemeTimer(new Date(), "0 0/5 0-23 ? * *");
+		logger.info("planVardiyaHareketGuncelleme start : " + PdksUtil.getCurrentTimeStampStr());
+
 	}
 
 	public void izinBakiyeGuncellemeTimer() {
@@ -138,7 +143,7 @@ public class Zamanlayici implements Serializable {
 			xaciklama += " ( " + PdksUtil.convertToDateString(Calendar.getInstance().getTime(), PdksUtil.getDateFormat() + " H:mm") + " ) ";
 		}
 		if (thisIp != null)
-			logger.info(xkonu + " " + thisIp);
+			logger.info(xkonu + " " + thisIp + " " + PdksUtil.getCurrentTimeStampStr());
 		if (!userList.isEmpty()) {
 			setAdminList(userList);
 			setKonu(xkonu);
@@ -166,11 +171,11 @@ public class Zamanlayici implements Serializable {
 				veriMap = null;
 				if (mailStatu != null && mailStatu.getDurum()) {
 					if (thisIp != null)
-						logger.info(xkonu + " " + thisIp + " tamamlandı.");
+						logger.info(xkonu + " " + thisIp + " tamamlandı." + PdksUtil.getCurrentTimeStampStr());
 				}
 
 			} catch (Exception e) {
-				logger.info(sayfaAdi + " : " + xkonu + " --> " + e.getMessage());
+				logger.error(sayfaAdi + " : " + xkonu + " --> " + e.getMessage() + " " + PdksUtil.getCurrentTimeStampStr());
 			}
 		}
 		if (yeni && session != null)

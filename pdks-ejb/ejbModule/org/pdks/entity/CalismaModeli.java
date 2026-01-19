@@ -46,6 +46,7 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_BAGLI_VARDIYA_SABLON = "BAGLI_VARDIYA_SABLON_ID";
 	public static final String COLUMN_NAME_DEPARTMAN = "DEPARTMAN_ID";
 	public static final String COLUMN_NAME_SIRKET = "SIRKET_ID";
+	public static final String COLUMN_NAME_TESIS = "TESIS_ID";
 	public static final String COLUMN_NAME_HAREKET_KAYDI_VARDIYA_BUL = "HAREKET_KAYDI_VARDIYA_BUL";
 	public static final String COLUMN_NAME_MAAS_ODEME_TIPI = "MAAS_ODEME_TIPI";
 	public static final String COLUMN_NAME_FAZLA_MESAI_VAR = "FAZLA_MESAI_VAR";
@@ -67,10 +68,13 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_IZIN_CUMARTESI_SAAT = "IZIN_CUMARTESI_SAAT";
 	public static final String COLUMN_NAME_IZIN_PAZAR_SAAT = "IZIN_PAZAR_SAAT";
 	public static final String COLUMN_NAME_PAZAR_SUT_IZNI_SURE = "PAZAR_SUT_IZNI_SURE";
+	public static final String COLUMN_NAME_HAFTA_TATIL_HAREKET_GUNCELLE = "HT_HAREKET_GUNCELLE";
+	public static final String COLUMN_NAME_OFF_HAREKET_GUNCELLE = "OFF_HAREKET_GUNCELLE";
 	public static final String COLUMN_NAME_SUT_IZNI_SABIT = "SUT_IZNI_SABIT";
 	public static final String COLUMN_NAME_ACIKLAMA = "ACIKLAMA";
 
 	private Sirket sirket;
+	private Tanim tesis;
 	private String aciklama = "";
 	private double haftaIci = 0.0d, arife = 0.0d, negatifBakiyeDenkSaat = 0.0d;
 	private Double haftaIciSutIzniSure = 7.5d, cumartesiSaat = 0.0d, izin = 0.0d, cumartesiIzinSaat = 0.0d, cumartesiSutIzniSure = 0.0d, sutIzniSabitSaat;
@@ -78,7 +82,7 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 	private Boolean fazlaMesaiVar = Boolean.TRUE, toplamGunGuncelle = Boolean.FALSE, durum = Boolean.TRUE, genelVardiya = Boolean.TRUE, hareketKaydiVardiyaBul = Boolean.FALSE;
 	private Boolean haftaTatilMesaiOde = Boolean.FALSE, geceHaftaTatilMesaiParcala = Boolean.FALSE, geceCalismaOdemeVar = Boolean.FALSE, otomatikFazlaCalismaOnaylansin = Boolean.FALSE;
 	private Boolean ortakVardiya = Boolean.FALSE, fazlaMesaiGoruntulensin = Boolean.TRUE, ilkPlanOnayliDurum = Boolean.FALSE, gunMaxCalismaOdemeDurum = Boolean.TRUE;
-	private Boolean genelModel = Boolean.TRUE, idariModel = Boolean.FALSE, suaDurum = Boolean.FALSE;
+	private Boolean genelModel = Boolean.TRUE, idariModel = Boolean.FALSE, suaDurum = Boolean.FALSE, haftaTatilHareketGuncelle = Boolean.FALSE, offHareketGuncelle = Boolean.FALSE;
 	private Integer haftaTatilGun = Calendar.SUNDAY;
 	private VardiyaSablonu bagliVardiyaSablonu;
 	private Departman departman;
@@ -107,6 +111,17 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 
 	public void setSirket(Sirket sirket) {
 		this.sirket = sirket;
+	}
+
+	@ManyToOne(cascade = CascadeType.REFRESH)
+	@JoinColumn(name = COLUMN_NAME_TESIS)
+	@Fetch(FetchMode.JOIN)
+	public Tanim getTesis() {
+		return tesis;
+	}
+
+	public void setTesis(Tanim tesis) {
+		this.tesis = tesis;
 	}
 
 	@Column(name = "HAFTA_ICI_SAAT")
@@ -388,6 +403,24 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 		this.departman = departman;
 	}
 
+	@Column(name = COLUMN_NAME_HAFTA_TATIL_HAREKET_GUNCELLE)
+	public Boolean getHaftaTatilHareketGuncelle() {
+		return haftaTatilHareketGuncelle;
+	}
+
+	public void setHaftaTatilHareketGuncelle(Boolean haftaTatilHareketGuncelle) {
+		this.haftaTatilHareketGuncelle = haftaTatilHareketGuncelle;
+	}
+
+	@Column(name = COLUMN_NAME_OFF_HAREKET_GUNCELLE)
+	public Boolean getOffHareketGuncelle() {
+		return offHareketGuncelle;
+	}
+
+	public void setOffHareketGuncelle(Boolean offHareketGuncelle) {
+		this.offHareketGuncelle = offHareketGuncelle;
+	}
+
 	@Column(name = COLUMN_NAME_HAFTA_ICI_SUT_IZNI_SURE)
 	public Double getHaftaIciSutIzniSure() {
 		return haftaIciSutIzniSure;
@@ -617,7 +650,7 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 				sutIzinSure = gunSure;
 			break;
 		}
-		
+
 		if (sutIzinSure == null) {
 			if (this.getDepartman() != null) {
 				Departman dm = this.getDepartman();
@@ -638,7 +671,7 @@ public class CalismaModeli extends BasePDKSObject implements Serializable {
 			}
 			if ((this.getHaftaTatilGun() != null && dayOfWeek == this.getHaftaTatilGun().intValue()) || sutIzinSure == null)
 				sutIzinSure = 0.0d;
-			 
+
 		}
 
 		if (sutIzinSure > 0.0d)

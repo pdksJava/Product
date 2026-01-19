@@ -58,7 +58,7 @@ import org.pdks.entity.VardiyaHafta;
 import org.pdks.entity.VardiyaSaat;
 import org.pdks.entity.YemekIzin;
 import org.pdks.enums.DenklestirmeTipi;
-import org.pdks.enums.KatSayiTipi;
+import org.pdks.enums.PuantajKatSayiTipi;
 import org.pdks.security.action.UserHome;
 import org.pdks.security.entity.User;
 
@@ -1110,12 +1110,12 @@ public class FazlaMesaiKontrolRaporHome extends EntityHome<AylikPuantaj> impleme
 					DenklestirmeTipi dt = null;
 					Double radyolojiKatsayi = null;
 					if (puantaj.getKatSayiMap() != null) {
-						if (puantaj.getKatSayiMap().containsKey(KatSayiTipi.DENKLESTIRME_TIPI.value())) {
-							Integer denkInteger = puantaj.getKatSayiMap().get(KatSayiTipi.DENKLESTIRME_TIPI.value()).intValue();
+						if (puantaj.getKatSayiMap().containsKey(PuantajKatSayiTipi.AYLIK_DENKLESTIRME_TIPI.value())) {
+							Integer denkInteger = puantaj.getKatSayiMap().get(PuantajKatSayiTipi.AYLIK_DENKLESTIRME_TIPI.value()).intValue();
 							dt = DenklestirmeTipi.fromValue(denkInteger);
 						}
-						if (puantaj.getKatSayiMap().containsKey(KatSayiTipi.RADYOLOJI_MAX_GUN.value()))
-							radyolojiKatsayi = puantaj.getKatSayiMap().get(KatSayiTipi.RADYOLOJI_MAX_GUN.value()).doubleValue();
+						if (puantaj.getKatSayiMap().containsKey(PuantajKatSayiTipi.AYLIK_RADYOLOJI_MAX_GUN.value()))
+							radyolojiKatsayi = puantaj.getKatSayiMap().get(PuantajKatSayiTipi.AYLIK_RADYOLOJI_MAX_GUN.value()).doubleValue();
 					}
 
 					TreeMap<String, VardiyaGun> vgMap = new TreeMap<String, VardiyaGun>();
@@ -1518,8 +1518,8 @@ public class FazlaMesaiKontrolRaporHome extends EntityHome<AylikPuantaj> impleme
 		fields.put(fieldName, siciller);
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-		// List<PersonelDenklestirme> list = pdksEntityController.getObjectBySQLList(PdksUtil.getStringBuffer(sb), fields, PersonelDenklestirme.class);
-		List<PersonelDenklestirme> list = pdksEntityController.getSQLParamList(siciller, PdksUtil.getStringBuffer(sb), fieldName, fields, PersonelDenklestirme.class, session);
+		// List<PersonelDenklestirme> list = pdksEntityController.getObjectBySQLList(sb, fields, PersonelDenklestirme.class);
+		List<PersonelDenklestirme> list = pdksEntityController.getSQLParamList(siciller, sb, fieldName, fields, PersonelDenklestirme.class, session);
 		ortakIslemler.setPersonelDenklestirmeDevir(null, list, session);
 
 		fields = null;

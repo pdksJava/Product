@@ -45,7 +45,7 @@ import org.pdks.entity.Tatil;
 import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGun;
 import org.pdks.entity.YemekIzin;
-import org.pdks.enums.KatSayiTipi;
+import org.pdks.enums.PuantajKatSayiTipi;
 import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.User;
 
@@ -519,7 +519,7 @@ public class PersonelFazlaMesaiHome extends EntityHome<PersonelFazlaMesai> imple
 				String key = pdksVardiyaGun.getVardiyaKey();
 				List<Personel> personeller = new ArrayList<Personel>();
 				personeller.add(pdksVardiyaGun.getPersonel());
-				TreeMap<String, VardiyaGun> vardiyalar = ortakIslemler.getVardiyalar(personeller, pdksVardiyaGun.getVardiyaDate(), pdksVardiyaGun.getVardiyaDate(), null, Boolean.TRUE, session, Boolean.FALSE);
+				TreeMap<String, VardiyaGun> vardiyalar = ortakIslemler.getVardiyalar(personeller, null, pdksVardiyaGun.getVardiyaDate(), pdksVardiyaGun.getVardiyaDate(), null, Boolean.TRUE, session, Boolean.FALSE);
 				if (vardiyalar.containsKey(key))
 					pdksVardiyaGun = vardiyalar.get(key);
 				fazlaMesai.setVardiyaGun(pdksVardiyaGun);
@@ -693,8 +693,8 @@ public class PersonelFazlaMesaiHome extends EntityHome<PersonelFazlaMesai> imple
 						List<Long> perIdList = new ArrayList<Long>();
 						for (Personel personel : personeller)
 							perIdList.add(personel.getId());
-						yuvarlamaMap = ortakIslemler.getPlanKatSayiMap(perIdList, basTarih, bitTarih, KatSayiTipi.YUVARLAMA_TIPI, session);
-						fazlaMesaiYuvarlamaMap = ortakIslemler.getPlanKatSayiMap(perIdList, basTarih, bitTarih, KatSayiTipi.FAZLA_MESAI_YUVARLAMA, session);
+						yuvarlamaMap = ortakIslemler.getPlanKatSayiMap(perIdList, basTarih, bitTarih, PuantajKatSayiTipi.AYLIK_YUVARLAMA_TIPI, session);
+						fazlaMesaiYuvarlamaMap = ortakIslemler.getPlanKatSayiMap(perIdList, basTarih, bitTarih, PuantajKatSayiTipi.AYLIK_FAZLA_MESAI_YUVARLAMA, session);
 						perIdList = null;
 					}
 					vardiyaList = new ArrayList<VardiyaGun>(vardiyaMap.values());
@@ -783,7 +783,7 @@ public class PersonelFazlaMesaiHome extends EntityHome<PersonelFazlaMesai> imple
 					parametreMap2.put(fieldName, idler);
 					if (session != null)
 						parametreMap2.put(PdksEntityController.MAP_KEY_SESSION, session);
-					List<Personel> personelList = pdksEntityController.getSQLParamList(idler, PdksUtil.getStringBuffer(sb), fieldName, parametreMap2, Personel.class, session);
+					List<Personel> personelList = pdksEntityController.getSQLParamList(idler, sb, fieldName, parametreMap2, Personel.class, session);
 					if (!personelList.isEmpty()) {
 						idler.clear();
 						for (Personel personel : personelList) {
@@ -801,7 +801,7 @@ public class PersonelFazlaMesaiHome extends EntityHome<PersonelFazlaMesai> imple
 						if (session != null)
 							parametreMap2.put(PdksEntityController.MAP_KEY_SESSION, session);
 						// mesaiList = pdksEntityController.getObjectByInnerObjectListInLogic(parametreMap2, PersonelFazlaMesai.class);
-						mesaiList = pdksEntityController.getSQLParamList(idler, PdksUtil.getStringBuffer(sb), fieldName, parametreMap2, PersonelFazlaMesai.class, session);
+						mesaiList = pdksEntityController.getSQLParamList(idler, sb, fieldName, parametreMap2, PersonelFazlaMesai.class, session);
 
 					} else
 						mesaiList = new ArrayList<PersonelFazlaMesai>();

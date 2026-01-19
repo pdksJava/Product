@@ -41,6 +41,7 @@ import org.pdks.entity.AylikPuantaj;
 import org.pdks.entity.CalismaModeliGun;
 import org.pdks.entity.CalismaModeliVardiya;
 import org.pdks.entity.DepartmanMailGrubu;
+import org.pdks.entity.FazlaMesaiERPDetay;
 import org.pdks.entity.IzinHakedisHakki;
 import org.pdks.entity.IzinTipiBirlesikHaric;
 import org.pdks.entity.IzinTipiMailAdres;
@@ -61,6 +62,7 @@ import org.pdks.entity.Sirket;
 import org.pdks.entity.SkinBean;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Tatil;
+import org.pdks.entity.TesisBaglanti;
 import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGorev;
 import org.pdks.entity.VardiyaGun;
@@ -263,11 +265,19 @@ public class StartupAction implements Serializable {
 			}
 			if (list != null) {
 				for (String string : list) {
-					logger.info("drop table " + string + ";");
+					logger.info("drop table " + string + "; " + PdksUtil.getCurrentTimeStampStr());
 				}
 				list = null;
 			}
 		}
+		try {
+			String adresStr = ortakIslemler.getLoginAdres();
+			if (PdksUtil.hasStringValue(adresStr))
+				logger.info("Web Login Adres : " + adresStr);
+		} catch (Exception e) {
+		 
+		}
+
 		ortakIslemler = null;
 	}
 
@@ -284,6 +294,7 @@ public class StartupAction implements Serializable {
 			list.add(CalismaModeliGun.class);
 			list.add(CalismaModeliVardiya.class);
 			list.add(DepartmanMailGrubu.class);
+			list.add(FazlaMesaiERPDetay.class);
 			list.add(PdksDinamikRaporAlan.class);
 			list.add(PdksDinamikRaporParametre.class);
 			list.add(PdksDinamikRaporRole.class);
@@ -299,6 +310,7 @@ public class StartupAction implements Serializable {
 			list.add(SAPSunucu.class);
 			list.add(ServiceData.class);
 			list.add(Tatil.class);
+			list.add(TesisBaglanti.class);
 			list.add(UserDigerOrganizasyon.class);
 			list.add(UserRoles.class);
 			list.add(VardiyaGorev.class);
@@ -315,7 +327,7 @@ public class StartupAction implements Serializable {
 			logger.error(e);
 		}
 		if (toplamAdet > 0)
-			logger.info(toplamAdet + " adet kayıt id güncellendi.");
+			logger.info(toplamAdet + " adet kayıt id güncellendi. " + PdksUtil.getCurrentTimeStampStr());
 
 		list = null;
 	}
@@ -375,7 +387,7 @@ public class StartupAction implements Serializable {
 					notice = (Notice) noticeList.get(0).clone();
 				else {
 					notice = new Notice();
-					StringBuffer aciklama = new StringBuffer();
+					StringBuilder aciklama = new StringBuilder();
 					for (Iterator iterator = noticeList.iterator(); iterator.hasNext();) {
 						Notice nt = (Notice) iterator.next();
 						if (aciklama.length() > 0)
@@ -442,7 +454,7 @@ public class StartupAction implements Serializable {
 		HashMap fields = new HashMap();
 		List<PdksDinamikRaporRole> list = null;
 		try {
-			StringBuffer sb = new StringBuffer();
+			StringBuilder sb = new StringBuilder();
 			sb.append("select * from " + PdksDinamikRaporRole.TABLE_NAME + " " + PdksEntityController.getSelectLOCK());
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -455,11 +467,15 @@ public class StartupAction implements Serializable {
 		}
 	}
 
+	/**
+	 * @param session
+	 * @param lockVar
+	 */
 	public void fillParameter(Session session, boolean lockVar) {
 		HashMap fields = new HashMap();
 		List<Parameter> parameterList = null;
 		try {
-			StringBuffer sb = new StringBuffer();
+			StringBuilder sb = new StringBuilder();
 			sb.append("select * from " + Parameter.TABLE_NAME + (lockVar ? " " + PdksEntityController.getSelectLOCK() : ""));
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);

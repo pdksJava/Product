@@ -23,8 +23,8 @@ import javax.persistence.UniqueConstraint;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.pdks.enums.KatSayiTipi;
 import org.pdks.enums.PersonelDurumTipi;
+import org.pdks.enums.PuantajKatSayiTipi;
 import org.pdks.session.PdksUtil;
 
 @Entity(name = VardiyaGun.TABLE_NAME)
@@ -44,6 +44,8 @@ public class VardiyaGun extends BaseObject {
 	public static final String COLUMN_NAME_VARDIYA_SAAT = "VARDIYA_SAAT_ID";
 	public static final String COLUMN_NAME_VARDIYA_ACIKLAMA = "VARDIYA_ACIKLAMA";
 	public static final String COLUMN_NAME_PERSONEL_NO = "PERSONEL_NO";
+	public static final String COLUMN_NAME_VERSION = "VERSION";
+
 	public static final String STYLE_CLASS_NORMAL_CALISMA = "calismaAylik";
 	public static final String STYLE_CLASS_NORMAL_CALISMA_EVEN = "calismaAylikEven";
 	public static final String STYLE_CLASS_OZEL_ISTEK = "ozelIstekAylik";
@@ -66,7 +68,7 @@ public class VardiyaGun extends BaseObject {
 	private VardiyaSaat vardiyaSaat, vardiyaSaatDB;
 	private ArrayList<HareketKGS> hareketler, gecerliHareketler, girisHareketleri, cikisHareketleri, yemekHareketleri, gecersizHareketler, sonrakiGunHareketler;
 	private ArrayList<PersonelIzin> izinler;
-	private List<PersonelFazlaMesai> fazlaMesailer;
+	private List<PersonelFazlaMesai> fazlaMesailer, hataliFazlaMesailer;
 	private ArrayList<Vardiya> vardiyalar;
 	private VardiyaGun oncekiVardiyaGun, sonrakiVardiyaGun;
 	private int beklemeSuresi = 6;
@@ -119,7 +121,7 @@ public class VardiyaGun extends BaseObject {
 			this.durum = !xVardiya.isCalisma();
 	}
 
-	@Column(name = "VERSION")
+	@Column(name = COLUMN_NAME_VERSION)
 	public Integer getVersion() {
 		return version;
 	}
@@ -1760,7 +1762,7 @@ public class VardiyaGun extends BaseObject {
 	public String getLinkAdresHtml() {
 		String adres = null;
 		if (linkAdresler != null) {
-			StringBuffer sb = new StringBuffer();
+			StringBuilder sb = new StringBuilder();
 			if (linkAdresler.size() > 1)
 				sb.append("<B>Uyarılar</B></br>");
 			for (String string : linkAdresler)
@@ -2229,7 +2231,7 @@ public class VardiyaGun extends BaseObject {
 	public double getSaatCalisanNormalGunKatsayisi() {
 		double katSayi = 0.0d;
 		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_NORMAL_GUN.value());
+			BigDecimal decimal = getKatSayi(PuantajKatSayiTipi.GUN_SAAT_CALISAN_NORMAL_GUN.value());
 			katSayi = decimal != null ? decimal.doubleValue() : 9.0d;
 		}
 		return katSayi;
@@ -2239,7 +2241,7 @@ public class VardiyaGun extends BaseObject {
 	public double getSaatCalisanIzinGunKatsayisi() {
 		double katSayi = 0.0d;
 		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_IZIN_GUN.value());
+			BigDecimal decimal = getKatSayi(PuantajKatSayiTipi.GUN_SAAT_CALISAN_IZIN_GUN.value());
 
 			katSayi = decimal != null ? decimal.doubleValue() : 9.0d;
 		}
@@ -2250,7 +2252,7 @@ public class VardiyaGun extends BaseObject {
 	public double getSaatCalisanHaftaTatilKatsayisi() {
 		double katSayi = 0.0d;
 		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_HAFTA_TATIL.value());
+			BigDecimal decimal = getKatSayi(PuantajKatSayiTipi.GUN_SAAT_CALISAN_HAFTA_TATIL.value());
 			katSayi = decimal != null ? decimal.doubleValue() : 7.5d;
 		}
 		return katSayi;
@@ -2260,7 +2262,7 @@ public class VardiyaGun extends BaseObject {
 	public double getSaatCalisanResmiTatilKatsayisi() {
 		double katSayi = 0.0d;
 		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_RESMI_TATIL.value());
+			BigDecimal decimal = getKatSayi(PuantajKatSayiTipi.GUN_SAAT_CALISAN_RESMI_TATIL.value());
 			katSayi = decimal != null ? decimal.doubleValue() : 7.5d;
 		}
 		return katSayi;
@@ -2270,7 +2272,7 @@ public class VardiyaGun extends BaseObject {
 	public double getSaatCalisanGunlukKatsayisi() {
 		double katSayi = 0.0d;
 		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_GUN.value());
+			BigDecimal decimal = getKatSayi(PuantajKatSayiTipi.GUN_SAAT_CALISAN_GUN.value());
 			katSayi = decimal != null ? decimal.doubleValue() : 7.5d;
 		}
 		return katSayi;
@@ -2280,7 +2282,7 @@ public class VardiyaGun extends BaseObject {
 	public double getSaatCalisanArifeNormalKatsayisi() {
 		double katSayi = 0.0d;
 		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_ARIFE_NORMAL_SAAT.value());
+			BigDecimal decimal = getKatSayi(PuantajKatSayiTipi.GUN_SAAT_CALISAN_ARIFE_NORMAL_SAAT.value());
 			katSayi = decimal != null ? decimal.doubleValue() : 3.75d;
 		}
 		return katSayi;
@@ -2290,7 +2292,7 @@ public class VardiyaGun extends BaseObject {
 	public double getSaatCalisanArifeTatilKatsayisi() {
 		double katSayi = 0.0d;
 		if (ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.SAAT_CALISAN_ARIFE_TATIL_SAAT.value());
+			BigDecimal decimal = getKatSayi(PuantajKatSayiTipi.GUN_SAAT_CALISAN_ARIFE_TATIL_SAAT.value());
 			katSayi = decimal != null ? decimal.doubleValue() : 3.75d;
 		}
 		return katSayi;
@@ -2299,7 +2301,7 @@ public class VardiyaGun extends BaseObject {
 	@Transient
 	public boolean isFazlaMesaiTalepDurum() {
 		if (!fazlaMesaiTalepDurum && izin == null && ayinGunu) {
-			BigDecimal decimal = getKatSayi(KatSayiTipi.FMT_DURUM.value());
+			BigDecimal decimal = getKatSayi(PuantajKatSayiTipi.GUN_FMT_DURUM.value());
 			fazlaMesaiTalepDurum = decimal != null && decimal.intValue() > 0;
 		}
 		return fazlaMesaiTalepDurum;
@@ -2325,7 +2327,7 @@ public class VardiyaGun extends BaseObject {
 
 	@Transient
 	public boolean isYemekHesabiSureEkle() {
-		BigDecimal decimal = getKatSayi(KatSayiTipi.YEMEK_SURE_EKLE_DURUM.value());
+		BigDecimal decimal = getKatSayi(PuantajKatSayiTipi.GUN_YEMEK_SURE_EKLE_DURUM.value());
 		boolean tatilYemekHesabiSureEkle = decimal != null && decimal.intValue() > 0;
 		return tatilYemekHesabiSureEkle;
 	}
@@ -2555,8 +2557,33 @@ public class VardiyaGun extends BaseObject {
 		this.resmiTatilKanunenEklenenSure = resmiTatilKanunenEklenenSure;
 	}
 
+	@Transient
+	public List<PersonelFazlaMesai> getHataliFazlaMesailer() {
+		return hataliFazlaMesailer;
+	}
+
+	/**
+	 * @param pfm
+	 */
+	public void addHataliFazlaMesailer(PersonelFazlaMesai pfm) {
+		if (pfm != null && pfm.getId() != null) {
+			if (this.hataliFazlaMesailer == null)
+				this.hataliFazlaMesailer = new ArrayList<PersonelFazlaMesai>();
+			boolean ekle = true;
+			for (PersonelFazlaMesai personelFazlaMesai : hataliFazlaMesailer) {
+				if (personelFazlaMesai.getId().equals(pfm.getId()))
+					ekle = false;
+			}
+			if (ekle)
+				this.hataliFazlaMesailer.add(pfm);
+		}
+	}
+
+	public void setHataliFazlaMesailer(List<PersonelFazlaMesai> hataliFazlaMesailer) {
+		this.hataliFazlaMesailer = hataliFazlaMesailer;
+	}
+
 	public void entityRefresh() {
 
 	}
-
 }

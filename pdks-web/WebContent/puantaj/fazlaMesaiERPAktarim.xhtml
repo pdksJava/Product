@@ -19,7 +19,10 @@
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">#{ortakIslemler.yilAciklama()}</ui:define>
 							<rich:inputNumberSpinner styleClass="size10" inputStyle="width:20px" minValue="#{ortakIslemler.getParameterKey('sistemBaslangicYili')}"
-								maxValue="#{fazlaMesaiERPAktarimHome.maxYil}" inputSize="1" value="#{fazlaMesaiERPAktarimHome.yil}" />
+								maxValue="#{fazlaMesaiERPAktarimHome.maxYil}" inputSize="1" value="#{fazlaMesaiERPAktarimHome.yil}">
+								<a4j:support event="onchange" status="ajaxStatus" action="#{fazlaMesaiERPAktarimHome.yilAyDegisti(true)}" ajaxSingle="true"
+									reRender="secimler,denklestirmeDonemiTable,anaForm" />
+							</rich:inputNumberSpinner>
 
 
 						</s:decorate>
@@ -28,12 +31,15 @@
 							<h:selectOneMenu value="#{fazlaMesaiERPAktarimHome.ay}" required="true" requiredMessage="Başlangıç ay seçiniz">
 								<f:selectItem itemLabel="Lütfen seçiniz" />
 								<f:selectItems value="#{fazlaMesaiERPAktarimHome.aylar}" />
+								<a4j:support event="onchange" status="ajaxStatus" action="#{fazlaMesaiERPAktarimHome.yilAyDegisti(false)}" ajaxSingle="true"
+									reRender="secimler,denklestirmeDonemiTable,anaForm" />
 							</h:selectOneMenu>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml"
 							rendered="#{(authenticatedUser.admin or authenticatedUser.IKAdmin) and fazlaMesaiERPAktarimHome.departmanList.size()>1}">
 							<ui:define name="label">#{ortakIslemler.firmaKaynagiAciklama()}</ui:define>
-							<h:selectOneMenu value="#{fazlaMesaiERPAktarimHome.departmanId}" required="true" requiredMessage="#{ortakIslemler.firmaKaynagiAciklama()} seçiniz">
+							<h:selectOneMenu value="#{fazlaMesaiERPAktarimHome.departmanId}" required="true"
+								requiredMessage="#{ortakIslemler.firmaKaynagiAciklama()} seçiniz">
 								<f:selectItem itemLabel="Lütfen seçiniz" />
 								<f:selectItems value="#{fazlaMesaiERPAktarimHome.departmanList}" />
 								<a4j:support event="onchange" action="#{fazlaMesaiERPAktarimHome.fillSirketList()}" ajaxSingle="true"
@@ -50,10 +56,22 @@
 								requiredMessage="#{ortakIslemler.sirketAciklama()} seçiniz">
 								<f:selectItem itemLabel="Lütfen seçiniz" />
 								<f:selectItems value="#{fazlaMesaiERPAktarimHome.sirketler}" />
-
+								<a4j:support event="onchange" action="#{fazlaMesaiERPAktarimHome.tesisDoldur()}" ajaxSingle="true"
+									reRender="secimler,denklestirmeDonemiTable,anaForm" />
 							</h:selectOneMenu>
 
 
+						</s:decorate>
+						<s:decorate template="/layout/edit.xhtml"
+							rendered="#{ortakIslemler.tesisDurumu and fazlaMesaiERPAktarimHome.tesisList != null and fazlaMesaiERPAktarimHome.tesisList.size()>0}">
+							<ui:define name="label">#{ortakIslemler.tesisAciklama()}</ui:define>
+							<h:selectOneMenu value="#{fazlaMesaiERPAktarimHome.tesisId}" requiredMessage="#{ortakIslemler.tesisAciklama()} seçiniz!"
+								disabled="#{fazlaMesaiERPAktarimHome.tesisList.size() == 1}">
+								<f:selectItem itemLabel="Lütfen seçiniz" />
+								<f:selectItems value="#{fazlaMesaiERPAktarimHome.tesisList}" />
+								<a4j:support event="onchange" status="ajaxStatus" action="#{fazlaMesaiERPAktarimHome.personelDenklestirmeList.clear()}" ajaxSingle="true"
+									reRender="secimler,denklestirmeDonemiTable,anaForm" />
+							</h:selectOneMenu>
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml" rendered="#{fazlaMesaiERPAktarimHome.sanalPersonelAciklama != ''}">
 							<ui:define name="label">Liste Durum</ui:define>
@@ -79,8 +97,13 @@
 							<a4j:commandButton status="ajaxStatus" action="#{fazlaMesaiERPAktarimHome.fillPersonelDenklestirmeList}" value="Fazla Mesai Getir"
 								reRender="denklestirmeDonemiTable" />
 							<a4j:commandButton status="ajaxStatus"
-								rendered="#{false and fazlaMesaiERPAktarimHome.instance.durum and fazlaMesaiERPAktarimHome.sirket.erpDurum and authenticatedUser.admin}"
+								rendered="#{fazlaMesaiERPAktarimHome.sapDurum and fazlaMesaiERPAktarimHome.sirket.erpDurum and authenticatedUser.admin}"
 								value="Fazla Mesai Aktar" oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel" />
+
+							<a4j:commandButton status="ajaxStatus" action="#{fazlaMesaiERPAktarimHome.fazlaMesaiERPAktar}"
+								rendered="#{fazlaMesaiERPAktarimHome.sirket.erpDurum and fazlaMesaiERPAktarimHome.fazlaMesaiERP.serverURL.startsWith('http')}"
+								value="Fazla Mesai #{fazlaMesaiERPAktarimHome.fazlaMesaiERP.sirketAdi} Aktar" />
+
 							<ui:fragment rendered="#{fazlaMesaiERPAktarimHome.onaylanmayanDurum != null}">
 								<b>Onaysız Personeller : </b>
 								<h:selectBooleanCheckbox value="#{fazlaMesaiERPAktarimHome.onaylanmayanDurum}">
@@ -131,7 +154,7 @@
 										<h:outputText value="#{mesai.personel.adSoyad}" style="font-size: 9px;width:autostretch ;white-space: nowrap;" />
 									</rich:column>
 									<rich:column style="text-align: left;"
-										rendered="#{ortakIslemler.getListTesisDurum(fazlaMesaiERPAktarimHome.onaysizPersonelDenklestirmeList)}">
+										rendered="#{fazlaMesaiERPAktarimHome.tesisId==null and ortakIslemler.getListTesisDurum(fazlaMesaiERPAktarimHome.onaysizPersonelDenklestirmeList)}">
 										<f:facet name="header">
 											<h:outputText value="#{ortakIslemler.tesisAciklama()}" />
 										</f:facet>
@@ -188,7 +211,7 @@
 									<f:facet name="header">
 										<h:outputText value="Fazla Mesailer" />
 									</f:facet>
-									<rich:column rendered="#{fazlaMesaiERPAktarimHome.durumERP or fazlaMesaiERPAktarimHome.instance.durum}">
+									<rich:column rendered="#{fazlaMesaiERPAktarimHome.sapDurum or fazlaMesaiERPAktarimHome.fazlaMesaiERP.serverURL.startsWith('http')}">
 										<f:facet name="header">
 											<h:selectBooleanCheckbox value="#{fazlaMesaiERPAktarimHome.secimDurum}">
 												<a4j:support event="onclick" status="ajaxStatus" action="#{fazlaMesaiERPAktarimHome.islemSec()}" reRender="hareketTables" />
@@ -217,7 +240,7 @@
 										</f:facet>
 										<h:outputText value="#{mesai.personel.adSoyad}" style="font-size: 9px;width:autostretch ;white-space: nowrap;" />
 									</rich:column>
-									<rich:column style="text-align: left;" rendered="#{ortakIslemler.getListTesisDurum(fazlaMesaiERPAktarimHome.personelDenklestirmeList)}">
+									<rich:column style="text-align: left;" rendered="#{fazlaMesaiERPAktarimHome.tesisId==null and ortakIslemler.getListTesisDurum(fazlaMesaiERPAktarimHome.personelDenklestirmeList)}">
 										<f:facet name="header">
 											<h:outputText value="#{ortakIslemler.tesisAciklama()}" />
 										</f:facet>
