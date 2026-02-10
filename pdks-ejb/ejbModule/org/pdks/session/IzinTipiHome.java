@@ -62,7 +62,7 @@ public class IzinTipiHome extends EntityHome<IzinTipi> implements Serializable {
 	private List<SelectItem> personelGirisTipiList, bakiyeDevirTipiList, mailTipiList;
 	private List<SelectItem> onaylayanTipiList;
 	private List<Tanim> cinsiyetList = new ArrayList<Tanim>();
-	private List<SelectItem> hesapTipiList = null, durumCGSList , mailGonderimDurumlari;
+	private List<SelectItem> hesapTipiList = null, durumCGSList, mailGonderimDurumlari;
 	private IzinTipi bakiyeIzinTipi;
 	public Tanim selectedDepartman, bilgiTipi;
 	private List<IzinTipiMailAdres> mailCCAdresList, mailBCCAdresList;
@@ -390,17 +390,26 @@ public class IzinTipiHome extends EntityHome<IzinTipi> implements Serializable {
 						pdksEntityController.saveOrUpdate(session, entityManager, izinTipiMailAdres);
 
 				}
+				boolean sirala = false;
 				if (!mailMap.isEmpty()) {
 					adresler = null;
 					adresler = new ArrayList<IzinTipiMailAdres>(mailMap.values());
 					for (Iterator iterator = adresler.iterator(); iterator.hasNext();) {
 						IzinTipiMailAdres izinTipiMailAdres = (IzinTipiMailAdres) iterator.next();
 						pdksEntityController.deleteObject(session, entityManager, izinTipiMailAdres);
+						sirala = true;
 					}
 				}
 				adresler = null;
 				mailMap = null;
 				session.flush();
+				if (sirala) {
+					try {
+						pdksEntityController.savePrepareTableID(true, IzinTipiMailAdres.class, entityManager, session);
+					} catch (Exception e) {
+					}
+					session.flush();
+				}
 				fillIzinTipiList();
 
 			}
