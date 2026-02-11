@@ -36,6 +36,7 @@ import org.pdks.entity.CalismaSekli;
 import org.pdks.entity.Departman;
 import org.pdks.entity.Liste;
 import org.pdks.entity.Sirket;
+import org.pdks.entity.Tanim;
 import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGun;
 import org.pdks.entity.VardiyaSablonu;
@@ -128,14 +129,19 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	}
 
 	/**
-	 * @param cm
+	 * @param modelDoldur
+	 * @param vardiya
 	 * @return
 	 */
-	private String tesisDoldur(Vardiya vardiya) {
+	public String tesisDoldur(boolean modelDoldur, Vardiya vardiya) {
 		if (tesisIdList == null)
 			tesisIdList = new ArrayList<SelectItem>();
-		tesisId = fazlaMesaiOrtakIslemler.tesisDoldur(vardiya, tesisId, tesisIdList, session);
+		if (modelDoldur)
+			vardiya.setTesisId(null);
+		tesisId = fazlaMesaiOrtakIslemler.tesisDoldur(vardiya, vardiya.getTesisId(), tesisIdList, session);
 		vardiya.setTesis(tesisId != null ? ortakIslemler.getTanimById(tesisId, session) : null);
+		if (modelDoldur)
+			fillCalismaModeliList(vardiya);
 		return "";
 
 	}
@@ -182,9 +188,9 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 		if (pdksVardiya.getId() == null || pdksVardiya.isCalisma()) {
 			Long pdksDepartmanId = pdksVardiya.getDepartmanId() != null ? pdksVardiya.getDepartmanId() : null;
 			Sirket sirket = pdksVardiya.getSirketId() != null ? new Sirket(pdksVardiya.getSirketId()) : null;
-
-			calismaModeliList = ortakIslemler.getCalismaModeliList(sirket, pdksDepartmanId, false, session);
-
+			Tanim tesis = pdksVardiya.getTesisId() != null ? new Tanim(pdksVardiya.getTesisId()) : null;
+			calismaModeliList = ortakIslemler.getCalismaModeliList(sirket, tesis, pdksDepartmanId, false, session);
+			Long seciliTesisId = pdksVardiya.getTesisId();
 			for (Iterator iterator = calismaModeliList.iterator(); iterator.hasNext();) {
 				CalismaModeli cm = (CalismaModeli) iterator.next();
 				if (pdksDepartmanId != null) {
@@ -200,8 +206,8 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 						continue;
 					}
 				}
-				if (tesisId != null) {
-					if (cm.getTesis() != null && !cm.getTesis().getId().equals(tesisId)) {
+				if (seciliTesisId != null) {
+					if (cm.getTesis() != null && !cm.getTesis().getId().equals(seciliTesisId)) {
 						iterator.remove();
 						continue;
 					}
@@ -373,7 +379,7 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 	private void vardiyaAlanlariDoldur(Vardiya pdksVardiya) {
 		setSeciliVardiya(pdksVardiya);
 		tesisId = pdksVardiya.getTesis() != null ? pdksVardiya.getTesis().getId() : null;
-		tesisDoldur(pdksVardiya);
+		tesisDoldur(false, pdksVardiya);
 		fillSaatler();
 		fillSablonlar();
 		if (authenticatedUser.isAdmin())
@@ -441,6 +447,7 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 				if (pdksVardiya.getSirket() != null)
 					pdksVardiya.setDepartman(pdksVardiya.getSirket().getDepartman());
 				pdksEntityController.saveOrUpdate(session, entityManager, pdksVardiya);
+				boolean cmvIptal = false, vyiIptal = false;
 				if (calismaModeliList.size() + calismaModeliKayitliList.size() > 0) {
 					parametreMap.clear();
 					parametreMap.put("vardiya.id", pdksVardiya.getId());
@@ -461,11 +468,14 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 						if (ekle) {
 							CalismaModeliVardiya vyi = new CalismaModeliVardiya(pdksVardiya, kayitli);
 							pdksEntityController.saveOrUpdate(session, entityManager, vyi);
+
 						}
 					}
+
 					for (Iterator iterator2 = kayitliCalismaModeliVardiyaList.iterator(); iterator2.hasNext();) {
 						CalismaModeliVardiya vyi = (CalismaModeliVardiya) iterator2.next();
 						pdksEntityController.deleteObject(session, entityManager, vyi);
+						cmvIptal = true;
 					}
 					kayitliCalismaModeliVardiyaList = null;
 				}
@@ -495,10 +505,21 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 					for (Iterator iterator2 = list.iterator(); iterator2.hasNext();) {
 						VardiyaYemekIzin vyi = (VardiyaYemekIzin) iterator2.next();
 						pdksEntityController.deleteObject(session, entityManager, vyi);
+						vyiIptal = true;
 					}
 					list = null;
 				}
 				session.flush();
+				if (vyiIptal || cmvIptal) {
+					try {
+						if (cmvIptal)
+							pdksEntityController.savePrepareTableID(true, CalismaModeliVardiya.class, entityManager, session);
+						if (vyiIptal)
+							pdksEntityController.savePrepareTableID(true, VardiyaYemekIzin.class, entityManager, session);
+					} catch (Exception e) {
+					}
+					session.flush();
+				}
 				fillVardiyalar();
 				cikis = "persisted";
 			}
@@ -533,6 +554,7 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 		tesisGoster = Boolean.FALSE;
 		HashMap parametreMap = new HashMap();
 		try {
+			session.clear();
 			manuelVardiyaIzinGir = ortakIslemler.getVardiyaIzinGir(session, authenticatedUser.getDepartman());
 			List<Vardiya> vardiyalar = pdksEntityController.getSQLParamByFieldList(Vardiya.TABLE_NAME, pasifGoster == false ? Vardiya.COLUMN_NAME_DURUM : null, Boolean.TRUE, Vardiya.class, session);
 			if (seciliSirketId != null) {
