@@ -108,9 +108,9 @@ public class HoldingKalanIzinHome extends EntityHome<HoldingIzin> implements Ser
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		istenAyrilanEkle = Boolean.FALSE;
 		if (authenticatedUser.isAdmin() == false || aramaSecenekleri == null)
 			aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
@@ -253,8 +253,7 @@ public class HoldingKalanIzinHome extends EntityHome<HoldingIzin> implements Ser
 					veriMap.put("sirketId", aramaSecenekleri.getSirketId() != null ? String.valueOf(aramaSecenekleri.getSirketId()) : null);
 					veriMap.put("tarih", hakedisTarihiStr);
 					veriMap.put("format", "120");
-					veriMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-					List<HoldingIzin> izinList = pdksEntityController.execSPList(veriMap, spName, HoldingIzin.class);
+ 					List<HoldingIzin> izinList = pdksEntityController.execSPList(session, veriMap, spName, HoldingIzin.class);
 
 					if (!izinList.isEmpty()) {
 						for (HoldingIzin holdingIzin : izinList) {

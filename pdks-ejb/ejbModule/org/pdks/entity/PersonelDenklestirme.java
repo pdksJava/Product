@@ -3,6 +3,7 @@ package org.pdks.entity;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
@@ -521,14 +522,18 @@ public class PersonelDenklestirme extends BaseObject {
 			double gunPlanSure = gebePersonelDonemselDurum == null ? gun : cm.getSaat(PdksUtil.getDateField(vg.getVardiyaDate(), Calendar.DAY_OF_WEEK)), sutIzniSure = 0.0d;
 			if (vg.isSutIzniVar()) {
 				sutIzniSure = gunPlanSure <= 9.0d ? sureGunlukSut : 7.5d;
+				Double deger = vg.getPlanSaatSutIzinSaati();
+				if (deger != null)
+					sutIzniSure = gunPlanSure - deger.doubleValue();
 				gunPlanSure = sutIzniSure;
 				logger.debug(vg.getVardiyaDateStr() + " Sut İzni " + gunPlanSure + " ");
 			} else if (vg.isGebePersonelDonemselDurum()) {
-				sutIzniSure = gunPlanSure > 7.5d ? 7.5d : gunPlanSure;
+				if (gunPlanSure > 0)
+					sutIzniSure = gunPlanSure > 7.5d || vg.getPlanSaatGebeSaatiKontrolEt().equals(Boolean.FALSE) ? 7.5d : gunPlanSure;
 				gunPlanSure = sutIzniSure;
 				logger.debug(vg.getVardiyaDateStr() + " Gebe " + gunPlanSure + " ");
 			} else if (isSuaDurumu()) {
-				sutIzniSure = gunPlanSure > 7.5d ? 7.5d : gunPlanSure;
+				sutIzniSure = gunPlanSure > 7d ? 7d : gunPlanSure;
 				gunPlanSure = AylikPuantaj.getGunlukCalismaSuresi();
 				logger.debug(vg.getVardiyaDateStr() + " Şua " + gunPlanSure + " ");
 			}
@@ -550,6 +555,40 @@ public class PersonelDenklestirme extends BaseObject {
 			}
 		}
 		return sure;
+	}
+
+	/**
+	 * @param vardiyalar
+	 * @param cgsDus
+	 * @return
+	 */
+	public static Double getSaatlikIzin(List<VardiyaGun> vardiyalar, boolean cgsDus) {
+		double izinSure = 0.0d;
+		if (vardiyalar != null) {
+			for (VardiyaGun vardiyaGun : vardiyalar) {
+				if (vardiyaGun.isAyinGunu()) {
+					if (vardiyaGun.getIzin() == null && vardiyaGun.getIzinler() != null) {
+						for (PersonelIzin personelIzin : vardiyaGun.getIzinler()) {
+							if (personelIzin.getHesapTipi() != null && personelIzin.getHesapTipi().equals(PersonelIzin.HESAP_TIPI_SAAT)) {
+								IzinTipi izinTipi = personelIzin.getIzinTipi();
+								double sure = personelIzin.getIzinSuresi();
+								if (cgsDus == false) {
+									if (izinTipi.isEkleCGS()) {
+										izinSure += sure;
+										vardiyaGun.addCalismaSuresi(sure);
+									}
+
+								} else if (cgsDus) {
+									if (izinTipi.isCikarCGS())
+										izinSure += sure;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		return izinSure;
 	}
 
 	/**
@@ -576,6 +615,7 @@ public class PersonelDenklestirme extends BaseObject {
 			if (izinSure > 0.0d && aylikSure >= izinSure)
 				aylikSure -= izinSure;
 		}
+
 		Double gunlukCalismaSuresi = calismaModeliAy != null ? AylikPuantaj.getGunlukCalismaSuresi() : null;
 		if (isSuaDurumu() || (cm != null && cm.isSua())) {
 			aylikSure = aylikSureHesapla(aylikSure - arifeToplamSure, calismaSuaSaati, gunlukCalismaSuresi) + arifeToplamSure;
@@ -589,6 +629,9 @@ public class PersonelDenklestirme extends BaseObject {
 			double isAramaSure = getIsAramaSure(vardiyalar);
 			maxSure -= isAramaSure;
 		}
+		if (cm != null && cm.isFazlaMesaiVarMi())
+			maxSure -= getSaatlikIzin(vardiyalar, true);
+
 		return maxSure;
 	}
 
@@ -859,6 +902,20 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	@Transient
+	public Boolean getSonDurum() {
+		boolean sonDurum = this.getDurum() != null && this.getDurum();
+		if (sonDurum) {
+			if (personelDenklestirmeGecenAy != null) {
+				Date iseBaslamaTarihi = personel.getIseBaslamaTarihi();
+				Date donemBasi = PdksUtil.convertToJavaDate(this.getDenklestirmeAy().getDonem() + "01", "yyyyMMdd");
+				if (iseBaslamaTarihi.before(donemBasi))
+					sonDurum = personelDenklestirmeGecenAy.getDurum() != null && personelDenklestirmeGecenAy.getDurum();
+			}
+		}
+		return sonDurum;
+	}
+
+	@Transient
 	public String getIsAramaIzniDurumAciklama() {
 		String str = getDurumAciklama(PersonelDurumTipi.IS_ARAMA_IZNI);
 		return str;
@@ -946,6 +1003,11 @@ public class PersonelDenklestirme extends BaseObject {
 
 	public void setPersonelDenklestirmeDevir(PersonelDenklestirmeDevir personelDenklestirmeDevir) {
 		this.personelDenklestirmeDevir = personelDenklestirmeDevir;
+	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
 	}
 
 }

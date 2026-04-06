@@ -39,7 +39,7 @@ public class PersonelDenklestirmeOrganizasyonDetay extends BasePDKSObject {
 
 	}
 
-	public PersonelDenklestirmeOrganizasyonDetay(PersonelDenklestirmeOrganizasyon personelDenklestirmeOrganizasyon,Tanim alan) {
+	public PersonelDenklestirmeOrganizasyonDetay(PersonelDenklestirmeOrganizasyon personelDenklestirmeOrganizasyon, Tanim alan) {
 		super();
 		this.personelDenklestirmeOrganizasyon = personelDenklestirmeOrganizasyon;
 		this.alan = alan;
@@ -97,6 +97,11 @@ public class PersonelDenklestirmeOrganizasyonDetay extends BasePDKSObject {
 
 	public void entityRefresh() {
 
+	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
 	}
 
 }

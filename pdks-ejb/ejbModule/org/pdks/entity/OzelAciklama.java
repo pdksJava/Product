@@ -1,0 +1,46 @@
+package org.pdks.entity;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Transient;
+
+@Entity(name = OzelAciklama.TABLE_NAME)
+public class OzelAciklama extends BasePDKSObject {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8870804083675438938L;
+	public static final String TABLE_NAME = "OZEL_ACIKLAMA";
+	public static final String COLUMN_NAME_ACIKLAMA = "ACIKLAMA";
+
+	public OzelAciklama() {
+		super();
+
+	}
+
+	public OzelAciklama(String aciklama) {
+		super();
+		this.aciklama = aciklama;
+	}
+
+	private String aciklama;
+
+	@Column(name = COLUMN_NAME_ACIKLAMA, length = 256)
+	public String getAciklama() {
+		return aciklama;
+	}
+
+	public void setAciklama(String aciklama) {
+		this.aciklama = aciklama;
+	}
+
+	public void entityRefresh() {
+
+	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
+	}
+}

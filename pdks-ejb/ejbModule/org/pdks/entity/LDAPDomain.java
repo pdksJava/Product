@@ -5,6 +5,7 @@ import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
 @Entity(name = LDAPDomain.TABLE_NAME)
@@ -21,7 +22,7 @@ public class LDAPDomain extends BasePDKSObject implements Serializable {
 	 */
 	public static final String TABLE_NAME = "LDAP_DOMAIN";
 
- 	public static final String COLUMN_NAME_HOST = "HOST";
+	public static final String COLUMN_NAME_HOST = "HOST";
 
 	private int sira;
 
@@ -122,8 +123,12 @@ public class LDAPDomain extends BasePDKSObject implements Serializable {
 	}
 
 	public void entityRefresh() {
-		
-		
+
+	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
 	}
 
 }

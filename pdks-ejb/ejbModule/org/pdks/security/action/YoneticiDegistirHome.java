@@ -11,7 +11,6 @@ import java.util.List;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -43,6 +42,8 @@ public class YoneticiDegistirHome extends EntityHome<User> implements Serializab
 	User authenticatedUser;
 	@In(required = true, create = true)
 	OrtakIslemler ortakIslemler;
+
+	public static String sayfaURL = "yoneticiDegistir";
 	private List<User> yoneticiList = new ArrayList<User>();
 	private User yonetici;
 	private Session session;
@@ -76,10 +77,9 @@ public class YoneticiDegistirHome extends EntityHome<User> implements Serializab
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		if (authenticatedUser.getSeciliSuperVisor() != null)
 			setYonetici(authenticatedUser.getSeciliSuperVisor());
 		else

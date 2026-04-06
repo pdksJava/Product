@@ -112,9 +112,9 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		aylikPuantajListClear();
 		if (aramaSecenekleri == null)
 			aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
@@ -253,9 +253,8 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 			// bu araliktaki tum hareketleri cekecektir.
 
 			try {
-				boolean islem = ortakIslemler.getVardiyaHareketIslenecekList(vardiyaGunList, date, date, session);
-				if (islem)
-					vardiyaGunList = getVardiyalariOku(oncekiGun, tumPersoneller, date, date);
+
+				vardiyaGunList = getVardiyalariOku(oncekiGun, tumPersoneller, date, date);
 			} catch (Exception e) {
 			}
 			Date bugun = new Date();
@@ -269,7 +268,7 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 				if (vardiya.isCalisma()) {
 
 				}
- 
+
 				perIdList.add(personelId);
 				if (islemVardiya.isCalisma()) {
 					if (tarih1 == null || pdksVardiyaGun.getIslemVardiya().getVardiyaTelorans1BasZaman().getTime() < tarih1.getTime())

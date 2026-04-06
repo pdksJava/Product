@@ -13,7 +13,6 @@ import javax.faces.FacesException;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.ScopeType;
 import org.jboss.seam.annotations.Begin;
@@ -28,6 +27,7 @@ import org.pdks.entity.MenuItem;
 import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.Role;
 import org.pdks.security.entity.User;
+import org.pdks.session.OrtakIslemler;
 import org.pdks.session.PdksEntityController;
 import org.pdks.session.PdksUtil;
 import org.richfaces.component.html.HtmlTree;
@@ -53,12 +53,16 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 	@In(create = true)
 	StartupAction startupAction;
 
+	@In(required = false, create = true)
+	OrtakIslemler ortakIslemler;
+
 	@In(required = false)
 	User authenticatedUser;
 
 	@In(required = false, create = true)
 	EntityManager entityManager;
-
+	
+	public static String sayfaURL = "menuItemPermissionTanimlama";
 	private boolean selectedFromTree;
 
 	private String iconLeaf = "/img/plus.gif";
@@ -134,7 +138,7 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 	}
 
 	public void setMenuItemTree4Rol(Role rol) {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		HashMap parametreMap = new HashMap();
 		parametreMap.put("status", Boolean.TRUE);
@@ -196,10 +200,10 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		selectedIdsFromTreeMap.clear();
 		// fillMenuItemTree();
 	}
@@ -207,7 +211,7 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 	public void fillMenuItemTree() {
 		HashMap parametreMap = new HashMap();
 		parametreMap.put("status", Boolean.TRUE);
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 
@@ -262,7 +266,7 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 	 */
 	@SuppressWarnings("unchecked")
 	public List<Role> getAllRoleList() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		HashMap parametreMap = new HashMap();
 		parametreMap.put("status=", Boolean.TRUE);
@@ -651,7 +655,7 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 
 	public ArrayList<MenuItem> getMenuItemList() {
 		HashMap parametreMap = new HashMap();
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 
@@ -689,7 +693,7 @@ public class MenuItemPermissionTanimlama extends EntityQuery<MenuItem> implement
 	 */
 	@Transactional
 	public String deleteAccountPermissionFromModelPanel(AccountPermission selectedAccPermission) {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		ArrayList<AccountPermission> deleteAccountPermissionList = new ArrayList<AccountPermission>();
 		// permissionun ait oldugu menuitem bulunur.

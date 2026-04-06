@@ -70,9 +70,9 @@ public class PdksAgentTanimlamaHome extends EntityHome<PdksAgent> implements Ser
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		admin = authenticatedUser.isAdmin();
 		fillPdksAgentList();
 	}
@@ -83,7 +83,7 @@ public class PdksAgentTanimlamaHome extends EntityHome<PdksAgent> implements Ser
 		pdksEntityController.deleteObject(session, entityManager, agent);
 		session.flush();
 		try {
-			pdksEntityController.savePrepareTableID(true, PdksAgent.class, entityManager, session);
+			pdksEntityController.savePrepareTableID(true, agent, PdksAgent.class, session);
 		} catch (Exception e) {
 		}
 		session.flush();

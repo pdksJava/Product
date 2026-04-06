@@ -10,13 +10,6 @@ import java.util.List;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
-import org.pdks.entity.Departman;
-import org.pdks.entity.Kapi;
-import org.pdks.entity.Sirket;
-import org.pdks.entity.YemekKartsiz;
-import org.pdks.entity.YemekOgun;
-import org.pdks.security.entity.User;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -26,6 +19,12 @@ import org.jboss.seam.annotations.Transactional;
 import org.jboss.seam.annotations.web.RequestParameter;
 import org.jboss.seam.faces.FacesMessages;
 import org.jboss.seam.framework.EntityHome;
+import org.pdks.entity.Departman;
+import org.pdks.entity.Kapi;
+import org.pdks.entity.Sirket;
+import org.pdks.entity.YemekKartsiz;
+import org.pdks.entity.YemekOgun;
+import org.pdks.security.entity.User;
 
 @Name("yemekHome")
 public class YemekHome extends EntityHome<YemekOgun> implements Serializable {
@@ -102,8 +101,8 @@ public class YemekHome extends EntityHome<YemekOgun> implements Serializable {
 
 	public void fillYemekOgunler() {
 		HashMap fields = new HashMap();
-		fields.put("bitTarih>=", yemekKartsiz.getTarih());
-		fields.put("basTarih<=", yemekKartsiz.getTarih());
+		fields.put("bitTarih >= ", yemekKartsiz.getTarih());
+		fields.put("basTarih <= ", yemekKartsiz.getTarih());
 		fields.put("durum=", Boolean.TRUE);
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -119,15 +118,15 @@ public class YemekHome extends EntityHome<YemekOgun> implements Serializable {
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 		List<Sirket> list = pdksEntityController.getObjectByInnerObjectList(fields, Sirket.class);
 		if (list.size() > 1)
-			list = PdksUtil.sortObjectStringAlanList(list, "getAd", null);
+			list = PdksUtil.sortSirketList(list);
 		setSirketList(list);
 
 	}
 
 	public void fillKartSizYemek() {
 		HashMap fields = new HashMap();
-		fields.put("tarih>=", basTarih);
-		fields.put("tarih<=", bitTarih);
+		fields.put("tarih >= ", basTarih);
+		fields.put("tarih <= ", bitTarih);
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 		List<YemekKartsiz> kartsizList = pdksEntityController.getObjectByInnerObjectListInLogic(fields, YemekKartsiz.class);
@@ -234,19 +233,18 @@ public class YemekHome extends EntityHome<YemekOgun> implements Serializable {
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		fillPdksYemekList();
 
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaExtraGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, "yemekKartsizTanimlama");
 		if (basTarih == null) {
 			Calendar cal = Calendar.getInstance();
 			bitTarih = PdksUtil.getDate(cal.getTime());

@@ -14,7 +14,6 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
 
 import org.apache.log4j.Logger;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -47,6 +46,7 @@ public class OpenSessionHome extends EntityHome<User> implements Serializable {
 	User authenticatedUser;
 
 	private List<KullaniciSession> sessionFilterList = new ArrayList<KullaniciSession>();
+	public static String sayfaURL = "openSession";
 
 	private Date tarih;
 
@@ -164,12 +164,11 @@ public class OpenSessionHome extends EntityHome<User> implements Serializable {
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+ 		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		secili = Boolean.FALSE;
-		authenticatedUser.setCalistigiSayfa("openSession");
+		authenticatedUser.setCalistigiSayfa(sayfaURL);
 		HttpSession mySession = (HttpSession) FacesContext.getCurrentInstance().getExternalContext().getSession(false);
 		setHttpSession(mySession);
 		durumDegistir();

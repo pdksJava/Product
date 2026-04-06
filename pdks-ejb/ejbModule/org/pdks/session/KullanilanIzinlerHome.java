@@ -20,7 +20,6 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -70,8 +69,9 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 
 	@In(required = false)
 	FacesMessages facesMessages;
-
-	private List<PersonelIzin> personelIzinList = new ArrayList<PersonelIzin>(), bakiyeIzinler;
+	
+	public static String sayfaURL = "kullanilanIzinler";
+ 	private List<PersonelIzin> personelIzinList = new ArrayList<PersonelIzin>(), bakiyeIzinler;
 
 	private TempIzin updateTempIzin;
 	private PersonelIzin updateIzin;
@@ -259,10 +259,9 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		if (authenticatedUser.isAdmin() == false || aramaSecenekleri == null)
 			aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
 		aramaSecenekleri.setStajyerOlmayanSirket(Boolean.FALSE);
@@ -293,12 +292,12 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 		map.put(PdksEntityController.MAP_KEY_MAP, "getKodu");
 		map.put(PdksEntityController.MAP_KEY_SELECT, "izinTipiTanim");
 		map.put("bakiyeIzinTipi=", null);
-		// map.put("izinTipiTanim.kodu<>", IzinTipi.SSK_ISTIRAHAT);
-		// map.put("personelGirisTipi<>", IzinTipi.GIRIS_TIPI_YOK);
+		// map.put("izinTipiTanim.kodu <> ", IzinTipi.SSK_ISTIRAHAT);
+		// map.put("personelGirisTipi <> ", IzinTipi.GIRIS_TIPI_YOK);
 		if (!authenticatedUser.isAdmin()) {
 			map.put("departman=", authenticatedUser.getDepartman());
 			if (!authenticatedUser.isIK() && !authenticatedUser.getPdksPersonel().isOnaysizIzinKullanir())
-				map.put("onaylayanTipi<>", IzinTipi.ONAYLAYAN_TIPI_YOK);
+				map.put("onaylayanTipi <> ", IzinTipi.ONAYLAYAN_TIPI_YOK);
 
 		}
 		if (session != null)
@@ -557,8 +556,8 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 			Date bitisTarihi = (Date) bitTarih.clone();
 			if (PdksUtil.tarihKarsilastirNumeric(bitTarih, basTarih) == 0)
 				bitisTarihi = ortakIslemler.tariheGunEkleCikar(null, bitisTarihi, 1);
-			parametreMap.put("baslangicZamani<=", bitisTarihi);
-			parametreMap.put("bitisZamani>=", basTarih);
+			parametreMap.put("baslangicZamani <= ", bitisTarihi);
+			parametreMap.put("bitisZamani >= ", basTarih);
 			List<Integer> izinDurumuList = new ArrayList<Integer>();
 			if (islemTipi.equals("K")) {
 				izinDurumuList.add(PersonelIzin.IZIN_DURUMU_ONAYLANDI);
@@ -756,8 +755,8 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 				Date bitisTarihi = (Date) bitTarih.clone();
 				if (PdksUtil.tarihKarsilastirNumeric(bitTarih, basTarih) == 0)
 					bitisTarihi = ortakIslemler.tariheGunEkleCikar(null, bitisTarihi, 1);
-				parametreMap.put("baslangicZamani<=", bitisTarihi);
-				parametreMap.put("bitisZamani>=", basTarih);
+				parametreMap.put("baslangicZamani <= ", bitisTarihi);
+				parametreMap.put("bitisZamani >= ", basTarih);
 				List<Integer> izinDurumuList = new ArrayList<Integer>();
 				izinDurumuList.add(PersonelIzin.IZIN_DURUMU_BIRINCI_YONETICI_ONAYINDA);
 				izinDurumuList.add(PersonelIzin.IZIN_DURUMU_IKINCI_YONETICI_ONAYINDA);

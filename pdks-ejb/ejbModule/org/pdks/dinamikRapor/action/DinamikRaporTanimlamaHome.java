@@ -87,9 +87,9 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		if (raporTipiList == null)
 			raporTipiList = new ArrayList<SelectItem>();
 		else
@@ -432,7 +432,7 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 		session.delete(deleteValue);
 		session.flush();
 		try {
-			pdksEntityController.savePrepareTableID(true, PdksDinamikRaporParametre.class, entityManager, session);
+			pdksEntityController.savePrepareTableID(true, deleteValue, PdksDinamikRaporParametre.class, session);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -449,7 +449,7 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 		session.delete(deleteValue);
 		session.flush();
 		try {
-			pdksEntityController.savePrepareTableID(true, PdksDinamikRaporAlan.class, entityManager, session);
+			pdksEntityController.savePrepareTableID(true, deleteValue, PdksDinamikRaporAlan.class, session);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -494,7 +494,7 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 			if (seciliPdksDinamikRapor.isStoreProcedure() == false) {
 				if (PdksUtil.hasStringValue(seciliPdksDinamikRaporParametre.getEsitlik())) {
 					String esitlik = seciliPdksDinamikRaporParametre.getEsitlik().trim().toLowerCase(Locale.ENGLISH);
-					List<String> veriler = Arrays.asList(new String[] { "<=", ">=", "like" });
+					List<String> veriler = Arrays.asList(new String[] { ENumEsitlik.BUYUKESIT.value(), ENumEsitlik.KUCUKESIT.value(), ENumEsitlik.ICEREN.value() });
 					if (!veriler.contains(esitlik))
 						seciliPdksDinamikRaporParametre.setEsitlik("");
 					else

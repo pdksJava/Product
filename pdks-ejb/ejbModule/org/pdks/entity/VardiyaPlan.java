@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
 
+import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 
 public class VardiyaPlan extends BaseObject {
@@ -195,7 +197,11 @@ public class VardiyaPlan extends BaseObject {
 	}
 
 	public void entityRefresh() {
-		
-		
+
+	}
+
+	@Transient
+	public String getTableName() {
+		return null;
 	}
 }

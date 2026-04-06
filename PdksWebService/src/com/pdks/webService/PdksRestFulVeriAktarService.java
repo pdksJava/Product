@@ -632,16 +632,7 @@ public class PdksRestFulVeriAktarService implements Serializable {
 		}
 		if (mediaType != null && mediaType.equals(MediaType.APPLICATION_XML)) {
 			try {
-				String str = sonuc;
-				String xml = null;
-				if (str.startsWith("{")) {
-					JSONObject jsonObject = new JSONObject(str);
-					xml = XML.toString(jsonObject);
-				} else {
-					JSONArray jsonObject = new JSONArray(str);
-					xml = "<" + fonksiyonAdi + ">" + PdksUtil.replaceAllManuel(XML.toString(jsonObject), "array", "satir") + "</" + fonksiyonAdi + ">";
-				}
-				sonuc = xml;
+				sonuc = convertJSONtoXML(fonksiyonAdi, sonuc);
 				dosyaAdi = dosyaAdiBaslangic + ".xml";
 			} catch (Exception e) {
 				logger.error(e);
@@ -649,16 +640,39 @@ public class PdksRestFulVeriAktarService implements Serializable {
 			}
 		}
 		if (PdksUtil.hasStringValue(sonuc)) {
-			try {
-				sendIKMail(sirketKoduInput, tesisKoduInput, dosyaAdi, sonuc);
-			} catch (Exception e) {
-				logger.error(e);
-				e.printStackTrace();
-			}
+			boolean testDurum = PdksVeriOrtakAktar.getTestDurum();
+			PdksVeriOrtakAktar pdksVeriOrtakAktar = new PdksVeriOrtakAktar();
+			if (testDurum == false && pdksVeriOrtakAktar.getMesaiEntrasyonMailKapali(sirketKoduInput, tesisKoduInput, null) == false) {
+ 				try {
+					sendIKMail(sirketKoduInput, tesisKoduInput, dosyaAdi, sonuc);
+				} catch (Exception e) {
+					logger.error(e);
+					e.printStackTrace();
+				}
 
+			}
 		}
-		response = Response.ok(sonuc, mediaType).build();
+		response = Response.ok(sonuc).type(mediaType + ";charset=utf-8").build();
 		return response;
+	}
+
+	/**
+	 * @param fonksiyonAdi
+	 * @param sonuc
+	 * @return
+	 */
+	public static String convertJSONtoXML(String fonksiyonAdi, String sonuc) {
+		String str = sonuc;
+		String xml = null;
+		if (str.startsWith("{")) {
+			JSONObject jsonObject = new JSONObject(str);
+			xml = XML.toString(jsonObject);
+		} else {
+			JSONArray jsonObject = new JSONArray(str);
+			xml = "<" + fonksiyonAdi + ">" + PdksUtil.replaceAllManuel(XML.toString(jsonObject), "array", "satir") + "</" + fonksiyonAdi + ">";
+		}
+		sonuc = xml;
+		return sonuc;
 	}
 
 	/**
@@ -698,7 +712,7 @@ public class PdksRestFulVeriAktarService implements Serializable {
 		}
 		Response response = null;
 		try {
-			response = Response.ok(sonuc, MediaType.APPLICATION_JSON).build();
+			response = Response.ok(sonuc).type(MediaType.APPLICATION_JSON + ";charset=utf-8").build();
 		} catch (Exception e) {
 		}
 		return response;
@@ -720,7 +734,7 @@ public class PdksRestFulVeriAktarService implements Serializable {
 		Response response = null;
 		try {
 			String sonuc = gson.toJson(durumMap);
-			response = Response.ok(sonuc, MediaType.APPLICATION_JSON).build();
+			response = Response.ok(sonuc).type(MediaType.APPLICATION_JSON + ";charset=utf-8").build();
 		} catch (Exception e) {
 		}
 		return response;
@@ -742,7 +756,7 @@ public class PdksRestFulVeriAktarService implements Serializable {
 		Response response = null;
 		try {
 			String sonuc = gson.toJson(durumMap);
-			response = Response.ok(sonuc, MediaType.APPLICATION_JSON).build();
+			response = Response.ok(sonuc).type(MediaType.APPLICATION_JSON + ";charset=utf-8").build();
 		} catch (Exception e) {
 		}
 		return response;
@@ -778,7 +792,7 @@ public class PdksRestFulVeriAktarService implements Serializable {
 		}
 		Response response = null;
 		try {
-			response = Response.ok(sonuc, MediaType.APPLICATION_JSON).build();
+			response = Response.ok(sonuc).type(MediaType.APPLICATION_JSON + ";charset=utf-8").build();
 		} catch (Exception e) {
 		}
 		return response;
@@ -824,7 +838,7 @@ public class PdksRestFulVeriAktarService implements Serializable {
 		data = gson.toJson(personelList);
 		Response response = null;
 		try {
-			response = Response.ok(data, MediaType.APPLICATION_JSON).build();
+			response = Response.ok(data).type(MediaType.APPLICATION_JSON + ";charset=utf-8").build();
 		} catch (Exception e) {
 		}
 		return response;

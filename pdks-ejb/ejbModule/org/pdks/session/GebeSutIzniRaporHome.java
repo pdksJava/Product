@@ -90,9 +90,9 @@ public class GebeSutIzniRaporHome extends EntityHome<PersonelDonemselDurum> impl
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		bitTarih = PdksUtil.getDate(new Date());
 		basTarih = PdksUtil.tariheAyEkleCikar(bitTarih, -12);
 		sirketId = null;
@@ -206,7 +206,7 @@ public class GebeSutIzniRaporHome extends EntityHome<PersonelDonemselDurum> impl
 		sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksEntityController.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_ID + " = D." + PersonelDonemselDurum.COLUMN_NAME_PERSONEL);
 		if (sirketId != null) {
 			if (sirket.getSirketGrup() == null) {
-				sb.append(" AND P." + Personel.COLUMN_NAME_SIRKET + " = :s");
+				sb.append(" and P." + Personel.COLUMN_NAME_SIRKET + " = :s");
 				fields.put("s", sirketId);
 			} else {
 				sb.append(" inner join " + Sirket.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET);
@@ -220,7 +220,7 @@ public class GebeSutIzniRaporHome extends EntityHome<PersonelDonemselDurum> impl
 		} else if (tesisTanimList != null && !tesisTanimList.isEmpty()) {
 			for (Tanim tesis : tesisTanimList)
 				list.add(tesis.getId());
-			sb.append(" AND P." + Personel.COLUMN_NAME_TESIS + " :t");
+			sb.append(" and P." + Personel.COLUMN_NAME_TESIS + " :t");
 			fields.put("t", list);
 		}
 		sb.append(" where D." + PersonelDonemselDurum.COLUMN_NAME_BASLANGIC_ZAMANI + " <= :b2");

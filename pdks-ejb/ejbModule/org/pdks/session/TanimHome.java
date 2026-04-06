@@ -72,9 +72,9 @@ public class TanimHome extends EntityHome<Tanim> implements Serializable {
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		genelTanim = new Tanim();
 		genelTanimId = null;
 		setSelectedParentTanim(new Tanim());
@@ -281,7 +281,7 @@ public class TanimHome extends EntityHome<Tanim> implements Serializable {
 		HashMap parametreMap = new HashMap();
 		parametreMap.put("tipi=", Tanim.TIPI_GENEL_TANIM);
 		if (!authenticatedUser.isAdmin()) {
-			parametreMap.put("kodu<>", Tanim.TIPI_GENEL_TANIM);
+			parametreMap.put("kodu <> ", Tanim.TIPI_GENEL_TANIM);
 			parametreMap.put("guncelle=", Boolean.TRUE);
 			parametreMap.put("durum=", Boolean.TRUE);
 

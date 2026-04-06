@@ -102,7 +102,7 @@ public class FazlaMesaiERPHome extends EntityHome<FazlaMesaiERP> implements Seri
 		try {
 			session.delete(seciliFazlaMesaiERPDetay);
 			session.flush();
-			pdksEntityController.savePrepareTableID(true, FazlaMesaiERPDetay.class, entityManager, session);
+			pdksEntityController.savePrepareTableID(true, seciliFazlaMesaiERPDetay, FazlaMesaiERPDetay.class, session);
 
 		} catch (Exception e) {
 			logger.error(e);
@@ -400,9 +400,9 @@ public class FazlaMesaiERPHome extends EntityHome<FazlaMesaiERP> implements Seri
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		fillFazlaMesaiERPList();
 	}
 

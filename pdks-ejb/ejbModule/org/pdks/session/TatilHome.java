@@ -254,15 +254,15 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 					bs = PdksUtil.convertToDateString(bitTarih, "yyyyMMdd HH:mm:ss");
 					if (oldPdksTatil == null || !oldPdksTatil.getDurum().equals(pdksTatil.getDurum()) || (pdksTatil.isTekSefer() && (basTarih.getTime() != oldPdksTatil.getBasTarih().getTime() || !bs.equals(PdksUtil.convertToDateString(oldPdksTatil.getBitTarih(), "yyyyMMdd HH:mm:ss"))))) {
 						HashMap parametreMap = new HashMap();
-						parametreMap.put("baslangicZamani<=", bitTarih);
-						parametreMap.put("bitisZamani>=", basTarih);
+						parametreMap.put("baslangicZamani <= ", bitTarih);
+						parametreMap.put("bitisZamani >= ", basTarih);
 						ArrayList durumList = new ArrayList();
 						durumList.add(PersonelIzin.IZIN_DURUMU_SISTEM_IPTAL);
 						durumList.add(PersonelIzin.IZIN_DURUMU_REDEDILDI);
 						durumList.add(PersonelIzin.IZIN_DURUMU_ERP_GONDERILDI);
 						parametreMap.put("izinDurumu not", durumList);
-						parametreMap.put("izinTipi.personelGirisTipi<>", IzinTipi.GIRIS_TIPI_YOK);
-						parametreMap.put("izinTipi.takvimGunumu<>", Boolean.TRUE);
+						parametreMap.put("izinTipi.personelGirisTipi <> ", IzinTipi.GIRIS_TIPI_YOK);
+						parametreMap.put("izinTipi.takvimGunumu <> ", Boolean.TRUE);
 						parametreMap.put("izinTipi.bakiyeIzinTipi=", null);
 						if (session != null)
 							parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -658,9 +658,9 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		setIslemYapan(authenticatedUser);
 		fillPdksTatilList();
 		fillAyList();

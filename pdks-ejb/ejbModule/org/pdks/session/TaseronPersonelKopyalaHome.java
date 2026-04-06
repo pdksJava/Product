@@ -109,9 +109,9 @@ public class TaseronPersonelKopyalaHome extends EntityHome<PersonelView> impleme
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 
 		sirketList = ortakIslemler.getSelectItemList("sirket", authenticatedUser);
 
@@ -127,7 +127,7 @@ public class TaseronPersonelKopyalaHome extends EntityHome<PersonelView> impleme
 		List<Sirket> list = pdksEntityController.getObjectByInnerObjectList(fields, Sirket.class);
 		fields = null;
 		if (list.size() > 1)
-			list = PdksUtil.sortObjectStringAlanList(list, "getAd", null);
+			list = PdksUtil.sortSirketList(list);
 		for (Sirket sirket : list)
 			sirketList.add(new SelectItem(sirket.getId(), sirket.getAd()));
 
@@ -198,8 +198,8 @@ public class TaseronPersonelKopyalaHome extends EntityHome<PersonelView> impleme
 					HashMap map = new HashMap();
 					Date bugun = PdksUtil.getDate(new Date());
 					map.put("id>", 0L);
-					map.put("basTarih<=", ortakIslemler.tariheGunEkleCikar(cal, bugun, +7));
-					map.put("bitTarih>=", ortakIslemler.tariheGunEkleCikar(cal, bugun, -7));
+					map.put("basTarih <= ", ortakIslemler.tariheGunEkleCikar(cal, bugun, +7));
+					map.put("bitTarih >= ", ortakIslemler.tariheGunEkleCikar(cal, bugun, -7));
 					if (session != null)
 						map.put(PdksEntityController.MAP_KEY_SESSION, session);
 					List<KapiSirket> list = pdksEntityController.getObjectByInnerObjectListInLogic(map, KapiSirket.class);

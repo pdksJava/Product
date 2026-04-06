@@ -1671,9 +1671,7 @@ public class Vardiya extends BaseObject {
 		boolean icapVardiyasi = Boolean.FALSE;
 		if (icapVardiya != null) {
 			icapVardiyasi = icapVardiya.booleanValue();
-			// if (!icapVardiyasi && kisaAdi != null)
-			// icapVardiyasi = kisaAdi.equals("Gİ") || kisaAdi.equals("Sİ") ||
-			// kisaAdi.equals("Aİ");
+			
 		}
 
 		return icapVardiyasi;
@@ -2058,6 +2056,11 @@ public class Vardiya extends BaseObject {
 
 	public void entityRefresh() {
 
+	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
 	}
 
 }

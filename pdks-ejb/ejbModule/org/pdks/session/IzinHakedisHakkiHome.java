@@ -98,8 +98,8 @@ public class IzinHakedisHakkiHome extends EntityHome<IzinHakedisHakki> implement
 				parametreMap.put("departman=", hakedisHakki.getDepartman());
 				parametreMap.put("suaDurum=", suaDurum);
 				parametreMap.put("yasTipi=", hakedisHakki.getYasTipi());
-				parametreMap.put("kidemYili>=", basYil);
-				parametreMap.put("kidemYili<=", bitisYil);
+				parametreMap.put("kidemYili >= ", basYil);
+				parametreMap.put("kidemYili <= ", bitisYil);
 				if (session != null)
 					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 				izinHakedisHakkiList = pdksEntityController.getObjectByInnerObjectListInLogic(parametreMap, IzinHakedisHakki.class);
@@ -257,9 +257,9 @@ public class IzinHakedisHakkiHome extends EntityHome<IzinHakedisHakki> implement
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		fillIzinHakedisHakkiList();
 		fillDepartmanList();
 	}

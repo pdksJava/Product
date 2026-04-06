@@ -84,6 +84,7 @@ import org.pdks.entity.Dosya;
 import org.pdks.entity.Liste;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelDenklestirme;
+import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
 import org.pdks.security.entity.DefaultPasswordGenerator;
 import org.pdks.security.entity.Role;
@@ -137,6 +138,103 @@ public class PdksUtil implements Serializable {
 	private static Integer yarimYuvarlaLast = 1, sicilNoUzunluk = null;
 
 	private static boolean sistemDestekVar = false, puantajSorguAltBolumGir = false;
+
+	/**
+	 * @param sessionx
+	 * @return
+	 */
+	public static boolean isSessionKapali(Session sessionx) {
+		boolean kapali = sessionx == null || sessionx.isConnected() == false;
+		return kapali;
+
+	}
+
+	/**
+	 * @param item
+	 * @param list
+	 */
+	public static void addItemFirstList(Object item, List list) {
+		if (item != null && list != null) {
+			List list2 = new ArrayList();
+			list2.add(item);
+			list2.addAll(list);
+			list.clear();
+			list.addAll(list2);
+			list2 = null;
+		}
+	}
+
+	/**
+	 * @param aciklama
+	 * @param minAdet
+	 * @return
+	 */
+	public static boolean getAciklamaDurum(String aciklama, int minAdet) {
+		boolean hataYok = PdksUtil.hasStringValue(aciklama) == false;
+		if (hataYok == false) {
+			List<String> harfList = Arrays.asList(new String[] { "A", "a", "B", "b", "C", "c", "Ç", "ç", "D", "d", "E", "e", "F", "f", "G", "g", "Ğ", "ğ", "H", "h", "I", "ı", "İ", "i", "J", "j", "K", "k", "L", "l", "M", "m", "N", "n", "O", "o", "Ö", "ö", "P", "p", "R", "r", "S", "s", "Ş", "ş", "T",
+					"t", "U", "u", "Ü", "ü", "V", "v", "Y", "y", "Z", "z", "Q", "q", "X", "x", "W", "w" });
+			int adet = 0;
+			for (int i = 0; i < aciklama.length(); i++) {
+				String str = aciklama.charAt(i) + "";
+				if (harfList.contains(str))
+					++adet;
+			}
+			harfList = null;
+			if (adet > minAdet)
+				hataYok = true;
+		}
+		return hataYok;
+	}
+
+	/**
+	 * @param sirketList
+	 * @return
+	 */
+	public static List<Sirket> sortSirketList(List<Sirket> sirketList) {
+		List<Sirket> list = null;
+		if (sirketList != null) {
+			if (sirketList.size() > 1) {
+				list = PdksUtil.sortObjectStringAlanList(new ArrayList<Sirket>(sirketList), "getAd", null);
+				sirketList = null;
+			} else
+				list = sirketList;
+			if (list.size() > 1) {
+				TreeMap<Long, List<Sirket>> sirketMap = new TreeMap<Long, List<Sirket>>();
+				for (Sirket sirket : list) {
+					Long key = sirket.getDepartman().getId();
+					sirketList = sirketMap.containsKey(key) ? sirketMap.get(key) : new ArrayList<Sirket>();
+					if (sirketList.isEmpty())
+						sirketMap.put(key, sirketList);
+					sirketList.add(sirket);
+				}
+				if (sirketMap.size() > 1) {
+					list.clear();
+					for (Long key : sirketMap.keySet())
+						list.addAll(sirketMap.get(key));
+
+				}
+				sirketMap = null;
+			}
+		}
+		return list;
+	}
+
+	/**
+	 * @param tarih
+	 * @return
+	 */
+	public static Date getAyinSonGunu(Date tarih) {
+		Date bitTarih = null;
+		if (tarih != null) {
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(tarih);
+			cal.set(Calendar.DATE, cal.getActualMaximum(Calendar.DATE));
+			bitTarih = cal.getTime();
+		}
+
+		return bitTarih;
+	}
 
 	/**
 	 * @param sqlObject
@@ -3311,7 +3409,7 @@ public class PdksUtil implements Serializable {
 			} catch (Exception e) {
 				logger.error(e);
 			} finally {
-				user.setSessionSQL(session1);
+
 			}
 
 		} else
@@ -4182,7 +4280,7 @@ public class PdksUtil implements Serializable {
 
 				}
 			} catch (Exception e) {
-				// TODO: handle exception
+			 
 			}
 
 		}

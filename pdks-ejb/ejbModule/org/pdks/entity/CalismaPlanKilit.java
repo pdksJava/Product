@@ -161,8 +161,12 @@ public class CalismaPlanKilit extends BaseObject {
 	}
 
 	public void entityRefresh() {
-		
-		
+
+	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
 	}
 
 }

@@ -13,6 +13,7 @@ import java.util.TreeMap;
 
 import javax.faces.model.SelectItem;
 import javax.persistence.EntityManager;
+import javax.ws.rs.core.MediaType;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
@@ -28,6 +29,7 @@ import org.pdks.entity.PdksPersonelView;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelView;
 import org.pdks.entity.Sirket;
+import org.pdks.entity.SirketEntegrasyon;
 import org.pdks.entity.Tanim;
 import org.pdks.security.action.StartupAction;
 import org.pdks.security.entity.User;
@@ -60,12 +62,15 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 	private List<Departman> departmanList = new ArrayList<Departman>();
 	private List<Sirket> sirketList = new ArrayList<Sirket>();
 	private List<PersonelView> personelList;
-	private Boolean istenAyrilanlariEkle, sirketEklenebilir, sirketGrupGoster, erpDatabaseDurum;
+	private Boolean istenAyrilanlariEkle, sirketEklenebilir, sirketGrupGoster, erpDatabaseDurum, apiGuncelle;
 	private HashMap<String, List<Tanim>> ekSahaListMap;
 	private TreeMap<String, Tanim> ekSahaTanimMap;
 	private String bolumAciklama;
 	private List<SelectItem> sirketGrupList;
+	private List<SelectItem> mediaTyepList;
 	private Sirket seciliSirket;
+
+	private SirketEntegrasyon seciliSirketEntegrasyon;
 	private Session session;
 
 	@Override
@@ -101,7 +106,16 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 		return "";
 	}
 
+	/**
+	 * @param sirket
+	 * @return
+	 */
 	public String guncelle(Sirket sirket) {
+		apiGuncelle = false;
+		if (mediaTyepList == null)
+			mediaTyepList = new ArrayList<SelectItem>();
+		else
+			mediaTyepList.clear();
 		fillBagliOlduguDepartmanTanimList();
 		sirketGrupList = ortakIslemler.getTanimSelectItem("sirketGrup", ortakIslemler.getTanimList(Tanim.TIPI_SIRKET_GRUP, session));
 		if (sirket == null) {
@@ -121,6 +135,17 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 				sirket.setFazlaMesaiTalepGirilebilir(departman.isFazlaMesaiTalepGirer());
 				sirket.setIsAramaGunlukSaat(departman.getIsAramaGunlukSaat());
 			}
+		}
+		seciliSirketEntegrasyon = null;
+		if (sirket.isErp() || sirket.getId() == null) {
+			if (sirket.getId() != null)
+				seciliSirketEntegrasyon = (SirketEntegrasyon) pdksEntityController.getSQLParamByFieldObject(SirketEntegrasyon.TABLE_NAME, SirketEntegrasyon.COLUMN_NAME_SIRKET, sirket.getId(), SirketEntegrasyon.class, session);
+			if (seciliSirketEntegrasyon == null)
+				seciliSirketEntegrasyon = new SirketEntegrasyon(sirket);
+			seciliSirketEntegrasyon.setDegisti(Boolean.FALSE);
+			mediaTyepList.add(new SelectItem(MediaType.APPLICATION_JSON, "JSON"));
+			mediaTyepList.add(new SelectItem(MediaType.APPLICATION_XML, "XML"));
+			apiGuncelle = ortakIslemler.getCanliDurum() == false && ortakIslemler.getTestSunucuDurum() == false;
 		}
 		sirket.setDegisti(sirket.getId() == null);
 		if (personelList != null)
@@ -148,7 +173,7 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 				sirket.setFazlaMesaiOde(Boolean.FALSE);
 			}
 			boolean spCalistir = false;
-			if (erpDatabaseDurum && sirket.isDegisti()&& sirket.getDurum() && sirket.isErp()) {
+			if (erpDatabaseDurum && sirket.isDegisti() && sirket.getDurum() && sirket.isErp()) {
 				if (PdksUtil.hasStringValue(sirket.getDatabaseAdiERP()) || PdksUtil.hasStringValue(sirket.getDatabaseKoduERP())) {
 					if (PdksUtil.hasStringValue(sirket.getDatabaseAdiERP()) == false) {
 						sirket.setDatabaseAdiERP("");
@@ -161,14 +186,15 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 			}
 
 			pdksEntityController.saveOrUpdate(session, entityManager, sirket);
+			if (seciliSirketEntegrasyon != null && seciliSirketEntegrasyon.isDegisti())
+				pdksEntityController.saveOrUpdate(session, entityManager, seciliSirketEntegrasyon);
 			session.flush();
 			if (spCalistir) {
 				LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-				veriMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-				pdksEntityController.execSP(veriMap, Sirket.SP_NAME_SP_ERP_VIEW_ALTER_CREATE);
+				pdksEntityController.execSP(session, veriMap, Sirket.SP_NAME_SP_ERP_VIEW_ALTER_CREATE);
 			}
 
- 			fillsirketList();
+			fillsirketList();
 
 		} catch (Exception e) {
 			logger.error("PDKS hata in : \n");
@@ -254,15 +280,13 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 	}
 
 	public void fillPersonelList() throws Exception {
-		if (session == null)
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		Sirket sirket = seciliSirket;
 		List<PersonelView> list = new ArrayList<PersonelView>();
 		HashMap parametreMap = new HashMap();
 		if (!istenAyrilanlariEkle) {
 			Date bugun = PdksUtil.getDate(Calendar.getInstance().getTime());
-			parametreMap.put("pdksPersonel.sskCikisTarihi>=", bugun);
-			parametreMap.put("pdksPersonel.iseBaslamaTarihi<=", bugun);
+			parametreMap.put("pdksPersonel.sskCikisTarihi >= ", bugun);
+			parametreMap.put("pdksPersonel.iseBaslamaTarihi <= ", bugun);
 			parametreMap.put("pdksPersonel.durum=", Boolean.TRUE);
 		}
 
@@ -306,11 +330,25 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 
 		fillsirketList();
+	}
+
+	public String updateIzinAPI() {
+		Date tarih = ortakIslemler.updateIzinAPI(seciliSirket.getErpKodu(), "", session);
+		if (tarih != null && PdksUtil.isDateDegisti(seciliSirketEntegrasyon.getGuncelemeZamaniIzin(), tarih))
+			seciliSirketEntegrasyon.setGuncelemeZamaniIzin(tarih);
+		return "";
+	}
+
+	public String updatePersonelAPI() {
+		Date tarih = ortakIslemler.updatePersonelAPI(seciliSirket.getErpKodu(), "", session);
+		if (tarih != null && PdksUtil.isDateDegisti(seciliSirketEntegrasyon.getGuncelemeZamaniPersonel(), tarih))
+			seciliSirketEntegrasyon.setGuncelemeZamaniPersonel(tarih);
+		return "";
 	}
 
 	public List<Departman> getDepartmanList() {
@@ -423,6 +461,30 @@ public class SirketHome extends EntityHome<Sirket> implements Serializable {
 
 	public void setErpDatabaseDurum(Boolean erpDatabaseDurum) {
 		this.erpDatabaseDurum = erpDatabaseDurum;
+	}
+
+	public SirketEntegrasyon getSeciliSirketEntegrasyon() {
+		return seciliSirketEntegrasyon;
+	}
+
+	public void setSeciliSirketEntegrasyon(SirketEntegrasyon seciliSirketEntegrasyon) {
+		this.seciliSirketEntegrasyon = seciliSirketEntegrasyon;
+	}
+
+	public List<SelectItem> getMediaTyepList() {
+		return mediaTyepList;
+	}
+
+	public void setMediaTyepList(List<SelectItem> mediaTyepList) {
+		this.mediaTyepList = mediaTyepList;
+	}
+
+	public Boolean getApiGuncelle() {
+		return apiGuncelle;
+	}
+
+	public void setApiGuncelle(Boolean apiGuncelle) {
+		this.apiGuncelle = apiGuncelle;
 	}
 
 }

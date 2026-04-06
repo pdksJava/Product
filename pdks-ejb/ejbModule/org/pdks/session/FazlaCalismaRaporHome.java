@@ -199,9 +199,9 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		aylikPuantajListClear();
 		fazlaMesaiSayfa = false;
 		aksamAdetGoster = false;
@@ -299,7 +299,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 				HashMap fields = new HashMap();
 				if (authenticatedUser.isYonetici() || authenticatedUser.isYoneticiKontratli()) {
 					if (!authenticatedUser.isIKAdmin())
-						fields.put("pdksSicilNo<>", authenticatedUser.getPdksPersonel().getPdksSicilNo());
+						fields.put("pdksSicilNo <> ", authenticatedUser.getPdksPersonel().getPdksSicilNo());
 					fields.put("pdksSicilNo", authenticatedUser.getYetkiTumPersonelNoList());
 					if (session != null)
 						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -673,9 +673,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			return "";
 		}
 		linkAdres = null;
-		if (session == null)
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.clear();
+ 		session.clear();
 		try {
 			DepartmanDenklestirmeDonemi denklestirmeDonemi = new DepartmanDenklestirmeDonemi();
 
@@ -759,7 +757,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 					HashMap fields = new HashMap();
 					sb.append("select distinct P.* from " + VardiyaGun.TABLE_NAME + " G " + PdksEntityController.getSelectLOCK() + " ");
 					sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksEntityController.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_ID + " = G." + VardiyaGun.COLUMN_NAME_PERSONEL);
-					sb.append(" and G.VARDIYA_TARIHI>=P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " and G.VARDIYA_TARIHI<=P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI);
+					sb.append(" and G.VARDIYA_TARIHI >= P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " and G.VARDIYA_TARIHI <= P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI);
 					sb.append(" inner join " + Vardiya.TABLE_NAME + " V " + PdksEntityController.getJoinLOCK() + " on V." + Vardiya.COLUMN_NAME_ID + " = G." + VardiyaGun.COLUMN_NAME_VARDIYA + " and V.AKSAM_VARDIYA=1");
 					sb.append(" inner join " + VardiyaSaat.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + VardiyaSaat.COLUMN_NAME_ID + " = G." + VardiyaGun.COLUMN_NAME_VARDIYA_SAAT + " and S.CALISMA_SURESI>0");
 					sb.append(" where G." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >= :t1 and G." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " <= :t2 ");
@@ -898,8 +896,8 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 						String fieldName = "izinSahibi.id";
 						Calendar cal = Calendar.getInstance();
 						HashMap fields = new HashMap();
-						fields.put("bitisZamani>=", ortakIslemler.tariheGunEkleCikar(cal, basTarih, -2));
-						fields.put("baslangicZamani<=", ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 1));
+						fields.put("bitisZamani >= ", ortakIslemler.tariheGunEkleCikar(cal, basTarih, -2));
+						fields.put("baslangicZamani <= ", ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 1));
 						fields.put(fieldName, idList);
 						fields.put("izinDurumu", ortakIslemler.getAktifIzinDurumList());
 						if (session != null)

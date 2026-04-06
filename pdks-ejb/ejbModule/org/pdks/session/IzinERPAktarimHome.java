@@ -12,12 +12,6 @@ import javax.faces.model.SelectItem;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
-import org.pdks.entity.AramaSecenekleri;
-import org.pdks.entity.IzinTipi;
-import org.pdks.entity.Personel;
-import org.pdks.entity.PersonelIzin;
-import org.pdks.entity.Sirket;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -27,7 +21,11 @@ import org.jboss.seam.annotations.Transactional;
 import org.jboss.seam.annotations.web.RequestParameter;
 import org.jboss.seam.faces.FacesMessages;
 import org.jboss.seam.framework.EntityHome;
-
+import org.pdks.entity.AramaSecenekleri;
+import org.pdks.entity.IzinTipi;
+import org.pdks.entity.Personel;
+import org.pdks.entity.PersonelIzin;
+import org.pdks.entity.Sirket;
 import org.pdks.erp.action.ERPController;
 import org.pdks.security.entity.User;
 
@@ -63,8 +61,8 @@ public class IzinERPAktarimHome extends EntityHome<PersonelIzin> implements Seri
 
 	List<PersonelIzin> personelizinList = new ArrayList<PersonelIzin>();
 	List<Personel> pdksPersonelList = new ArrayList<Personel>();
+	public static String sayfaURL = "izinERPAktarim";
 	private AramaSecenekleri aramaSecenekleri = null;
-
 	private boolean istenAyrilanEkle = Boolean.FALSE, checkBoxDurum = Boolean.FALSE;
 	private List<User> userList = new ArrayList<User>();
 
@@ -87,9 +85,9 @@ public class IzinERPAktarimHome extends EntityHome<PersonelIzin> implements Seri
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		try {
 			if (authenticatedUser.isAdmin() == false || aramaSecenekleri == null)
 				aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
@@ -177,8 +175,8 @@ public class IzinERPAktarimHome extends EntityHome<PersonelIzin> implements Seri
 				if (!map.isEmpty()) {
 					List<Long> list = new ArrayList<Long>(map.keySet());
 					parametreMap.clear();
-					parametreMap.put("baslangicZamani<=", getBitDate());
-					parametreMap.put("bitisZamani>=", getBasDate());
+					parametreMap.put("baslangicZamani <= ", getBitDate());
+					parametreMap.put("bitisZamani >= ", getBasDate());
 					if (list.size() == 1)
 						parametreMap.put("izinSahibi.id=", list.get(0));
 					else

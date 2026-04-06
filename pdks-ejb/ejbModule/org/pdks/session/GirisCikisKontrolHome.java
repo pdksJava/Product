@@ -93,9 +93,9 @@ public class GirisCikisKontrolHome extends EntityHome<VardiyaGun> implements Ser
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		setHareketList(new ArrayList<HareketKGS>());
 		setVardiyaGunList(new ArrayList<VardiyaGun>());
 		HareketKGS hareket = new HareketKGS();
@@ -183,8 +183,8 @@ public class GirisCikisKontrolHome extends EntityHome<VardiyaGun> implements Ser
 		}
 		if (aramaSecenekleri.getTesisId() != null)
 			map.put("tesis.id=", aramaSecenekleri.getTesisId());
-		map.put("sskCikisTarihi>=", oncekiGun);
-		map.put("iseBaslamaTarihi<=", date);
+		map.put("sskCikisTarihi >= ", oncekiGun);
+		map.put("iseBaslamaTarihi <= ", date);
 		if (session != null)
 			map.put(PdksEntityController.MAP_KEY_SESSION, session);
 		ArrayList<Personel> tumPersoneller = (ArrayList<Personel>) pdksEntityController.getObjectByInnerObjectListInLogic(map, Personel.class);

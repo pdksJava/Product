@@ -405,7 +405,7 @@ public class IzinTipiHome extends EntityHome<IzinTipi> implements Serializable {
 				session.flush();
 				if (sirala) {
 					try {
-						pdksEntityController.savePrepareTableID(true, IzinTipiMailAdres.class, entityManager, session);
+						pdksEntityController.savePrepareTableID(true, null, IzinTipiMailAdres.class, session);
 					} catch (Exception e) {
 					}
 					session.flush();
@@ -528,7 +528,7 @@ public class IzinTipiHome extends EntityHome<IzinTipi> implements Serializable {
 		if (izinTipi.getDepartman() != null)
 			parametreMap.put("departman.id=", izinTipi.getDepartman().getId());
 		if (izinTipi.getId() != null)
-			parametreMap.put("id<>", izinTipi.getId());
+			parametreMap.put("id <> ", izinTipi.getId());
 		if (session != null)
 			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 		TreeMap tanimMap = pdksEntityController.getObjectByInnerObjectMapInLogic(parametreMap, IzinTipi.class, Boolean.FALSE);
@@ -598,9 +598,9 @@ public class IzinTipiHome extends EntityHome<IzinTipi> implements Serializable {
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		durumCGSList = ortakIslemler.getSelectItemList("durumCGS", authenticatedUser);
 		durumCGSList.add(new SelectItem(IzinTipi.CGS_DURUM_YOK, IzinTipi.getDurumCGSAciklama(IzinTipi.CGS_DURUM_YOK)));
 		durumCGSList.add(new SelectItem(IzinTipi.CGS_DURUM_CIKAR, IzinTipi.getDurumCGSAciklama(IzinTipi.CGS_DURUM_CIKAR)));

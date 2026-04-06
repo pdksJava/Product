@@ -31,7 +31,6 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -891,10 +890,9 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void bakiyeGuncelleSayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, "bakiyeGuncelle");
 		minYil = PdksUtil.getSistemBaslangicYili();
 		Calendar cal = Calendar.getInstance();
 		maxYil = cal.get(Calendar.YEAR) - 1;
@@ -906,9 +904,9 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() throws Exception {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 
 		aramaSecenekleri = null;
 		if (authenticatedUser.isAdmin() == false || aramaSecenekleri == null)
@@ -2223,10 +2221,10 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 					tipler.add(IzinTipi.YILLIK_UCRETLI_IZIN);
 					fields.clear();
 					fields.put("izinTipiTanim.kodu", tipler);
-					fields.put("bakiyeIzinTipi<>", null);
+					fields.put("bakiyeIzinTipi <> ", null);
 					fields.put("departman.id=", pdksPersonel.getSirket().getDepartman().getId());
 					fields.put("durum=", Boolean.TRUE);
-					// fields.put("bakiyeIzinTipi.personelGirisTipi<>", IzinTipi.GIRIS_TIPI_YOK);
+					// fields.put("bakiyeIzinTipi.personelGirisTipi <> ", IzinTipi.GIRIS_TIPI_YOK);
 					if (session != null)
 						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 					izinTipiList = pdksEntityController.getObjectByInnerObjectListInLogic(fields, IzinTipi.class);

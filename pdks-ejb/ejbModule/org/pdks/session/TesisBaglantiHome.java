@@ -93,7 +93,7 @@ public class TesisBaglantiHome extends EntityHome<TesisBaglanti> implements Seri
 			try {
 				session.flush();
 				if (sirala > 0)
-					pdksEntityController.savePrepareTableID(true, TesisBaglanti.class, entityManager, session);
+					pdksEntityController.savePrepareTableID(true, null, TesisBaglanti.class, session);
 				if (kayit > 0)
 					PdksUtil.addMessageInfo("Kayıt" + (kayit == 1 ? "" : "lar") + " başarılı.");
 				else
@@ -166,8 +166,9 @@ public class TesisBaglantiHome extends EntityHome<TesisBaglanti> implements Seri
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		String sayfa = "";
 		if (ortakIslemler.getTesisDurumu()) {
 			if (personelTipiList == null)
@@ -177,7 +178,6 @@ public class TesisBaglantiHome extends EntityHome<TesisBaglanti> implements Seri
 			personelTipiList.add(new SelectItem(PersonelTipi.TUM.value(), TesisBaglanti.getPersonelTipiAciklama(PersonelTipi.TUM)));
 			personelTipiList.add(new SelectItem(PersonelTipi.IK.value(), TesisBaglanti.getPersonelTipiAciklama(PersonelTipi.IK)));
 			personelTipiList.add(new SelectItem(PersonelTipi.SUPERVISOR.value(), TesisBaglanti.getPersonelTipiAciklama(PersonelTipi.SUPERVISOR)));
-			ortakIslemler.setUserMenuItemTime(session, sayfaURL);
 			fillTesisList();
 		} else
 			sayfa = MenuItemConstant.home;

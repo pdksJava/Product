@@ -63,7 +63,7 @@ public class PdksEntityController implements Serializable {
 	public static final String MAP_KEY_TRANSACTION = "transaction";
 	public static final String TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED = "read uncommitted";
 	public static final String TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED = "read committed";
-	private static String selectLOCK = "with(nolock)", joinLOCK = "with(nolock)", sqlSistemTarihi = "getdate()";
+	private static String selectLOCK = "with(nolock)", joinLOCK = "with(nolock)", sqlSistemTarihi = "getdate()", sqlBuGun = "convert(date,getdate())";
 	private static boolean readUnCommitted = false;
 
 	public static final String SELECT_KARAKTER = "c";
@@ -236,7 +236,7 @@ public class PdksEntityController implements Serializable {
 		else if (authenticatedUser != null) {
 			session = authenticatedUser.getSessionSQL();
 		}
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		List list = new ArrayList((Collection) parametreMap.get(keyAlan));
 		ArrayList parametreList = new ArrayList();
@@ -354,7 +354,7 @@ public class PdksEntityController implements Serializable {
 				} else if (authenticatedUser != null) {
 					session = authenticatedUser.getSessionSQL();
 				}
-				if (session == null)
+				if (PdksUtil.isSessionKapali(session))
 					session = PdksUtil.getSession(pEntityManager == null ? entityManager : pEntityManager, Boolean.FALSE);
 				StringBuffer strArray = null;
 
@@ -396,13 +396,13 @@ public class PdksEntityController implements Serializable {
 								strArray = new StringBuffer();
 								for (Iterator iter1 = ((List) fieldValue).iterator(); iter1.hasNext();) {
 									Object fieldListValue = iter1.next();
-									strArray.append((session == null ? (parametreSayac++) : "?") + (iter1.hasNext() ? "," : ""));
+									strArray.append((PdksUtil.isSessionKapali(session) ? (parametreSayac++) : "?") + (iter1.hasNext() ? "," : ""));
 									parametreList.add(fieldListValue);
 								}
 								str.append(strArray.toString().indexOf(",") > 0 ? "in (" + strArray.toString() + ")" : "= " + strArray.toString());
 								strArray = null;
 							} else {
-								str.append(esit + "?" + (session == null ? (parametreSayac++) : ""));
+								str.append(esit + "?" + (PdksUtil.isSessionKapali(session) ? (parametreSayac++) : ""));
 								parametreList.add(fieldValue);
 							}
 						}
@@ -413,7 +413,7 @@ public class PdksEntityController implements Serializable {
 			} else if (authenticatedUser != null) {
 				session = authenticatedUser.getSessionSQL();
 			}
-			if (session == null)
+			if (PdksUtil.isSessionKapali(session))
 				session = PdksUtil.getSession(pEntityManager == null ? entityManager : pEntityManager, Boolean.FALSE);
 			String sql = MAP_KEY_SELECT + " " + (PdksUtil.hasStringValue(select) == false ? " " + SELECT_KARAKTER + " " : select.trim()) + " from " + class1.getName() + " " + SELECT_KARAKTER + " " + query.toString() + order;
 			if (query.indexOf(" and ") > 0 && or != null)
@@ -486,10 +486,10 @@ public class PdksEntityController implements Serializable {
 	}
 
 	public Object save(Object object, Session session) {
-		if (session == null) {
+		if (PdksUtil.isSessionKapali(session)) {
 			if (authenticatedUser != null)
 				session = authenticatedUser.getSessionSQL();
-			if (session == null)
+			if (PdksUtil.isSessionKapali(session))
 				session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		}
 
@@ -514,17 +514,52 @@ public class PdksEntityController implements Serializable {
 
 	/**
 	 * @param ses
-	 * @param em
+	 * @param ortakIslemler
 	 * @param del
 	 */
-	public void deleteObject(Session ses, EntityManager em, Object del) {
-		try {
-			ses.delete(del);
-		} catch (Exception e) {
-			if (em != null)
-				ses.delete(getEntityManagerObject(em, del));
+	public void deleteObject(Session ses, Object object, Object del) {
+		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+		if (del != null && ses != null) {
+			try {
+				ses.delete(del);
+			} catch (Exception e) {
+				try {
+					if (object != null) {
+						if (object instanceof OrtakIslemler) {
+							OrtakIslemler ortakIslemler = (OrtakIslemler) object;
+							String tableName = null;
+							Long id = null;
+							if (del instanceof BasePDKSObject) {
+								BasePDKSObject basePDKSObject = (BasePDKSObject) del;
+								tableName = basePDKSObject.getTableName();
+								id = basePDKSObject.getId();
+							} else {
+								tableName = (String) PdksUtil.getMethodObject(del, "getTableName", null);
+								id = (Long) PdksUtil.getMethodObject(del, "getId", null);
+							}
 
+							if (id != null && tableName != null) {
+								String sp = "SP_DELETE_OBJECT_BY_ID";
+								if (ortakIslemler.isExisStoreProcedure(sp, ses)) {
+									veriMap.put("id", id);
+									veriMap.put("tableName", tableName);
+									execSP(ses, veriMap, sp);
+								}
+							}
+						} else if (object instanceof EntityManager) {
+							EntityManager em = (EntityManager) object;
+							if (em != null)
+								ses.delete(getEntityManagerObject(em, del));
+						}
+
+					}
+
+				} catch (Exception e2) {
+				}
+
+			}
 		}
+		veriMap = null;
 	}
 
 	/**
@@ -630,26 +665,37 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 * @throws Exception
 	 */
-	public List execFNList(LinkedHashMap<String, Object> veriMap, String sp) throws Exception {
+	public List execFNList(Session session, LinkedHashMap<String, Object> veriMap, String sp) throws Exception {
 		List sonucList = null;
-		boolean manuelReadUnCommitted = false;
+		boolean manuelReadUnCommitted = false, sessinYok = false;
 		try {
-			if (veriMap.containsKey("readUnCommitted")) {
-				manuelReadUnCommitted = true;
-				veriMap.remove("readUnCommitted");
+			if (veriMap != null) {
+				if (veriMap.containsKey("readUnCommitted")) {
+					manuelReadUnCommitted = true;
+					veriMap.remove("readUnCommitted");
+				}
+				if (veriMap.containsKey("readUnCommitted")) {
+					manuelReadUnCommitted = true;
+					veriMap.remove("readUnCommitted");
+				}
 			}
-			Session session = veriMap.containsKey(MAP_KEY_SESSION) ? (Session) veriMap.get(MAP_KEY_SESSION) : PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			if (PdksUtil.isSessionKapali(session)) {
+				sessinYok = true;
+				session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			}
 			SQLQuery queryReadUnCommitted = null;
 			if (readUnCommitted || manuelReadUnCommitted) {
 				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
 				queryReadUnCommitted.executeUpdate();
 			}
-			SQLQuery query = prepareFunction(veriMap, sp);
+			SQLQuery query = prepareFunction(session, veriMap, sp);
 			sonucList = query.list();
 			if (queryReadUnCommitted != null) {
 				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
 				queryReadUnCommitted.executeUpdate();
 			}
+			if (sessinYok)
+				session.close();
 		} catch (Exception e) {
 			Gson gson = new Gson();
 			logger.error(sp.toString() + (veriMap != null && !veriMap.isEmpty() ? "\n" + gson.toJson(veriMap) : "") + "\n" + e);
@@ -670,28 +716,32 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 * @throws Exception
 	 */
-	public List execSPList(LinkedHashMap<String, Object> veriMap, String sp, Class class1) throws Exception {
+	@Transactional
+	public List execSPList(Session session, LinkedHashMap<String, Object> veriMap, String sp, Class class1) throws Exception {
 		List sonucList = null;
-		boolean manuelReadUnCommitted = false;
+		boolean manuelReadUnCommitted = false, sessinYok = false;
 		try {
-			if (veriMap.containsKey("readUnCommitted")) {
-				manuelReadUnCommitted = true;
-				veriMap.remove("readUnCommitted");
+			if (veriMap != null) {
+				if (veriMap.containsKey(MAP_KEY_SESSION)) {
+					session = (Session) veriMap.get(MAP_KEY_SESSION);
+					veriMap.remove(MAP_KEY_SESSION);
+				}
+				if (veriMap.containsKey("readUnCommitted")) {
+					manuelReadUnCommitted = true;
+					veriMap.remove("readUnCommitted");
+				}
 			}
-			Session session = veriMap.containsKey(MAP_KEY_SESSION) ? (Session) veriMap.get(MAP_KEY_SESSION) : PdksUtil.getSessionUser(entityManager, authenticatedUser);
-			SQLQuery queryReadUnCommitted = null;
-			if (readUnCommitted || manuelReadUnCommitted) {
-				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
-				queryReadUnCommitted.executeUpdate();
+			if (PdksUtil.isSessionKapali(session)) {
+				sessinYok = true;
+				session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 			}
-			SQLQuery query = prepareProcedure(veriMap, sp);
+
+			SQLQuery query = prepareProcedure(session, veriMap, sp);
 			if (class1 != null)
 				query.addEntity(class1);
 			sonucList = query.list();
-			if (queryReadUnCommitted != null) {
-				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
-				queryReadUnCommitted.executeUpdate();
-			}
+			if (sessinYok)
+				session.close();
 		} catch (Exception e) {
 			Gson gson = new Gson();
 			logger.error(sp.toString() + (veriMap != null && !veriMap.isEmpty() ? "\n" + gson.toJson(veriMap) : "") + "\n" + e);
@@ -706,30 +756,35 @@ public class PdksEntityController implements Serializable {
 	}
 
 	/**
+	 * @param session
 	 * @param veriMap
 	 * @param sp
+	 * @return
+	 * @throws Exception
 	 */
 	@Transactional
-	public int execSP(LinkedHashMap<String, Object> veriMap, String sp) throws Exception {
+	public int execSP(Session session, LinkedHashMap<String, Object> veriMap, String sp) throws Exception {
 		Integer sonuc = null;
-		boolean manuelReadUnCommitted = false;
+		boolean manuelReadUnCommitted = false, sessinYok = false;
 		try {
-			if (veriMap.containsKey("readUnCommitted")) {
-				manuelReadUnCommitted = true;
-				veriMap.remove("readUnCommitted");
+			if (veriMap != null) {
+				if (veriMap.containsKey(MAP_KEY_SESSION)) {
+					session = (Session) veriMap.get(MAP_KEY_SESSION);
+					veriMap.remove(MAP_KEY_SESSION);
+				}
+				if (veriMap.containsKey("readUnCommitted")) {
+					manuelReadUnCommitted = true;
+					veriMap.remove("readUnCommitted");
+				}
 			}
-			Session session = veriMap.containsKey(MAP_KEY_SESSION) ? (Session) veriMap.get(MAP_KEY_SESSION) : PdksUtil.getSessionUser(entityManager, authenticatedUser);
-			SQLQuery queryReadUnCommitted = null;
-			if (readUnCommitted || manuelReadUnCommitted) {
-				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
-				queryReadUnCommitted.executeUpdate();
+			if (PdksUtil.isSessionKapali(session)) {
+				sessinYok = true;
+				session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 			}
-			SQLQuery query = prepareProcedure(veriMap, sp);
+			SQLQuery query = prepareProcedure(session, veriMap, sp);
 			sonuc = query.executeUpdate();
-			if (queryReadUnCommitted != null) {
-				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
-				queryReadUnCommitted.executeUpdate();
-			}
+			if (sessinYok)
+				session.close();
 		} catch (Exception e) {
 			Gson gson = new Gson();
 			logger.error(sp.toString() + (veriMap != null && !veriMap.isEmpty() ? "\n" + gson.toJson(veriMap) : "") + "\n" + e);
@@ -751,46 +806,51 @@ public class PdksEntityController implements Serializable {
 	}
 
 	/**
+	 * @param session
 	 * @param veriMap
 	 * @param sp
 	 * @return
 	 */
-	private SQLQuery prepareProcedure(LinkedHashMap<String, Object> veriMap, String sp) {
+	private SQLQuery prepareProcedure(Session session, LinkedHashMap<String, Object> veriMap, String sp) {
 		String queryStr = "exec " + sp;
-		Session session = veriMap.containsKey(MAP_KEY_SESSION) ? (Session) veriMap.get(MAP_KEY_SESSION) : PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		if (veriMap.containsKey(MAP_KEY_SESSION))
-			veriMap.remove(MAP_KEY_SESSION);
-		for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
-			String string = (String) iterator.next();
-			if (string != null) {
-				queryStr += " :" + string;
-				// queryStr += " :" + string;
-				if (iterator.hasNext())
-					queryStr += ",";
+
+		if (veriMap != null) {
+
+			for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
+				String string = (String) iterator.next();
+				if (string != null) {
+					queryStr += " :" + string;
+					// queryStr += " :" + string;
+					if (iterator.hasNext())
+						queryStr += ",";
+				}
 			}
 		}
-		SQLQuery query = session.createSQLQuery(queryStr);
-		logger.debug(queryStr);
-		for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
-			String key1 = (String) iterator.next();
-			if (key1 != null) {
-				Object veri = veriMap.get(key1);
-				query.setParameter(key1, veri);
+		SQLQuery query = null;
+		if (session != null) {
+			query = session.createSQLQuery(queryStr);
+			logger.debug(queryStr);
+			if (veriMap != null) {
+				for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
+					String key1 = (String) iterator.next();
+					if (key1 != null) {
+						Object veri = veriMap.get(key1);
+						query.setParameter(key1, veri);
+					}
+				}
 			}
 		}
 		return query;
 	}
 
 	/**
+	 * @param session
 	 * @param veriMap
 	 * @param sp
 	 * @return
 	 */
-	private SQLQuery prepareFunction(LinkedHashMap<String, Object> veriMap, String sp) {
+	private SQLQuery prepareFunction(Session session, LinkedHashMap<String, Object> veriMap, String sp) {
 		String queryStr = "select dbo." + sp + " ( ";
-		Session session = veriMap.containsKey(MAP_KEY_SESSION) ? (Session) veriMap.get(MAP_KEY_SESSION) : PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		if (veriMap.containsKey(MAP_KEY_SESSION))
-			veriMap.remove(MAP_KEY_SESSION);
 		if (veriMap != null) {
 			for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
 				String string = (String) iterator.next();
@@ -807,11 +867,13 @@ public class PdksEntityController implements Serializable {
 
 		SQLQuery query = session.createSQLQuery(queryStr);
 		logger.debug(queryStr);
-		for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
-			String key1 = (String) iterator.next();
-			if (key1 != null) {
-				Object veri = veriMap.get(key1);
-				query.setParameter(key1, veri);
+		if (veriMap != null) {
+			for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
+				String key1 = (String) iterator.next();
+				if (key1 != null) {
+					Object veri = veriMap.get(key1);
+					query.setParameter(key1, veri);
+				}
 			}
 		}
 		return query;
@@ -827,7 +889,7 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 */
 	public HareketKGS hareketSistemEkleReturn(KapiView kapi, PersonelKGS personel, Date zaman, Session session) {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		HareketKGS id = null;
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
@@ -840,7 +902,7 @@ public class PdksEntityController implements Serializable {
 
 		StringBuffer sb = new StringBuffer();
 		try {
-			List<BigDecimal> list = execSPList(veriMap, sp, null);
+			List<BigDecimal> list = execSPList(session, veriMap, sp, null);
 			Long kgsId = null;
 			if (!list.isEmpty()) {
 				kgsId = list.get(0).longValue();
@@ -872,7 +934,7 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 */
 	public Long hareketEkle(KapiView kapi, PersonelView personel, Date zaman, User guncelleyen, long nedenId, String aciklama, Session session) {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 		String sp = "SP_HAREKET_EKLE";
@@ -886,7 +948,7 @@ public class PdksEntityController implements Serializable {
 			veriMap.put(MAP_KEY_SESSION, session);
 		Long sonuc = null;
 		try {
-			List<BigDecimal> list = execSPList(veriMap, sp, null);
+			List<BigDecimal> list = execSPList(session, veriMap, sp, null);
 			if (!list.isEmpty())
 				sonuc = list.get(0).longValue();
 		} catch (Exception e) {
@@ -907,7 +969,7 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 */
 	public Long hareketGuncelle(long kgsId, long pdksId, Date zaman, User guncelleyen, long nedenId, String aciklama, long sirketId, Session session) {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 		String sp = "SP_HAREKET_GUNCELLE_SIRKET";
@@ -923,7 +985,7 @@ public class PdksEntityController implements Serializable {
 			veriMap.put(MAP_KEY_SESSION, session);
 		Long sonuc = 0L;
 		try {
-			List<BigDecimal> list = execSPList(veriMap, sp, null);
+			List<BigDecimal> list = execSPList(session, veriMap, sp, null);
 			if (!list.isEmpty())
 				sonuc = list.get(0).longValue();
 		} catch (Exception e) {
@@ -944,7 +1006,7 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 */
 	public Long hareketSil(long kgsId, long pdksId, User guncelleyen, long nedenId, String aciklama, long sirketId, Session session) {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 		String sp = "SP_HAREKET_SIL_SIRKET";
@@ -958,7 +1020,7 @@ public class PdksEntityController implements Serializable {
 			veriMap.put(MAP_KEY_SESSION, session);
 		Long sonuc = 0L;
 		try {
-			List<BigDecimal> list = execSPList(veriMap, sp, null);
+			List<BigDecimal> list = execSPList(session, veriMap, sp, null);
 			if (!list.isEmpty())
 				sonuc = pdksId + kgsId;
 		} catch (Exception e) {
@@ -968,89 +1030,162 @@ public class PdksEntityController implements Serializable {
 	}
 
 	/**
+	 * @param name
+	 * @param session
+	 * @return
+	 */
+	public boolean isExisStoreProcedure(String name, Session session) {
+		boolean durum = isExisObject(name, "P", session);
+		return durum;
+	}
+
+	/**
+	 * @param name
+	 * @param session
+	 * @return
+	 */
+	public boolean isExisFunction(String name, Session session) {
+		boolean durum = isExisObject(name, "FN", session);
+		return durum;
+	}
+
+	/**
+	 * @param name
+	 * @param session
+	 * @return
+	 */
+	public boolean isExisView(String name, Session session) {
+		boolean durum = isExisObject(name, "V", session);
+		return durum;
+	}
+
+	/**
+	 * @param name
+	 * @param type
+	 * @param session
+	 * @return
+	 */
+	public boolean isExisObject(String name, String type, Session session) {
+		boolean durum = false;
+		StringBuilder sb = new StringBuilder();
+		sb.append("select name, object_id from sys.objects " + PdksEntityController.getJoinLOCK());
+		sb.append(" where name = :k and type = :t");
+		HashMap fields = new HashMap();
+		fields.put("k", name);
+		fields.put("t", type);
+		if (session != null)
+			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+		List list = getObjectBySQLList(sb, fields, null);
+		durum = list != null && list.size() == 1;
+		return durum;
+	}
+
+	/**
 	 * @param single
+	 * @param object
 	 * @param class1
-	 * @param em1
+	 * @param ortakIslemler
 	 * @param session
 	 * @return
 	 * @throws Exception
 	 */
-	public Long savePrepareTableID(boolean single, Class class1, EntityManager em1, Session session) throws Exception {
-		HashMap fields = new HashMap();
-		if (session != null)
-			fields.put(MAP_KEY_SESSION, session);
-		List list = getObjectByInnerObjectList(fields, class1);
-		long kayitAdet = list.size();
-		if (kayitAdet > 0) {
-			if (kayitAdet > 1)
-				list = PdksUtil.sortListByAlanAdi(list, "id", true);
-			Long id = (Long) PdksUtil.getMethodObject(list.get(0), "getId", null);
-			if (id.longValue() != kayitAdet) {
-				kayitAdet = 0;
-				list = PdksUtil.sortListByAlanAdi(list, "id", false);
-				List saveList = new ArrayList(), removeList = new ArrayList();
-				for (Iterator iterator = list.iterator(); iterator.hasNext();) {
-					Object object = (Object) iterator.next();
-					kayitAdet++;
-					id = (Long) PdksUtil.getMethodObject(object, "getId", null);
-					if (id.longValue() != kayitAdet) {
-						removeList.add(object);
-						BasePDKSObject basePDKSObject = (BasePDKSObject) PdksUtil.getMethodObject(object, "cloneEmpty", null);
-						if (basePDKSObject != null)
-							saveList.add(basePDKSObject);
-					}
-				}
-				if (!saveList.isEmpty() && removeList.size() == saveList.size()) {
-					kayitAdet = saveList.size();
-					for (Object object : removeList) {
-						if (object != null) {
-							id = (Long) PdksUtil.getMethodObject(object, "getId", null);
-							if (id != null) {
-								deleteObject(session, em1, object);
-							} else {
-								saveList.clear();
-							}
-						}
-
-					}
-					session.flush();
-					session.clear();
-					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-					if (session != null)
-						veriMap.put(MAP_KEY_SESSION, session);
-					String sp = "SP_CHECKIDENT_VIEW";
-					execSP(veriMap, sp);
-					session.flush();
-					session.clear();
-					for (Object object : saveList) {
-						if (object != null) {
-							id = (Long) PdksUtil.getMethodObject(object, "getId", null);
+	public Long savePrepareTableID(boolean single, BasePDKSObject object, Class class1, Session session) throws Exception {
+		Long kayitAdet = null;
+		String tableName = object != null ? object.getTableName() : null;
+		kayitAdet = 0L;
+		kayitAdet = null;
+		String fn = "FN_TABLE_UPDATE_ID";
+		if (isExisFunction(fn, session)) {
+			HashMap fields = new HashMap();
+			if (session != null)
+				fields.put(MAP_KEY_SESSION, session);
+			List list = null;
+			Long id = object != null ? object.getId() : null;
+			if (id != null) {
+				fields.put("id>", id);
+				list = getObjectByInnerObjectListInLogic(fields, class1);
+			} else
+				list = getObjectByInnerObjectList(fields, class1);
+			int durum = 0;
+			LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+			if (list.isEmpty() == false) {
+				BasePDKSObject object2 = (BasePDKSObject) list.get(0);
+				if (tableName == null)
+					tableName = object2.getTableName();
+			}
+			veriMap.put("tableName", tableName);
+			List list2 = execFNList(session, veriMap, fn);
+			if (list2 != null && list2.isEmpty() == false)
+				durum = ((Integer) list2.get(0));
+			if (durum != -1) {
+				if (list.size() > 1)
+					list = PdksUtil.sortListByAlanAdi(list, "id", false);
+				kayitAdet = null;
+				if (durum == 1) {
+					veriMap.clear();
+					String sp = "SP_UPDATE_OBJECT_BY_ID";
+					if (isExisStoreProcedure(sp, session)) {
+						kayitAdet = (long) list.size();
+						if (kayitAdet > 0) {
 							if (id == null) {
-								save(object, session);
+								id = ((BasePDKSObject) list.get(0)).getId();
+								if (id.longValue() > 1)
+									id = 1L;
 							}
-						}
+							kayitAdet = 0L;
+
+							while (list.isEmpty() == false) {
+								BasePDKSObject basePDKSObject = (BasePDKSObject) list.get(0);
+								if (tableName == null)
+									tableName = basePDKSObject.getTableName();
+								Long ilkId = basePDKSObject.getId();
+								if (id.equals(871L))
+									logger.debug("");
+								if (ilkId.equals(id) == false) {
+									long fark = ilkId.longValue() - id.longValue();
+									if (fark > list.size())
+										fark = list.size();
+
+									while (list.size() > 0 && fark > 0) {
+										int sonIndex = list.size() - 1;
+										object = (BasePDKSObject) list.get(sonIndex);
+										Long sonId = object.getId();
+										veriMap.put("id", id);
+										veriMap.put("sonId", sonId);
+										veriMap.put("tableName", tableName);
+										logger.debug(veriMap.toString());
+										execSP(session, veriMap, sp);
+										veriMap.clear();
+										list.remove(sonIndex);
+										id = id.longValue() + 1L;
+										++kayitAdet;
+										--fark;
+									}
+									id = ilkId;
+								}
+								if (list.isEmpty() == false)
+									list.remove(0);
+								id = id.longValue() + 1L;
+							}
+						} else if (single)
+							kayitAdet = 1L;
 
 					}
-					session.flush();
-				}
-			} else {
-				if (single) {
-					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-					if (session != null)
-						veriMap.put(MAP_KEY_SESSION, session);
-					String sp = "SP_CHECKIDENT_VIEW";
-					execSP(veriMap, sp);
-					session.flush();
-				}
 
-				kayitAdet = 0L;
+				}
+				if (kayitAdet != null && kayitAdet > 0) {
+					logger.info(tableName + " " + kayitAdet);
+					veriMap.clear();
+					execSP(session, veriMap, "SP_CHECKIDENT_VIEW");
+					session.flush();
+				}
+				veriMap = null;
 			}
 
 		}
-		list = null;
-		if (kayitAdet > 0)
-			logger.info(kayitAdet + " " + class1.getName() + " düzenlendi.");
+
 		return kayitAdet;
+
 	}
 
 	/**
@@ -1059,7 +1194,7 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 */
 	public int hareketOnayla(long islemId, User guncelleyen, Session session) {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 		String sp = "SP_HAREKET_ONAYLA";
@@ -1069,7 +1204,7 @@ public class PdksEntityController implements Serializable {
 			veriMap.put(MAP_KEY_SESSION, session);
 		int sonuc = 0;
 		try {
-			sonuc = execSP(veriMap, sp);
+			sonuc = execSP(session, veriMap, sp);
 		} catch (Exception e) {
 			sonuc = 0;
 		}
@@ -1084,7 +1219,7 @@ public class PdksEntityController implements Serializable {
 	 * @return
 	 */
 	public int hareketOnaylama(long kgsId, long pdksId, User guncelleyen, Session session) {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 		String sp = "SP_HAREKET_ONAYLAMA";
@@ -1095,7 +1230,7 @@ public class PdksEntityController implements Serializable {
 			veriMap.put(MAP_KEY_SESSION, session);
 		int sonuc = 0;
 		try {
-			sonuc = execSP(veriMap, sp);
+			sonuc = execSP(session, veriMap, sp);
 		} catch (Exception e) {
 			sonuc = 0;
 		}
@@ -1376,7 +1511,7 @@ public class PdksEntityController implements Serializable {
 			} else if (authenticatedUser != null) {
 				session = authenticatedUser.getSessionSQL();
 			}
-			if (session == null)
+			if (PdksUtil.isSessionKapali(session))
 				session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 			Object tr = null;
 
@@ -1567,7 +1702,7 @@ public class PdksEntityController implements Serializable {
 		List idList = new ArrayList();
 		List veriList = new ArrayList();
 		try {
-			if (session == null && fieldsOrj != null && fieldsOrj.containsKey(PdksEntityController.MAP_KEY_SESSION))
+			if (PdksUtil.isSessionKapali(session) && fieldsOrj != null && fieldsOrj.containsKey(PdksEntityController.MAP_KEY_SESSION))
 				session = (Session) fieldsOrj.get(PdksEntityController.MAP_KEY_SESSION);
 			int size = PdksEntityController.LIST_MAX_SIZE - fieldsOrj.size();
 			List idInputList = new ArrayList(dataIdList);
@@ -1669,6 +1804,12 @@ public class PdksEntityController implements Serializable {
 		PdksEntityController.sqlSistemTarihi = sqlSistemTarihi;
 	}
 
-	 
+	public static String getSqlBuGun() {
+		return sqlBuGun;
+	}
+
+	public static void setSqlBuGun(String sqlBuGun) {
+		PdksEntityController.sqlBuGun = sqlBuGun;
+	}
 
 }

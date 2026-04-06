@@ -101,8 +101,12 @@ public class YetkiBaseObject extends BaseObject {
 	}
 
 	public void entityRefresh() {
-		
-		
+
+	}
+
+	@Transient
+	public String getTableName() {
+		return null;
 	}
 
 }

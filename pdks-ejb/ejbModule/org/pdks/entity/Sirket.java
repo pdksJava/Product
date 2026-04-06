@@ -339,4 +339,9 @@ public class Sirket extends BaseObject {
 
 	}
 
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
+	}
+
 }

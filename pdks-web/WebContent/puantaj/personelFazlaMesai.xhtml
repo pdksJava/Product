@@ -249,7 +249,11 @@
 									<span style="background: #66ff66" title="#{mesai.personelFazlaMesai.olusturanUser.adSoyad} onayladı"> <ui:fragment
 											rendered="#{mesai.personelFazlaMesai.tatilDurum == 1}">
 											<b>Resmi Tatil </b>
-										</ui:fragment> <h:outputText value="#{mesai.personelFazlaMesai.fazlaMesaiOnayDurum.aciklama}" /> <br />
+										</ui:fragment> <h:outputText value="#{mesai.personelFazlaMesai.fazlaMesaiOnayDurum.aciklama}" /> <ui:fragment
+											rendered="#{ortakIslemler.hasStringValue(mesai.personelFazlaMesai.nedenAciklama)}">
+											<br />[ #{mesai.personelFazlaMesai.nedenAciklama} ]</ui:fragment><br />
+
+
 										<DIV style="background: #66ff66">
 											<h:outputText value="Fazla Çalışma Saati : #{authenticatedUser.sayiFormatliGoster(mesai.personelFazlaMesai.fazlaMesaiSaati)}" />
 											<ui:fragment rendered="#{mesai.personelFazlaMesai.fazlaMesaiTalep != null}">
@@ -357,10 +361,12 @@
 								<h:outputText value="#{personelFazlaMesaiHome.instance.hareket.kapiView.aciklama}" />
 							</s:decorate>
 
-							<s:decorate template="/layout/edit.xhtml">
+							<s:decorate template="/layout/edit.xhtml" id="fazlaMesaiSaat">
 								<ui:define name="label">Mesai Saati</ui:define>
 								<ui:fragment rendered="#{personelFazlaMesaiHome.instance.hareket!=null}">
-									<h:inputText size="10" value="#{personelFazlaMesaiHome.instance.hareket.fazlaMesai}" />
+									<h:inputText size="10" value="#{personelFazlaMesaiHome.instance.hareket.fazlaMesai}">
+										<a4j:support event="onchange" action="#{ortakIslemler.emtpyAjaxFunction()}" reRender="fazlaMesaiSaat" ajaxSingle="true" status="ajaxStatus" />
+ 									</h:inputText>
 									<ui:fragment rendered="#{personelFazlaMesaiHome.instance.hareket.yemekMolasi gt 0}">
 										Kanuni Minumum Mola : #{authenticatedUser.sayiFormatliGoster(personelFazlaMesaiHome.instance.hareket.yemekMolasi)}
 									</ui:fragment>
@@ -373,9 +379,22 @@
 								<h:selectOneMenu value="#{personelFazlaMesaiHome.instance.fazlaMesaiOnayDurum}" style="width:350px" required="true"
 									requiredMessage="Islem seciniz">
 									<s:selectItems var="comp" value="#{personelFazlaMesaiHome.fazlaMesaiList}" label="#{comp.aciklama}" noSelectionLabel="Lutfen Seciniz" />
+									<a4j:support event="onchange" action="#{ortakIslemler.emtpyAjaxFunction()}" reRender="nedenAciklama" status="ajaxStatus" ajaxSingle="true" />
 									<s:convertEntity />
 								</h:selectOneMenu>
 							</s:decorate>
+							<a4j:outputPanel id="nedenAciklama">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{personelFazlaMesaiHome.onayAciklamaGirin}">
+									<ui:define name="label">Neden Açıklaması</ui:define>
+								 
+								 	#{messages['pdks.genel.etiket.kalanKarakterSayisi']}: <SPAN id="Counter">#{255 - personelFazlaMesaiHome.instance.aciklama.length()}</SPAN>
+									<br />
+									<rich:spacer width="5px;" />
+									<h:inputTextarea value="#{personelFazlaMesaiHome.instance.aciklama}" required="#{personelFazlaMesaiHome.onayAciklamaZorunlu}"
+										requiredMessage="Neden açıklaması giriniz" rows="4" cols="80" onkeypress="return limitText(this,255,'Counter')"
+										onkeyup="return limitText(this,255, 'Counter')" />
+								</s:decorate>
+							</a4j:outputPanel>
 							<s:decorate template="/layout/edit.xhtml" rendered="#{personelFazlaMesaiHome.instance.vardiyaGun.fazlaMesaiTalepler != null}">
 								<ui:define name="label">Fazla Çalışma Talep</ui:define>
 								<ui:fragment rendered="#{personelFazlaMesaiHome.instance.fazlaMesaiTalep != null}">

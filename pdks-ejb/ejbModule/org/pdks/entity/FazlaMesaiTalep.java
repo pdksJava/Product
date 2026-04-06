@@ -7,6 +7,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
@@ -34,8 +35,9 @@ public class FazlaMesaiTalep extends BaseObject {
 	public static final String COLUMN_NAME_BITIS_ZAMANI = "BITIS_ZAMANI";
 	public static final String COLUMN_NAME_MESAI_SURESI = "MESAI_SURESI";
 	public static final String COLUMN_NAME_ONAY_DURUMU = "ONAY_DURUMU";
-	public static final String COLUMN_NAME_ACIKLAMA = "ACIKLAMA";
-	public static final String COLUMN_NAME_IPTAL_ACIKLAMA = "IPTAL_ACIKLAMA";
+	// public static final String COLUMN_NAME_ACIKLAMA = "ACIKLAMA";
+	public static final String COLUMN_NAME_ONAY_ACIKLAMA = "ONAY_ACIKLAMA_ID";
+	public static final String COLUMN_NAME_IPTAL_ACIKLAMA = "IPTAL_ACIKLAMA_ID";
 	public static final int ONAY_DURUM_ISLEM_YAPILMADI = 1;
 	public static final int ONAY_DURUM_ONAYLANDI = 2;
 	public static final int ONAY_DURUM_RED = 3;
@@ -46,7 +48,11 @@ public class FazlaMesaiTalep extends BaseObject {
 
 	private int onayDurumu = ONAY_DURUM_ISLEM_YAPILMADI;
 
-	private String aciklama, iptalAciklama;
+	private String aciklamaYonetici, aciklamaIptalMudur;
+
+	// private String aciklama, iptalAciklama;
+
+	private OzelAciklama ozelAciklama, ozelIptalAciklama;
 
 	private VardiyaGun vardiyaGun;
 
@@ -112,15 +118,6 @@ public class FazlaMesaiTalep extends BaseObject {
 		this.bitisZamani = bitisZamani;
 	}
 
-	@Column(name = COLUMN_NAME_ACIKLAMA)
-	public String getAciklama() {
-		return aciklama;
-	}
-
-	public void setAciklama(String aciklama) {
-		this.aciklama = aciklama;
-	}
-
 	@Column(name = COLUMN_NAME_MESAI_SURESI, nullable = false)
 	public Double getMesaiSuresi() {
 		return mesaiSuresi;
@@ -139,15 +136,6 @@ public class FazlaMesaiTalep extends BaseObject {
 		this.onayDurumu = onayDurumu;
 	}
 
-	@Column(name = COLUMN_NAME_IPTAL_ACIKLAMA)
-	public String getIptalAciklama() {
-		return iptalAciklama;
-	}
-
-	public void setIptalAciklama(String iptalAciklama) {
-		this.iptalAciklama = iptalAciklama;
-	}
-
 	@ManyToOne(cascade = CascadeType.REFRESH)
 	@JoinColumn(name = COLUMN_NAME_IPTAL_NEDEN)
 	@Fetch(FetchMode.JOIN)
@@ -159,6 +147,28 @@ public class FazlaMesaiTalep extends BaseObject {
 		this.redNedeni = redNedeni;
 	}
 
+	@ManyToOne(cascade = CascadeType.REFRESH)
+	@JoinColumn(name = COLUMN_NAME_ONAY_ACIKLAMA)
+	@Fetch(FetchMode.JOIN)
+	public OzelAciklama getOzelAciklama() {
+		return ozelAciklama;
+	}
+
+	public void setOzelAciklama(OzelAciklama ozelAciklama) {
+		this.ozelAciklama = ozelAciklama;
+	}
+
+	@OneToOne(cascade = CascadeType.REFRESH)
+	@JoinColumn(name = COLUMN_NAME_IPTAL_ACIKLAMA)
+	@Fetch(FetchMode.JOIN)
+	public OzelAciklama getOzelIptalAciklama() {
+		return ozelIptalAciklama;
+	}
+
+	public void setOzelIptalAciklama(OzelAciklama ozelIptalAciklama) {
+		this.ozelIptalAciklama = ozelIptalAciklama;
+	}
+
 	@Transient
 	public boolean isIslemYapildi() {
 		return islemYapildi;
@@ -166,6 +176,20 @@ public class FazlaMesaiTalep extends BaseObject {
 
 	public void setIslemYapildi(boolean islemYapildi) {
 		this.islemYapildi = islemYapildi;
+	}
+
+	// @Column(name = "IPTAL_ACIKLAMA")
+	@Transient
+	public String getIptalAciklama() {
+		String aciklama = ozelIptalAciklama != null && PdksUtil.hasStringValue(ozelIptalAciklama.getAciklama()) ? ozelIptalAciklama.getAciklama().trim() : aciklamaIptalMudur;
+		return aciklama;
+
+	}
+
+	@Transient
+	public String getAciklama() {
+		String aciklama = ozelAciklama != null && PdksUtil.hasStringValue(ozelAciklama.getAciklama()) ? ozelAciklama.getAciklama() : aciklamaYonetici;
+		return aciklama;
 	}
 
 	@Transient
@@ -181,7 +205,7 @@ public class FazlaMesaiTalep extends BaseObject {
 				onayDurumAciklama = "Onaylandı.";
 				break;
 			case ONAY_DURUM_RED:
-				onayDurumAciklama = "Red Edildi." + (redNedeni != null ? " ( " + redNedeni.getAciklama() + (PdksUtil.hasStringValue(iptalAciklama) ? " - " + iptalAciklama.trim() : "") + " )" : "");
+				onayDurumAciklama = "Red Edildi." + (redNedeni != null ? " ( " + redNedeni.getAciklama() + (PdksUtil.hasStringValue(getIptalAciklama()) ? " - " + getIptalAciklama().trim() : "") + " )" : "");
 				break;
 			default:
 				onayDurumAciklama = "";
@@ -242,7 +266,7 @@ public class FazlaMesaiTalep extends BaseObject {
 
 	@Transient
 	public boolean isAciklamaVar() {
-		return PdksUtil.hasStringValue(aciklama);
+		return PdksUtil.hasStringValue(getAciklama());
 	}
 
 	@Transient
@@ -268,8 +292,31 @@ public class FazlaMesaiTalep extends BaseObject {
 		return vardiyaGun != null ? vardiyaGun.getPersonel() : null;
 	}
 
-	public void entityRefresh() {
-		
-		
+	@Transient
+	public String getAciklamaYonetici() {
+		return aciklamaYonetici;
 	}
+
+	public void setAciklamaYonetici(String aciklamaYonetici) {
+		this.aciklamaYonetici = aciklamaYonetici;
+	}
+
+	@Transient
+	public String getAciklamaIptalMudur() {
+		return aciklamaIptalMudur;
+	}
+
+	public void setAciklamaIptalMudur(String aciklamaIptalMudur) {
+		this.aciklamaIptalMudur = aciklamaIptalMudur;
+	}
+
+	public void entityRefresh() {
+
+	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
+	}
+
 }

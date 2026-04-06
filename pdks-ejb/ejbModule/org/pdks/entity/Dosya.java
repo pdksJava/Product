@@ -113,7 +113,11 @@ public class Dosya extends BasePDKSObject implements Serializable {
 	}
 
 	public void entityRefresh() {
-		
-		
+
+	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
 	}
 }

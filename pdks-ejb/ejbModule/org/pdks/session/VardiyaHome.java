@@ -513,9 +513,9 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 				if (vyiIptal || cmvIptal) {
 					try {
 						if (cmvIptal)
-							pdksEntityController.savePrepareTableID(true, CalismaModeliVardiya.class, entityManager, session);
+							pdksEntityController.savePrepareTableID(true, null, CalismaModeliVardiya.class, session);
 						if (vyiIptal)
-							pdksEntityController.savePrepareTableID(true, VardiyaYemekIzin.class, entityManager, session);
+							pdksEntityController.savePrepareTableID(true, null, VardiyaYemekIzin.class, session);
 					} catch (Exception e) {
 					}
 					session.flush();
@@ -1115,9 +1115,9 @@ public class VardiyaHome extends EntityHome<Vardiya> implements Serializable {
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		pasifGoster = false;
 		List<Sirket> pdksSirketList = ortakIslemler.getDepartmanPDKSSirketList(null, session);
 		if (pdksSirketIdList == null)

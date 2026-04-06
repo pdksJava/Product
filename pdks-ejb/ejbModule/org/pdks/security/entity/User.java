@@ -6,11 +6,13 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
@@ -78,6 +80,8 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 
 	private Tanim departmanTanim;
 
+	private EntityManager entityManager;
+
 	// private Set<UserRoles> yetkilerim;
 
 	private boolean durum = Boolean.TRUE, entegrasyonMailDurum = false, yeniSifre = Boolean.FALSE, admin = Boolean.FALSE, IK = Boolean.FALSE, IKSirket = Boolean.FALSE, IK_Tesis = Boolean.FALSE;
@@ -100,6 +104,7 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 
 	private HttpSession session;
 
+	private LinkedHashMap<String, Session> sessionMap;
 	private Session sessionSQL;
 
 	public User() {
@@ -898,15 +903,6 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 	}
 
 	@Transient
-	public Session getSessionSQL() {
-		return sessionSQL;
-	}
-
-	public void setSessionSQL(Session sessionSQL) {
-		this.sessionSQL = sessionSQL;
-	}
-
-	@Transient
 	public boolean isBrowserIE() {
 		return browserIE;
 	}
@@ -1160,6 +1156,67 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 
 	public void entityRefresh() {
 
+	}
+
+	@Transient
+	public LinkedHashMap<String, Session> getSessionMap() {
+		return sessionMap;
+	}
+
+	public void setSessionMap(LinkedHashMap<String, Session> sessionMap) {
+		this.sessionMap = sessionMap;
+	}
+
+	/**
+	 * @param key
+	 * @param sessionNewSQL
+	 */
+	public void putSessionMap(String key, Session sessionNewSQL) {
+
+		if (sessionNewSQL != null && sessionNewSQL.isConnected()) {
+			this.sessionSQL = sessionNewSQL;
+			if (key == null)
+				key = "";
+			if (sessionMap == null)
+				sessionMap = new LinkedHashMap<String, Session>();
+			else {
+				List<String> keyList = new ArrayList<String>(sessionMap.keySet());
+				for (String string : keyList) {
+					if (string.equals(key) == false) {
+						Session session = sessionMap.get(string);
+						if (session.isConnected() == false)
+							sessionMap.remove(string);
+					}
+				}
+				keyList = null;
+			}
+			if (sessionMap.containsKey(key) == false)
+				sessionMap.put(key, sessionNewSQL);
+		}
+
+	}
+
+	@Transient
+	public Session getSessionSQL() {
+		return sessionSQL;
+	}
+
+	public void setSessionSQL(Session sessionSQL) {
+		this.sessionSQL = sessionSQL;
+	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
+	}
+
+	@Transient
+	public EntityManager getEntityManager() {
+		return entityManager;
+	}
+
+	public void setEntityManager(EntityManager entityManager) {
+		this.entityManager = entityManager;
 	}
 
 }

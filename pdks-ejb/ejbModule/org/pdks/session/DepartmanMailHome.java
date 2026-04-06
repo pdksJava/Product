@@ -13,10 +13,6 @@ import javax.mail.internet.InternetAddress;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
-import org.pdks.entity.DepartmanMailGrubu;
-import org.pdks.entity.Tanim;
-import org.pdks.security.entity.User;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -26,6 +22,9 @@ import org.jboss.seam.annotations.Transactional;
 import org.jboss.seam.annotations.web.RequestParameter;
 import org.jboss.seam.faces.FacesMessages;
 import org.jboss.seam.framework.EntityHome;
+import org.pdks.entity.DepartmanMailGrubu;
+import org.pdks.entity.Tanim;
+import org.pdks.security.entity.User;
 
 @Name("departmanMailHome")
 public class DepartmanMailHome extends EntityHome<DepartmanMailGrubu> implements Serializable {
@@ -50,6 +49,7 @@ public class DepartmanMailHome extends EntityHome<DepartmanMailGrubu> implements
 	@In(required = false)
 	FacesMessages facesMessages;
 
+	public static String sayfaURL = "departmanMail";
 	DepartmanMailGrubu departmanMail;
 	private String mailAdresleri, departmanAciklama;
 	private String mailString;
@@ -177,10 +177,9 @@ public class DepartmanMailHome extends EntityHome<DepartmanMailGrubu> implements
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, "departmanMail");
 		departmanAciklama = "Departman";
 		HashMap parametreMap = new HashMap();
 		parametreMap.put("parentTanim.tipi", Tanim.TIPI_PERSONEL_EK_SAHA);

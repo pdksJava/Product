@@ -198,7 +198,8 @@ public class PdksUtil implements Serializable {
 		}
 		return str.trim();
 	}
-
+	
+	
 	/**
 	 * @param aciklama
 	 * @return
@@ -2624,7 +2625,7 @@ public class PdksUtil implements Serializable {
 
 				}
 			} catch (Exception e) {
-				// TODO: handle exception
+			 
 			}
 
 		}

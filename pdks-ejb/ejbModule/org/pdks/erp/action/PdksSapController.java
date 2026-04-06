@@ -92,7 +92,7 @@ public class PdksSapController implements ERPController, Serializable {
 		if (jcoClient != null) {
 			String hataMesaj = null;
 			try {
-				if (session == null)
+				if (PdksUtil.isSessionKapali(session))
 					session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 				DenklestirmeAy denklestirmeAy = sapMesaiList.get(0).getDenklestirmeAy();
 				Calendar cal = Calendar.getInstance();
@@ -403,7 +403,7 @@ public class PdksSapController implements ERPController, Serializable {
 					map.put(PdksEntityController.MAP_KEY_MAP, "getSapKodu");
 					if (session != null)
 						map.put(PdksEntityController.MAP_KEY_SESSION, session);
-					// map.put("sapKodu<>", "");
+					// map.put("sapKodu <> ", "");
 					map.put("ero=", Boolean.TRUE);
 					map.put("durum=", Boolean.TRUE);
 					// map.put("pdks=", Boolean.TRUE);

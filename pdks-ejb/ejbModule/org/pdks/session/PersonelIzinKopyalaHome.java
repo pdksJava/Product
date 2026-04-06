@@ -90,7 +90,7 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 		session.setFlushMode(FlushMode.MANUAL);
 		session.clear();
@@ -370,7 +370,7 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 			HashMap fields = new HashMap();
 			fields.put("durum=", Boolean.TRUE);
 			fields.put("izinTipiTanim.kodu", tipler);
-			fields.put("personelGirisTipi<>", IzinTipi.GIRIS_TIPI_YOK);
+			fields.put("personelGirisTipi <> ", IzinTipi.GIRIS_TIPI_YOK);
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<IzinTipi> izinTipleri = pdksEntityController.getObjectByInnerObjectListInLogic(fields, IzinTipi.class);
 			String idStr = "";
@@ -407,9 +407,8 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 						map.put("izinSahibiNewId", izinSahibiClone.getId());
 						map.put("sistemAdminUserId", sistemAdminUser.getId());
 						map.put(PdksEntityController.MAP_KEY_SQLPARAMS, params);
-						map.put(PdksEntityController.MAP_KEY_SESSION, session);
 						try {
-							pdksEntityController.execSP(map, "SP_IZIN_KOPYALA");
+							pdksEntityController.execSP(session, map, "SP_IZIN_KOPYALA");
 							if (yil > izinHakEdisYil && bugun >= izinHakEdisTarihi) {
 								LinkedHashMap<String, Object> dataKidemMap = new LinkedHashMap<String, Object>();
 								dataKidemMap.put("sistemYonetici", null);
@@ -461,8 +460,7 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 			LinkedHashMap map = new LinkedHashMap();
 			map.put("izinSahibiId", sb.toString());
 			map.put(PdksEntityController.MAP_KEY_SQLPARAMS, params);
-			map.put(PdksEntityController.MAP_KEY_SESSION, session);
-			pdksEntityController.execSP(map, "SP_IZINLERI_SIL");
+ 			pdksEntityController.execSP(session, map, "SP_IZINLERI_SIL");
 
 		}
 

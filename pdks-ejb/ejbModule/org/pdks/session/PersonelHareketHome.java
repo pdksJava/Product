@@ -306,9 +306,9 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() throws Exception {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		if (personelList == null)
 			personelList = new ArrayList<Personel>();
 		else
@@ -639,9 +639,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 					veriMap.put("nedenId", neden.getId());
 					veriMap.put("aciklama", aciklama);
 					veriMap.put("sirketId", kgsHareket.getKgsSirketId());
-					if (session != null)
-						veriMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-					pdksEntityController.execSP(veriMap, name);
+ 					pdksEntityController.execSP(session, veriMap, name);
 				} else {
 					pdksEntityController.hareketSil(kgsId, pdksId, authenticatedUser, neden.getId(), "", kgsHareket.getKgsSirketId(), session);
 					pdksId = pdksEntityController.hareketEkle(terminalKapi, kgsHareket.getPersonel(), kgsHareket.getZaman(), authenticatedUser, neden.getId(), aciklama, session);
@@ -894,7 +892,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 					if (!authenticatedUser.isIK() && !authenticatedUser.isAdmin()) {
 						map1.clear();
 						map1.put(PdksEntityController.MAP_KEY_MAP, "getPersonelId");
-						map1.put("devredenSure<>", null);
+						map1.put("devredenSure <> ", null);
 						map1.put("onaylandi=", Boolean.TRUE);
 						if (denklestirmeAy != null)
 							map1.put("denklestirmeAy.id=", denklestirmeAy.getId());

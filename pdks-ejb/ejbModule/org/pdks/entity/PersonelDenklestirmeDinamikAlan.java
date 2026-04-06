@@ -216,4 +216,9 @@ public class PersonelDenklestirmeDinamikAlan extends BasePDKSObject implements S
 
 	}
 
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
+	}
+
 }

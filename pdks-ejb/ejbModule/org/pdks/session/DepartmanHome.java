@@ -103,6 +103,7 @@ public class DepartmanHome extends EntityHome<Departman> implements Serializable
 					if (session != null)
 						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 					List<Sirket> sirketler = pdksEntityController.getObjectByInnerObjectList(fields, Sirket.class);
+					sirketler = PdksUtil.sortSirketList(sirketler);
 					for (Sirket sirket : sirketler) {
 						sirket.setGuncelleyenUser(authenticatedUser);
 						sirket.setGuncellemeTarihi(pdksDepartman.getGuncellemeTarihi());
@@ -257,9 +258,9 @@ public class DepartmanHome extends EntityHome<Departman> implements Serializable
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		fillDepartmanTanimList();
 	}
 

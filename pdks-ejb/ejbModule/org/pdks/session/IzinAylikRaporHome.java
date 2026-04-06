@@ -107,9 +107,9 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		fillAyList();
 		setSirket(null);
 		if (authenticatedUser.isIK() || authenticatedUser.isAdmin()) {
@@ -146,7 +146,7 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 		List<Sirket> list = pdksEntityController.getObjectBySQLList(sb, map, Sirket.class);
 
 		if (list.size() > 1)
-			list = PdksUtil.sortObjectStringAlanList(list, "getAd", null);
+			list = PdksUtil.sortSirketList(list);
 		setSirketList(list);
 	}
 
@@ -398,8 +398,8 @@ public class IzinAylikRaporHome extends EntityHome<PersonelIzin> implements Seri
 			parametreMap.clear();
 			parametreMap.put("izinTipi.bakiyeIzinTipi=", null);
 			parametreMap.put("izinDurumu", durum);
-			parametreMap.put("baslangicZamani<=", bitDate);
-			parametreMap.put("bitisZamani>=", basDate);
+			parametreMap.put("baslangicZamani <= ", bitDate);
+			parametreMap.put("bitisZamani >= ", basDate);
 			parametreMap.put("hesapTipi", hesapTipi);
 			parametreMap.put("izinSahibi", personelList.clone());
 			if (session != null)

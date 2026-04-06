@@ -85,7 +85,7 @@ public class AylikPuantaj implements Serializable, Cloneable {
 
 	private boolean donemBitti = Boolean.TRUE, ayrikHareketVar = Boolean.FALSE, fazlaMesaiIzinKontrol = Boolean.TRUE, gebeDurum = Boolean.FALSE, sutIzniDurumu = Boolean.FALSE;
 
-	private Double saatToplami = 0d, resmiTatilKanunenEklenenSure = 0d, resmiTatilToplami = 0d, haftaCalismaSuresi = 0d, ucretiOdenenMesaiSure = 0d, fazlaMesaiSure = 0d, odenenSure = 0d, planlananSure = 0d, offSure = 0.0d;
+	private Double saatToplami = 0d, resmiTatilKanunenEklenenSure = 0d, resmiTatilToplami = 0d, haftaCalismaSuresi = 0d, icapciMesaiSure = 0d, ucretiOdenenMesaiSure = 0d, fazlaMesaiSure = 0d, odenenSure = 0d, planlananSure = 0d, offSure = 0.0d;
 
 	private Double izinSuresi = 0d, saatlikIzinSuresi = 0d, fazlaMesaiMaxSure = 0d, eksikCalismaSure = 0d, gecenAyFazlaMesai = 0d, hesaplananSure = 0d, devredenSure = 0d, aksamVardiyaSaatSayisi = 0d, kesilenSure = 0d;
 
@@ -436,8 +436,7 @@ public class AylikPuantaj implements Serializable, Cloneable {
 	}
 
 	public double getAylikFazlaMesai() {
-
-		double aylikFazlaMesai = saatToplami - (planlananSure + ucretiOdenenMesaiSure);
+		double aylikFazlaMesai = saatToplami - (planlananSure + ucretiOdenenMesaiSure + icapciMesaiSure);
 		if (calismaModeli == null || !calismaModeli.isFazlaMesaiVarMi())
 			aylikFazlaMesai = 0;
 
@@ -488,7 +487,6 @@ public class AylikPuantaj implements Serializable, Cloneable {
 		}
 		double arifeToplamSure = getArifeToplamSure(tatilGunleriMap, calismaModeli);
 		Double hesaplananSure = (personelDenklestirme != null ? personelDenklestirme.getMaksimumSure(izinSure, arifeToplamSure, vardiyalar) : 0d);
-
 		if (hesaplananSure < 0)
 			hesaplananSure = 0.0d;
 		if (tatilGunleriMap != null && vardiyalar != null && !vardiyalar.isEmpty()) {
@@ -525,7 +523,19 @@ public class AylikPuantaj implements Serializable, Cloneable {
 											if (arifeBaslangicTarihi.getTime() <= vardiya.getVardiyaBasZaman().getTime()) {
 												if (vg.getResmiTatilSure() > 0.0d) {
 													saatToplami -= vg.getCalismaSuresi() - vg.getResmiTatilSure();
-													vg.setResmiTatilSure(vg.getCalismaSuresi());
+													double rtSure = vg.getCalismaSuresi(), ncSure = 0.0d;
+													if (vg.getFazlaMesailer() != null) {
+														for (PersonelFazlaMesai pfm : vg.getFazlaMesailer()) {
+															if (pfm.isOnaylandi() && pfm.getDurum()) {
+																if (pfm.isBayram() == false) {
+																	ncSure += pfm.getFazlaMesaiSaati();
+																}
+															}
+														}
+													}
+													saatToplami += ncSure;
+													vg.setResmiTatilSure(rtSure - ncSure);
+
 												}
 												if (vardiyaTatil.isArifeCalismaSaatYokCGSDussun())
 													arifeSure = 0.0d;
@@ -925,6 +935,16 @@ public class AylikPuantaj implements Serializable, Cloneable {
 		this.ucretiOdenenMesaiSure = value;
 	}
 
+	public Double getIcapciMesaiSure() {
+		return icapciMesaiSure;
+	}
+
+	public void setIcapciMesaiSure(Double value) {
+		if (value != null && value.doubleValue() != 0.0d)
+			logger.debug(value);
+		this.icapciMesaiSure = value;
+	}
+
 	public boolean isVardiyaOlustu() {
 		return vardiyaOlustu;
 	}
@@ -1190,7 +1210,7 @@ public class AylikPuantaj implements Serializable, Cloneable {
 	public boolean isFazlaMesaiTalepVar() {
 		boolean fazlaMesaiTalepVar = false;
 		if (yonetici2 != null && sirket != null)
-			fazlaMesaiTalepVar = sirket.getDepartman().isFazlaMesaiTalepGirer() && sirket.isFazlaMesaiTalepGirer();
+			fazlaMesaiTalepVar = sirket.isFazlaMesaiTalepGirer();
 		return fazlaMesaiTalepVar;
 	}
 
@@ -1318,18 +1338,19 @@ public class AylikPuantaj implements Serializable, Cloneable {
 	}
 
 	public boolean isFazlaMesaiDurum() {
-		Boolean fazlaMesaiDurum = Boolean.FALSE;
-		if (personelDenklestirme != null && personelDenklestirme.getCalismaModeliAy() != null)
-			fazlaMesaiDurum = personelDenklestirme.getCalismaModeliAy().isHareketKaydiVardiyaBulsunmu();
-
-		if (fazlaMesaiDurum.equals(Boolean.FALSE) && vardiyalar != null) {
-			for (VardiyaGun vardiyaGun : vardiyalar) {
-				if (!fazlaMesaiDurum && vardiyaGun.isAyinGunu() && vardiyaGun.getVardiya() != null && vardiyaGun.getVardiya().getId() != null) {
-					fazlaMesaiDurum = vardiyaGun.isFazlaMesaiTalepDurum();
+		Boolean fazlaMesaiDurum = sirket != null && sirket.isFazlaMesaiTalepGirer();
+		if (vardiyalar != null && fazlaMesaiDurum) {
+			fazlaMesaiDurum = false;
+			for (VardiyaGun vg : vardiyalar) {
+				if (vg.isAyinGunu() && vg.getVardiya() != null && vg.getVardiya().getId() != null) {
+					if (vg.getFazlaMesaiTalepler() != null && vg.getFazlaMesaiTalepler().isEmpty() == false)
+						fazlaMesaiDurum = true;
+					else
+						fazlaMesaiDurum = vg.isFazlaMesaiTalepDurum();
 					if (fazlaMesaiDurum)
 						break;
-				}
 
+				}
 			}
 		}
 		return fazlaMesaiDurum;

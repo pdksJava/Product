@@ -176,7 +176,7 @@ public class Authenticator implements IAuthenticator, Serializable {
 					sb.append("select U.* from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK());
 					sb.append("inner join " + User.TABLE_NAME + " U " + PdksEntityController.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_ID + " = U." + User.COLUMN_NAME_PERSONEL + " and U." + User.COLUMN_NAME_DURUM + " = 1 and U." + User.COLUMN_NAME_DEPARTMAN + " is not null ");
 					sb.append(" where P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " = :sicilNo and P." + Personel.COLUMN_NAME_DURUM + " = 1  ");
-					sb.append(" and P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " <= convert(date,GETDATE()) and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
+					sb.append(" and P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " <= " + PdksEntityController.getSqlBuGun() + " and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= " + PdksEntityController.getSqlBuGun());
 					sb.append(" and P." + Personel.COLUMN_NAME_DURUM + " = 1 ");
 					parametreMap.put("sicilNo", sicilNo);
 					if (session != null)
@@ -288,7 +288,7 @@ public class Authenticator implements IAuthenticator, Serializable {
 								ortakIslemler.sistemeGirisIslemleri(loginUser, Boolean.TRUE, null, null, session);
 								logger.info(loginUser.getUsername() + " " + loginUser.getAdSoyad() + " " + (loginUser.getEmail() != null && !loginUser.getEmail().equals(loginUser.getUsername()) ? loginUser.getEmail() + " e-postalı" : "") + " kullanıcısı PDKS sistemine login oldu. "
 										+ PdksUtil.getCurrentTimeStampStr());
-								loginUser.setSessionSQL(session);
+								loginUser.putSessionMap("", session);
 								loginUser.setLogin(Boolean.TRUE);
 							} catch (Exception e) {
 								logger.error("PDKS hata in : \n");
@@ -320,6 +320,7 @@ public class Authenticator implements IAuthenticator, Serializable {
 			}
 		}
 		sonuc = getSonDurum(sonuc, userName, loginUser);
+		authenticatedUser.setSessionSQL(session);
 		return sonuc;
 
 	}

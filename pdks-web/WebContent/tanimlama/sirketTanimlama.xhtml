@@ -301,8 +301,6 @@
 									<ui:define name="label">Fazla Mesai Talep</ui:define>
 									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.fazlaMesaiTalepGirilebilir}" />
 								</s:decorate>
-								 
-
 								<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin}">
 									<ui:define name="label">İşten Ayrıldığı Tarih Çalışıyor</ui:define>
 									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.istenAyrilmaTarihindeCalisiyor}" />
@@ -311,11 +309,95 @@
 									<ui:define name="label">#{ortakIslemler.tesisAciklama()} Durumu</ui:define>
 									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.tesisDurum}" />
 								</s:decorate>
-								<s:decorate template="/layout/edit.xhtml">
-									<ui:define name="label">Aktif</ui:define>
-									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.durum}" />
-								</s:decorate>
+
 							</h:panelGrid>
+							<c:if test="#{sirketHome.seciliSirket.erp}">
+								<h:panelGrid columns="3" id="erpPanel">
+									<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin}">
+										<ui:define name="label">Personel Servis Bilgi</ui:define>
+											#{messages['pdks.genel.etiket.kalanKarakterSayisi']}: <SPAN id="urlPersonelCounter">#{1024 -
+											sirketHome.seciliSirketEntegrasyon.urlPersonel.length()}</SPAN>
+										<br />
+										<rich:spacer width="5px;" />
+										<h:inputTextarea value="#{sirketHome.seciliSirketEntegrasyon.urlPersonel}" cols="80" rows="5"
+											onkeypress="return limitText(this,1024,'urlPersonelCounter')" onkeyup="return limitText(this,1024, 'urlPersonelCounter')">
+											<a4j:support event="onchange" ajaxSingle="true" reRender="sirketGiris" />
+										</h:inputTextarea>
+									</s:decorate>
+									<s:decorate template="/layout/edit.xhtml">
+										<ui:define name="label">Personel Servis Type</ui:define>
+										<h:selectOneMenu value="#{sirketHome.seciliSirketEntegrasyon.mediaTypePersonel}"
+											required="#{ortakIslemler.hasStringValue(sirketHome.seciliSirketEntegrasyon.urlPersonel)}" requiredMessage="Personel Servis Type seçiniz">
+											<f:selectItem itemLabel="Lütfen seçiniz" />
+											<f:selectItems value="#{sirketHome.mediaTyepList}" />
+											<a4j:support event="onchange" ajaxSingle="true" reRender="erpPanel" />
+										</h:selectOneMenu>
+									</s:decorate>
+
+
+									<s:decorate template="/layout/edit.xhtml" id="guncelemeZamaniPersonel">
+										<ui:define name="label">Personel Güncelle Tarihi</ui:define>
+										<rich:calendar value="#{sirketHome.seciliSirketEntegrasyon.guncelemeZamaniPersonel}" datePattern="#{authenticatedUser.dateFormat}" />
+										<a4j:commandButton status="ajaxStatus" value="Personel Güncelle Calistir"
+											rendered="#{sirketHome.apiGuncelle and ortakIslemler.hasStringValue(sirketHome.seciliSirketEntegrasyon.urlPersonel)}"
+											action="#{sirketHome.updatePersonelAPI()}" reRender="guncelemeZamaniPersonel" />
+									</s:decorate>
+									<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin}">
+										<ui:define name="label">İzin Servis Bilgi</ui:define>
+										#{messages['pdks.genel.etiket.kalanKarakterSayisi']}: <SPAN id="urlIzinCounter">#{1024 -
+											sirketHome.seciliSirketEntegrasyon.urlIzin.length()}</SPAN>
+										<br />
+										<rich:spacer width="5px;" />
+										<h:inputTextarea value="#{sirketHome.seciliSirketEntegrasyon.urlIzin}" cols="80" rows="5"
+											onkeypress="return limitText(this,1024,'urlIzinCounter')" onkeyup="return limitText(this,1024, 'urlIzinCounter')">
+											<a4j:support event="onchange" ajaxSingle="true" reRender="sirketGiris" />
+										</h:inputTextarea>
+									</s:decorate>
+									<s:decorate template="/layout/edit.xhtml">
+										<ui:define name="label">İzin Servis Type</ui:define>
+										<h:selectOneMenu value="#{sirketHome.seciliSirketEntegrasyon.mediaTypeIzin}"
+											required="#{ortakIslemler.hasStringValue(sirketHome.seciliSirketEntegrasyon.urlIzin)}" requiredMessage="İzin Servis Type seçiniz">
+											<f:selectItem itemLabel="Lütfen seçiniz" />
+											<f:selectItems value="#{sirketHome.mediaTyepList}" />
+											<a4j:support event="onchange" ajaxSingle="true" reRender="erpPanel" />
+										</h:selectOneMenu>
+									</s:decorate>
+
+									<s:decorate template="/layout/edit.xhtml" id="guncelemeZamaniIzin">
+										<ui:define name="label">İzin Güncelle Tarihi</ui:define>
+										<rich:calendar value="#{sirketHome.seciliSirketEntegrasyon.guncelemeZamaniIzin}" datePattern="#{authenticatedUser.dateFormat}" />
+										<a4j:commandButton status="ajaxStatus" value="İzin Güncelle Calistir"
+											rendered="#{sirketHome.apiGuncelle and ortakIslemler.hasStringValue(sirketHome.seciliSirketEntegrasyon.urlIzin)}"
+											action="#{sirketHome.updateIzinAPI()}" reRender="guncelemeZamaniIzin" />
+									</s:decorate>
+									<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin}">
+										<ui:define name="label">Mesai Servis Bilgi</ui:define>
+										<ui:define name="label">İzin Servis Bilgi</ui:define>
+										#{messages['pdks.genel.etiket.kalanKarakterSayisi']}: <SPAN id="urlMesaiCounter">#{1024 -
+											sirketHome.seciliSirketEntegrasyon.urlMesai.length()}</SPAN>
+										<br />
+										<rich:spacer width="5px;" />
+										<h:inputTextarea value="#{sirketHome.seciliSirketEntegrasyon.urlMesai}" cols="80" rows="5"
+											onkeypress="return limitText(this,1024,'urlMesaiCounter')" onkeyup="return limitText(this,1024, 'urlMesaiCounter')">
+											<a4j:support event="onchange" ajaxSingle="true" reRender="sirketGiris" />
+										</h:inputTextarea>
+									</s:decorate>
+									<s:decorate template="/layout/edit.xhtml">
+										<ui:define name="label">Mesai Servis Type</ui:define>
+										<h:selectOneMenu value="#{sirketHome.seciliSirketEntegrasyon.mediaTypeMesai}"
+											required="#{ortakIslemler.hasStringValue(sirketHome.seciliSirketEntegrasyon.urlMesai)}" requiredMessage="Mesai Servis Type seçiniz">
+											<f:selectItem itemLabel="Lütfen seçiniz" />
+											<f:selectItems value="#{sirketHome.mediaTyepList}" />
+											<a4j:support event="onchange" ajaxSingle="true" reRender="erpPanel" />
+										</h:selectOneMenu>
+									</s:decorate>
+
+								</h:panelGrid>
+							</c:if>
+							<s:decorate template="/layout/edit.xhtml">
+								<ui:define name="label">Aktif</ui:define>
+								<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.durum}" />
+							</s:decorate>
 						</h:panelGrid>
 					</a4j:outputPanel>
 

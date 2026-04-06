@@ -77,6 +77,7 @@ import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.User;
 import org.pdks.security.entity.UserDigerOrganizasyon;
 import org.pdks.security.entity.UserRoles;
+import org.pdks.session.Constants;
 import org.pdks.session.ExcelUtil;
 import org.pdks.session.LDAPUserManager;
 import org.pdks.session.OrtakIslemler;
@@ -218,7 +219,7 @@ public class StartupAction implements Serializable {
 	}
 
 	public void fillMenuItemList(Session session) {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		fillAccountPermission(session, null);
 
@@ -249,17 +250,15 @@ public class StartupAction implements Serializable {
 	@Create
 	public void startupMethodBasla() {
 		// pdksUtil.setTimeZome();
-		Session session = PdksUtil.getSession(entityManager, Boolean.FALSE);
+		Session session = PdksUtil.getSession(entityManager, Boolean.TRUE);
 		startupMethod(session);
 		OrtakIslemler ortakIslemler = new OrtakIslemler();
 		String spName = "SP_DROP_NOT_USED_TABLES";
-		if (ortakIslemler.isExisObject(spName, "P", session, pdksEntityController)) {
+		if (pdksEntityController.isExisStoreProcedure(spName, session)) {
 			LinkedHashMap<String, Object> dataMap = new LinkedHashMap<String, Object>();
-			if (session != null)
-				dataMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 			List<String> list = null;
 			try {
-				list = pdksEntityController.execSPList(dataMap, spName, null);
+				list = pdksEntityController.execSPList(session, dataMap, spName, null);
 			} catch (Exception e) {
 				list = null;
 			}
@@ -273,10 +272,11 @@ public class StartupAction implements Serializable {
 		try {
 			String adresStr = ortakIslemler.getLoginAdres();
 			if (PdksUtil.hasStringValue(adresStr))
-				logger.info("Web Login Adres : " + adresStr);
+				logger.info("Web Login Adres : " + adresStr + " ---> " + Constants.VERSION);
 		} catch (Exception e) {
-		 
+
 		}
+		session.close();
 
 		ortakIslemler = null;
 	}
@@ -317,11 +317,16 @@ public class StartupAction implements Serializable {
 			list.add(VardiyaHafta.class);
 			list.add(VardiyaYemekIzin.class);
 			list.add(YemekKartsiz.class);
-			for (Class class1 : list) {
-				long adet = pdksEntityController.savePrepareTableID(false, class1, entityManager, session);
-				toplamAdet += adet;
-				if (adet > 0)
-					session.flush();
+			for (Iterator iterator = list.iterator(); iterator.hasNext();) {
+				Class class1 = (Class) iterator.next();
+				Long adet = pdksEntityController.savePrepareTableID(false, null, class1, session);
+				if (adet != null) {
+					toplamAdet += adet;
+					if (adet > 0)
+						session.flush();
+				}
+
+				iterator.remove();
 			}
 		} catch (Exception e) {
 			logger.error(e);
@@ -351,8 +356,7 @@ public class StartupAction implements Serializable {
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 		try {
 			veriMap.put("ekranYaz", 0);
-			veriMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			List hatalar = pdksEntityController.execSPList(veriMap, "SP_PDKS_VIEW_REFRESH", null);
+			List hatalar = pdksEntityController.execSPList(session, veriMap, "SP_PDKS_VIEW_REFRESH", null);
 			if (hatalar != null && !hatalar.isEmpty()) {
 				Clob clobComment = (Clob) hatalar.get(0);
 				String aciklama = PdksUtil.replaceAllManuel(PdksUtil.StringToByClob(clobComment), "|", "\n");
@@ -372,9 +376,9 @@ public class StartupAction implements Serializable {
 	 * @param session
 	 */
 	public void fillStartMethod(User user, boolean lockVar, Session session) {
-		if (session == null) {
+		if (PdksUtil.isSessionKapali(session)) {
 			session = user != null ? user.getSessionSQL() : null;
-			if (session == null)
+			if (PdksUtil.isSessionKapali(session))
 				session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		}
 		logger.info("Sistem verileri yukleniyor in " + PdksUtil.getCurrentTimeStampStr());
@@ -1009,7 +1013,12 @@ public class StartupAction implements Serializable {
 		OrtakIslemler islemler = new OrtakIslemler();
 		Gson gson = new Gson();
 		if (PdksUtil.getCanliSunucuDurum()) {
-			String helpDeskLastDateStr = islemler.getStringHelpDesk();
+			String helpDeskLastDateStr = null;
+			try {
+				helpDeskLastDateStr = islemler.getStringHelpDesk();
+			} catch (Exception e) {
+				logger.error(e);
+			}
 			if (helpDeskLastDateStr != null && pmMap.containsKey(helpDeskLastDateKey)) {
 				Parameter parameter = pmMap.get(helpDeskLastDateKey);
 				if (parameter.getValue() == null || !parameter.getValue().equals(helpDeskLastDateStr)) {
@@ -1123,7 +1132,7 @@ public class StartupAction implements Serializable {
 	@Transactional
 	public void setLDAPUserList(Session session) {
 		List saveList = new ArrayList(), list = new ArrayList();
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		HashMap fields = new HashMap();
 		fields.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -1182,10 +1191,10 @@ public class StartupAction implements Serializable {
 	}
 
 	public void fillAccountPermission(Session session, User user) {
-		if (session == null) {
+		if (PdksUtil.isSessionKapali(session)) {
 			if (user != null)
 				session = user.getSessionSQL();
-			if (session == null)
+			if (PdksUtil.isSessionKapali(session))
 				session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		}
 

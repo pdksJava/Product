@@ -96,8 +96,12 @@ public class IzinTipiMailAdres extends BasePDKSObject implements Serializable, C
 	}
 
 	public void entityRefresh() {
-		
-		
+
+	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
 	}
 
 }

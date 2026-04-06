@@ -36,6 +36,8 @@ public class NoticeHome extends EntityHome<Notice> {
 	EntityManager entityManager;
 	@In(required = false, create = true)
 	OrtakIslemler ortakIslemler;
+	
+	public static String sayfaURL = "notice";
 	private List<SelectItem> duyuruTipleri;
 	private String duyuruTip;
 	private Session session;
@@ -79,9 +81,9 @@ public class NoticeHome extends EntityHome<Notice> {
 	}
 
 	public void fillNotice() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		List<Tanim> list = ortakIslemler.getTanimList(Tanim.TIPI_DUYURU, session);
 
 		duyuruTipleri = ortakIslemler.getSelectItemList("duyuruTip", authenticatedUser);

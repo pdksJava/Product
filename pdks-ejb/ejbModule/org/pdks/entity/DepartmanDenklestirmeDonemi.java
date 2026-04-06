@@ -4,6 +4,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TreeMap;
 
+import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import org.pdks.session.PdksUtil;
 
@@ -36,8 +38,6 @@ public class DepartmanDenklestirmeDonemi extends BaseObject {
 	private Integer version = 0;
 
 	private DenklestirmeAy denklestirmeAy;
-	
- 
 
 	private Boolean denklestirmeAyDurum = Boolean.FALSE;
 
@@ -190,8 +190,12 @@ public class DepartmanDenklestirmeDonemi extends BaseObject {
 	}
 
 	public void entityRefresh() {
-		
-		
+
+	}
+
+	@Transient
+	public String getTableName() {
+		return null;
 	}
 
 }

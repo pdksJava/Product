@@ -72,11 +72,12 @@ public class VardiyaGun extends BaseObject {
 	private ArrayList<Vardiya> vardiyalar;
 	private VardiyaGun oncekiVardiyaGun, sonrakiVardiyaGun;
 	private int beklemeSuresi = 6;
-	private Double calismaSuaSaati = PersonelDenklestirme.getCalismaSaatiSua(), resmiTatilKanunenEklenenSure = 0.0d;
+	private Double calismaSuaSaati = PersonelDenklestirme.getCalismaSaatiSua(), resmiTatilKanunenEklenenSure = 0.0d, icapciMesaiSaat = 0d;
 	private Boolean izinHaftaTatilDurum;
 	private boolean hareketHatali = Boolean.FALSE, planHareketEkle = Boolean.TRUE, kullaniciYetkili = Boolean.TRUE, zamanGuncelle = Boolean.TRUE, zamanGelmedi = Boolean.FALSE;
 	private boolean fazlaMesaiTalepOnayliDurum = Boolean.FALSE, fazlaMesaiTalepDurum = Boolean.FALSE, ayarlamaBitti = false, bayramAyir = false;
-	private double calismaSuresi = 0, normalSure = 0, resmiTatilSure = 0, haftaTatilDigerSure = 0, gecenAyResmiTatilSure = 0, aksamKatSayisi = 0d, aksamVardiyaSaatSayisi = 0d;
+
+	private double calismaSuresi = 0, normalSure = 0, resmiTatilSure = 0, ucretiOdenenFazlaMesaiSaat = 0, haftaTatilDigerSure = 0, gecenAyResmiTatilSure = 0, aksamKatSayisi = 0d, aksamVardiyaSaatSayisi = 0d;
 	private double calisilmayanAksamSure = 0, fazlaMesaiSure = 0, bayramCalismaSuresi = 0, haftaCalismaSuresi = 0d, yasalMaxSure = 11.0d;
 	private Integer basSaat, basDakika, bitSaat, bitDakika;
 	private String tdClass = "", style = "", manuelGirisHTML = "", vardiyaKisaAciklama, personelNo, vardiyaDateStr, donemStr;
@@ -196,9 +197,6 @@ public class VardiyaGun extends BaseObject {
 		this.personelNo = personelNo;
 	}
 
-	// @Column(name = "VARDIYA_BAS_SAAT")
-	// @Min(value = 0, message = "Sıfır altında değeri olamaz")
-	// @Max(value = 23, message = "23 üstünde değeri olamaz")
 	@Transient
 	public Integer getBasSaat() {
 		return basSaat;
@@ -208,9 +206,6 @@ public class VardiyaGun extends BaseObject {
 		this.basSaat = basSaat;
 	}
 
-	// @Column(name = "VARDIYA_BAS_DAKIKA")
-	// @Min(value = 0, message = "Sıfır altında değeri olamaz")
-	// @Max(value = 59, message = "59 üstünde değeri olamaz")
 	@Transient
 	public Integer getBasDakika() {
 		return basDakika;
@@ -220,9 +215,6 @@ public class VardiyaGun extends BaseObject {
 		this.basDakika = basDakika;
 	}
 
-	// @Column(name = "VARDIYA_BIT_SAAT")
-	// @Min(value = 0, message = "Sıfır altında değeri olamaz")
-	// @Max(value = 23, message = "23 üstünde değeri olamaz")
 	@Transient
 	public Integer getBitSaat() {
 		return bitSaat;
@@ -232,9 +224,6 @@ public class VardiyaGun extends BaseObject {
 		this.bitSaat = bitSaat;
 	}
 
-	// @Column(name = "VARDIYA_BIT_DAKIKA")
-	// @Min(value = 0, message = "Sıfır altında değeri olamaz")
-	// @Max(value = 59, message = "59 üstünde değeri olamaz")
 	@Transient
 	public Integer getBitDakika() {
 		return bitDakika;
@@ -482,7 +471,13 @@ public class VardiyaGun extends BaseObject {
 			this.setIzin(personelIzin);
 			personelIzin.setGunlukOldu(Boolean.TRUE);
 		}
-		izinler.add(personelIzin);
+		boolean ekle = true;
+		for (PersonelIzin izin : izinler) {
+			if (personelIzin.getId() != null && izin.getId().equals(personelIzin.getId()))
+				ekle = false;
+		}
+		if (ekle)
+			izinler.add(personelIzin);
 	}
 
 	@Transient
@@ -1215,9 +1210,18 @@ public class VardiyaGun extends BaseObject {
 		return resmiTatilToplamSure;
 	}
 
+	@Transient
+	public double getUcretiOdenenFazlaMesaiSaat() {
+		return ucretiOdenenFazlaMesaiSaat;
+	}
+
+	public void setUcretiOdenenFazlaMesaiSaat(double ucretiOdenenFazlaMesaiSaat) {
+		this.ucretiOdenenFazlaMesaiSaat = ucretiOdenenFazlaMesaiSaat;
+	}
+
 	public void setResmiTatilSure(double value) {
 		if (value != 0.0d) {
-			if (this.getVardiyaDateStr().endsWith("0501"))
+			if (this.getVardiyaDateStr().endsWith("0319"))
 				logger.debug(value);
 		}
 		this.resmiTatilSure = value;
@@ -1225,7 +1229,7 @@ public class VardiyaGun extends BaseObject {
 
 	public void addResmiTatilSure(double value) {
 		if (value != 0.0d) {
-			if (this.getVardiyaDateStr().endsWith("0501"))
+			if (this.getVardiyaDateStr().endsWith("0319"))
 				logger.debug(value);
 		}
 		this.resmiTatilSure += value;
@@ -2209,6 +2213,27 @@ public class VardiyaGun extends BaseObject {
 	}
 
 	@Transient
+	public Boolean getPlanSaatGebeSaatiKontrolEt() {
+		boolean kontrolDurum = false;
+		if (isGebeMi()) {
+			BigDecimal value = getKatSayi(PuantajKatSayiTipi.GUN_GEBE_PLAN_KONTROL_ETME.value());
+			kontrolDurum = value == null || value.intValue() == 0;
+		}
+		return kontrolDurum;
+	}
+
+	@Transient
+	public Double getPlanSaatSutIzinSaati() {
+		Double value = null;
+		if (isSutIzni()) {
+			BigDecimal deger = getKatSayi(PuantajKatSayiTipi.GUN_SUT_IZIN_PLAN_KONTROL_ETME.value());
+			if (deger != null)
+				value = deger.doubleValue();
+		}
+		return value;
+	}
+
+	@Transient
 	public HashMap<Integer, BigDecimal> getKatSayiMap() {
 		return katSayiMap;
 	}
@@ -2562,6 +2587,31 @@ public class VardiyaGun extends BaseObject {
 		return hataliFazlaMesailer;
 	}
 
+	@Transient
+	public String getTalepDurum() {
+		String talepDurum = "left_16.png";
+		if (fazlaMesaiTalepler != null) {
+			int onaylandi = 0, onaylanmadi = 0, onayBekliyor = 0;
+			for (FazlaMesaiTalep fmt : fazlaMesaiTalepler) {
+				if (fmt.getOnayDurumu() == FazlaMesaiTalep.ONAY_DURUM_ISLEM_YAPILMADI)
+					++onayBekliyor;
+				else if (fmt.getOnayDurumu() == FazlaMesaiTalep.ONAY_DURUM_ONAYLANDI)
+					++onaylandi;
+				else if (fmt.getOnayDurumu() == FazlaMesaiTalep.ONAY_DURUM_RED)
+					++onaylanmadi;
+
+			}
+			if (onayBekliyor > 0)
+				talepDurum = "starYellow.png";
+			else if (onaylandi > 0)
+				talepDurum = "starGreen.png";
+			else if (onaylanmadi > 0)
+				talepDurum = "starRed.png";
+		}
+		return talepDurum;
+
+	}
+
 	/**
 	 * @param pfm
 	 */
@@ -2583,7 +2633,58 @@ public class VardiyaGun extends BaseObject {
 		this.hataliFazlaMesailer = hataliFazlaMesailer;
 	}
 
+	@Transient
+	public double ucretiOdenenMesaiHesapla() {
+		double saat = 0d;
+		boolean icap = false;
+		try {
+			icap = this.getVardiya() != null && this.getVardiya().isIcapVardiyasi();
+		} catch (Exception e) {
+			logger.debug("");
+		}
+
+		double icapciSaat = 0.0d;
+		if (icap) {
+			icapciMesaiSaat = this.getCalismaSuresi();
+		} else if (this.getFazlaMesailer() != null) {
+			try {
+				for (PersonelFazlaMesai pfm : this.getFazlaMesailer()) {
+					if (pfm != null && pfm.getDurum() && pfm.isOnaylandi() && pfm.isBayram() == false) {
+						String kodu = pfm.getFazlaMesaiOnayDurum() != null ? pfm.getFazlaMesaiOnayDurum().getErpKodu() : null;
+						if (icap || (kodu != null && kodu.toUpperCase().contains("UCM"))) {
+							if (icap || (kodu != null && kodu.toUpperCase().contains("I"))) {
+								icapciSaat += pfm.getFazlaMesaiSaati();
+							} else
+								saat += pfm.getFazlaMesaiSaati();
+						}
+					}
+
+				}
+			} catch (Exception e) {
+			}
+
+		}
+		this.setIcapciMesaiSaat(icapciSaat);
+		this.setUcretiOdenenFazlaMesaiSaat(saat);
+		return saat;
+	}
+
+	@Transient
+	public Double getIcapciMesaiSaat() {
+		return icapciMesaiSaat;
+	}
+
+	public void setIcapciMesaiSaat(Double icapciMesaiSaat) {
+		this.icapciMesaiSaat = icapciMesaiSaat;
+	}
+
 	public void entityRefresh() {
 
 	}
+
+	@Transient
+	public String getTableName() {
+		return TABLE_NAME;
+	}
+
 }

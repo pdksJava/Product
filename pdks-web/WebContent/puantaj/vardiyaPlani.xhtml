@@ -467,8 +467,8 @@
 							<tr class="acik">
 
 								<a4j:repeat value="#{vardiyaHafta.vardiyaGunler}" var="vardiyaGun">
-									<td style="width: 90px; height: 20px;" id="vardiya#{vardiyaGun.vardiyaDateStr}" class="#{vardiyaGunHome.vardiyaGunRenk(vardiyaGun,aylikPuantaj)}"
-										align="center"><ui:fragment
+									<td style="width: 90px; height: 20px;" id="vardiya#{vardiyaGun.vardiyaDateStr}"
+										class="#{vardiyaGunHome.vardiyaGunRenk(vardiyaGun,aylikPuantaj)}" align="center"><ui:fragment
 											rendered="#{vardiyaGun.vardiyalar == null or vardiyaGun.vardiya == null or vardiyaGun.aylikGirisYap == false or  vardiyaGun.izin != null or vardiyaGun.kullaniciYetkili == false}">
 											<h:panelGrid id="veriDigerAy">
 												<h:outputText style="font-size: 11px;#{vardiyaGun.styleGun}" value="#{vardiyaGun.aciklama}" />
@@ -573,7 +573,7 @@
 						</a4j:repeat>
 					</table>
 					<h:panelGrid id="digerIslemler" columns="5"
-						rendered="#{vardiyaGunHome.personelAylikPuantaj.kaydet and (vardiyaGunHome.ikRole or ortakIslemler.getParameterKey('yoneticiModelGuncelle')=='1')}">
+						rendered="#{vardiyaGunHome.personelAylikPuantaj.kaydet and (vardiyaGunHome.ikRole or vardiyaGunHome.modelList.size()>0)}">
 
 						<s:decorate template="/layout/edit.xhtml">
 							<ui:define name="label">#{ortakIslemler.calismaModeliAciklama()}</ui:define>
@@ -1045,7 +1045,13 @@
 
 										<s:decorate template="/layout/edit.xhtml">
 											<ui:define name="label">Açıklama</ui:define>
-											<h:inputTextarea value="#{vardiyaGunHome.fazlaMesaiTalep.aciklama}" cols="80" rows="3" />
+								 
+								 	#{messages['pdks.genel.etiket.kalanKarakterSayisi']}: <SPAN id="Counter">#{255 -
+												vardiyaGunHome.fazlaMesaiTalep.aciklamaYonetici.length()}</SPAN>
+											<br />
+											<rich:spacer width="5px;" />
+											<h:inputTextarea value="#{vardiyaGunHome.fazlaMesaiTalep.aciklamaYonetici}" rows="4" cols="80"
+												onkeypress="return limitText(this,255,'Counter')" onkeyup="return limitText(this,255, 'Counter')" />
 										</s:decorate>
 										<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaGunHome.hareketPdksList != null}">
 											<ui:define name="label">Otomatik  Kapı Hareketi Ekle </ui:define>
@@ -1114,7 +1120,7 @@
 											rendered="#{vardiyaGunHome.fazlaMesaiTalep.bitisZamani.after(vardiyaGunHome.fazlaMesaiTalep.baslangicZamani)}"
 											onclick="#{rich:component('wait')}.show()" action="#{vardiyaGunHome.mesaiTopluKaydet()}"
 											oncomplete="#{rich:component('wait')}.hide();if (#{vardiyaGunHome.fazlaMesaiTalep == null}) #{rich:component('topluMesaiTalepPanel')}.hide(); "
-											reRender="secimlerTopluMesai,personelVardiyaGun" />
+											reRender="secimlerTopluMesai,personelVardiyaGun,vardiyaPanel" />
 
 									</h:panelGrid></TD>
 								<TD valign="top" width="%40"><rich:dataTable rowClasses="acik,koyu" value="#{vardiyaGunHome.aylikPuantajMesaiTalepList}"
@@ -1233,7 +1239,7 @@
 													</ui:fragment>
 													<ui:fragment rendered="#{vardiyaGun.fazlaMesaiTalepler != null}">
 
-														<h:graphicImage value="/img/left_16.png" style="border:0" id="bilgiMesaiVardiya" />
+														<h:graphicImage value="/img/#{vardiyaGun.talepDurum}" style="border:0" id="bilgiMesaiVardiya" />
 
 													</ui:fragment>
 
@@ -1346,7 +1352,12 @@
 
 								<s:decorate template="/layout/edit.xhtml">
 									<ui:define name="label">Açıklama</ui:define>
-									<h:inputTextarea value="#{vardiyaGunHome.fazlaMesaiTalep.aciklama}" cols="80" rows="3" />
+							 	#{messages['pdks.genel.etiket.kalanKarakterSayisi']}: <SPAN id="Counter">#{255 -
+										vardiyaGunHome.fazlaMesaiTalep.aciklamaYonetici.length()}</SPAN>
+									<br />
+									<rich:spacer width="5px;" />
+									<h:inputTextarea value="#{vardiyaGunHome.fazlaMesaiTalep.aciklamaYonetici}" rows="4" cols="80"
+										onkeypress="return limitText(this,255,'Counter')" onkeyup="return limitText(this,255, 'Counter')" />
 								</s:decorate>
 								<s:decorate template="/layout/edit.xhtml" rendered="#{vardiyaGunHome.hareketPdksList != null}">
 									<ui:define name="label">Otomatik  Kapı Hareketi Ekle </ui:define>
@@ -1415,7 +1426,8 @@
 								<a4j:commandButton value="Mesai Kaydet"
 									rendered="#{vardiyaGunHome.fazlaMesaiTalep.bitisZamani.after(vardiyaGunHome.fazlaMesaiTalep.baslangicZamani)}"
 									onclick="#{rich:component('wait')}.show()" action="#{vardiyaGunHome.mesaiKaydet(false)}"
-									oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('wait')}.hide(); " reRender="seciliMesaiGun,secimlerMesai" />
+									oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('wait')}.hide(); "
+									reRender="vardiyaPanel,seciliMesaiGun,secimlerMesai" />
 
 							</h:panelGrid>
 						</ui:fragment>
@@ -1599,7 +1611,13 @@
 						</s:decorate>
 						<s:decorate template="/layout/edit.xhtml" style="vertical-align: top;">
 							<ui:define name="label">İptal Açıklama</ui:define>
-							<h:inputTextarea value="#{vardiyaGunHome.islemFazlaMesaiTalep.iptalAciklama}" cols="80" rows="3" />
+							<ui:define name="label">Red Açıklama</ui:define>
+										  #{messages['pdks.genel.etiket.kalanKarakterSayisi']}: <SPAN id="Counter">#{255 -
+								vardiyaGunHome.islemFazlaMesaiTalep.aciklamaIptalMudur.length()}</SPAN>
+							<br />
+							<rich:spacer width="5px;" />
+							<h:inputTextarea value="#{vardiyaGunHome.islemFazlaMesaiTalep.aciklamaIptalMudur}" cols="80" rows="4"
+								onkeypress="return limitText(this,255,'Counter')" onkeyup="return limitText(this,255, 'Counter')" />
 						</s:decorate>
 						<a4j:commandButton value="İptal Et" action="#{vardiyaGunHome.mesaiIptal}" rendered="#{vardiyaGunHome.mesaiIptalNedenTanimList != null}"
 							onclick="#{rich:component('wait')}.show()" reRender="fmtTable,secimler,seciliMesaiGun"

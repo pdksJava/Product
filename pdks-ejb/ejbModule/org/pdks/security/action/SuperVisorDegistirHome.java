@@ -12,7 +12,6 @@ import java.util.TreeMap;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -46,6 +45,8 @@ public class SuperVisorDegistirHome extends EntityHome<User> implements Serializ
 	User authenticatedUser;
 	@In(required = true, create = true)
 	OrtakIslemler ortakIslemler;
+
+	public static String sayfaURL = "superVisorDegistir";
 	private List<User> superVisorList = new ArrayList<User>();
 	private Session session;
 
@@ -79,10 +80,9 @@ public class SuperVisorDegistirHome extends EntityHome<User> implements Serializ
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		Date bugun = PdksUtil.getDate(Calendar.getInstance().getTime());
 		List<User> list = null;
 		HashMap parametreMap = new HashMap();
@@ -91,16 +91,16 @@ public class SuperVisorDegistirHome extends EntityHome<User> implements Serializ
 		parametreMap.put("role.rolename=", Role.TIPI_SUPER_VISOR);
 		parametreMap.put("user.durum=", Boolean.TRUE);
 		parametreMap.put("user.pdksPersonel.durum=", Boolean.TRUE);
-		parametreMap.put("user.pdksPersonel.sskCikisTarihi>=", bugun);
-		parametreMap.put("user.pdksPersonel.iseBaslamaTarihi<=", bugun);
+		parametreMap.put("user.pdksPersonel.sskCikisTarihi >= ", bugun);
+		parametreMap.put("user.pdksPersonel.iseBaslamaTarihi <= ", bugun);
 		if (session != null)
 			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 		if (authenticatedUser.getSeciliSuperVisor() != null)
-			parametreMap.put("user<>", authenticatedUser.getSeciliSuperVisor());
+			parametreMap.put("user.id <> ", authenticatedUser.getSeciliSuperVisor().getId());
 		if (authenticatedUser.isSuperVisor()) {
-			parametreMap.put("user.pdksPersonel.sirket=", authenticatedUser.getPdksPersonel().getSirket());
+			parametreMap.put("user.pdksPersonel.sirket.id=", authenticatedUser.getPdksPersonel().getSirket().getId());
 		} else if (authenticatedUser.isIK())
-			parametreMap.put("user.pdksPersonel.sirket.departman=", authenticatedUser.getDepartman());
+			parametreMap.put("user.pdksPersonel.sirket.departman.id=", authenticatedUser.getDepartman().getId());
 		try {
 			TreeMap userMap = pdksEntityController.getObjectByInnerObjectMapInLogic(parametreMap, UserRoles.class, Boolean.FALSE);
 			if (!userMap.isEmpty())

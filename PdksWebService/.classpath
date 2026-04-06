@@ -25,5 +25,9 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="/pdks-test/lib/hibernate-all.jar"/>
+	<classpathentry kind="lib" path="C:/opt/lib/gl/slf4j-simple-1.6.2.jar"/>
+	<classpathentry kind="lib" path="C:/opt/lib/gl/json-smart-1.0.6.3.jar"/>
+	<classpathentry kind="lib" path="C:/opt/lib/gl/oauth2-oidc-sdk-6.5.jar"/>
+	<classpathentry kind="lib" path="C:/opt/lib/gl/adal4j-1.6.7.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>

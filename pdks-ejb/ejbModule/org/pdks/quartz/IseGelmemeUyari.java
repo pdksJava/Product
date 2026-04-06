@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 
+import javax.faces.model.SelectItem;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
@@ -34,6 +35,7 @@ import org.jboss.seam.annotations.async.Expiration;
 import org.jboss.seam.annotations.async.IntervalCron;
 import org.jboss.seam.async.QuartzTriggerHandle;
 import org.jboss.seam.faces.Renderer;
+import org.pdks.entity.AramaSecenekleri;
 import org.pdks.entity.CalismaModeli;
 import org.pdks.entity.Departman;
 import org.pdks.entity.Dosya;
@@ -203,7 +205,7 @@ public class IseGelmemeUyari implements Serializable {
 			StringBuilder sb = new StringBuilder();
 			sb.append("select P.* from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK() + " ");
 			sb.append(" where P." + Personel.COLUMN_NAME_DURUM + " = 1 and P." + Personel.COLUMN_NAME_HAREKET_MAIL_ID + " is not null");
-			sb.append(" and P." + Personel.COLUMN_NAME_MAIL_TAKIP + " = 1 and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
+			sb.append(" and P." + Personel.COLUMN_NAME_MAIL_TAKIP + " = 1 and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= " + PdksEntityController.getSqlBuGun());
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 			// fields.put("ad", "hareketMailGrubu");
@@ -244,14 +246,16 @@ public class IseGelmemeUyari implements Serializable {
 	}
 
 	/**
+	 * @param as
 	 * @param tarih
 	 * @param islemYapan
 	 * @param manuel
 	 * @param session
+	 * @param mailGonder
 	 * @return
 	 * @throws Exception
 	 */
-	public String iseGelmeDurumu(Date tarih, User islemYapan, boolean manuel, Session session, boolean mailGonder) throws Exception {
+	public String iseGelmeDurumu(AramaSecenekleri as, Date tarih, User islemYapan, boolean manuel, Session session, boolean mailGonder) throws Exception {
 		if (islemYapan != null && session != null)
 			session.clear();
 		logger.info("iseGelmeDurumu in " + PdksUtil.getCurrentTimeStampStr());
@@ -274,7 +278,7 @@ public class IseGelmemeUyari implements Serializable {
 			devam = bugun.getTime() > tarih.getTime();
 		islemTarihi = tarih;
 		if (devam) {
-			if (session == null)
+			if (PdksUtil.isSessionKapali(session))
 				session = PdksUtil.getSession(entityManager, islemYapan == null);
 
 			setEkSaha1(null);
@@ -296,6 +300,20 @@ public class IseGelmemeUyari implements Serializable {
 			sb.append(" and P." + Personel.COLUMN_NAME_DURUM + " = 1 and P." + Personel.COLUMN_NAME_MAIL_TAKIP + " = 1");
 			if (yoneticiTanimsiz == false)
 				sb.append(" and P." + Personel.COLUMN_NAME_YONETICI + " is not null");
+			if (as != null) {
+				if (as.getSirketId() != null) {
+					sb.append(" and P." + Personel.COLUMN_NAME_SIRKET + " = " + as.getSirketId());
+					if (as.getTesisId() != null)
+						sb.append(" and P." + Personel.COLUMN_NAME_TESIS + " = " + as.getTesisId());
+					else if (as.getTesisList() != null && as.getTesisList().isEmpty() == false) {
+						List<Long> idList = new ArrayList<Long>();
+						for (SelectItem si : as.getTesisList())
+							idList.add((Long) si.getValue());
+						sb.append(" and P." + Personel.COLUMN_NAME_TESIS + " :v ");
+						map.put("v", idList);
+					}
+				}
+			}
 			// sb.append(" and P." + Personel.COLUMN_NAME_TESIS + " = 12996");
 			// sb.append(" and P." + Personel.COLUMN_NAME_YONETICI + " = 388");
 
@@ -374,9 +392,8 @@ public class IseGelmemeUyari implements Serializable {
 					try {
 						boolean otomatikGuncelle = ortakIslemler.getParameterKeyHasStringValue(PlanVardiyaHareketGuncelleme.PARAMETER_HAREKET_KEY);
 						if (otomatikGuncelle == false) {
-							boolean islem = ortakIslemler.getVardiyaHareketIslenecekList(new ArrayList<VardiyaGun>(vardiyalar.values()), tarih, tarih, session);
-							if (islem)
-								vardiyalar = ortakIslemler.getIslemVardiyalar(personeller, oncekiGun, sonrakiGun, Boolean.FALSE, session, Boolean.TRUE);
+
+							vardiyalar = ortakIslemler.getIslemVardiyalar(personeller, oncekiGun, sonrakiGun, Boolean.FALSE, session, Boolean.TRUE);
 						}
 					} catch (Exception e) {
 						logger.error(e);
@@ -550,16 +567,16 @@ public class IseGelmemeUyari implements Serializable {
 						map.clear();
 						map.put(PdksEntityController.MAP_KEY_SESSION, session);
 						map.put("durum=", Boolean.TRUE);
-						map.put("basTarih<=", ortakIslemler.tariheGunEkleCikar(cal, (Date) tarih.clone(), 1));
-						map.put("bitTarih>=", vardiyaBas);
+						map.put("basTarih <= ", ortakIslemler.tariheGunEkleCikar(cal, (Date) tarih.clone(), 1));
+						map.put("bitTarih >= ", vardiyaBas);
 						map.put(PdksEntityController.MAP_KEY_MAP, "getVekaletVerenId");
 						TreeMap<Long, UserVekalet> vekaletMap = pdksEntityController.getObjectByInnerObjectMapInLogic(map, UserVekalet.class, Boolean.FALSE);
 
 						map.clear();
 						map.put(PdksEntityController.MAP_KEY_SESSION, session);
 						map.put("durum=", Boolean.TRUE);
-						map.put("basTarih<=", ortakIslemler.tariheGunEkleCikar(cal, (Date) tarih.clone(), 1));
-						map.put("bitTarih>=", vardiyaBas);
+						map.put("basTarih <= ", ortakIslemler.tariheGunEkleCikar(cal, (Date) tarih.clone(), 1));
+						map.put("bitTarih >= ", vardiyaBas);
 						map.put(PdksEntityController.MAP_KEY_MAP, "getPersonelGeciciId");
 						TreeMap<Long, PersonelGeciciYonetici> geciciYoneticiMap = pdksEntityController.getObjectByInnerObjectMapInLogic(map, PersonelGeciciYonetici.class, Boolean.FALSE);
 						session.clear();
@@ -590,8 +607,8 @@ public class IseGelmemeUyari implements Serializable {
 								pdksVardiyaGun.setHareketler(null);
 								pdksVardiyaGun.setHareketHatali(Boolean.FALSE);
 								Personel pdksPersonel = pdksVardiyaGun.getPersonel();
-//								if (pdksPersonel.getPdksSicilNo().equals("SR0013"))
-//									logger.debug("");
+								// if (pdksPersonel.getPdksSicilNo().equals("SR0013"))
+								// logger.debug("");
 								Vardiya islemVardiya = pdksVardiyaGun.getIslemVardiya();
 								Long perNoId = pdksPersonel.getPersonelKGS().getId(), personelNoId = pdksPersonel.getId();
 								Long depId = pdksPersonel.getSirket().getDepartman().getId();
@@ -2259,7 +2276,7 @@ public class IseGelmemeUyari implements Serializable {
 		if (ekle) {
 			Long perNoId = pdksVardiyaGun.getPersonel().getPersonelKGS().getId();
 			boolean baslangicTatil = Boolean.FALSE, bitisTatil = Boolean.FALSE;// islemVardiya.getVardiyaTelorans1BitZaman().getTime()
-			// <=
+			//  <= 
 			// bugun.getTime();
 
 			ArrayList<HareketKGS> perHareketList = null;
@@ -2392,7 +2409,7 @@ public class IseGelmemeUyari implements Serializable {
 						// if (!zamanDurum)
 						// zamanDurum = PdksUtil.getTestDurum();
 						if (zamanDurum)
-							iseGelmemeDurumuCalistir(null, session, null, false, true);
+							iseGelmemeDurumuCalistir(null, null, session, null, false, true);
 					}
 				}
 			} catch (Exception e) {
@@ -2418,6 +2435,7 @@ public class IseGelmemeUyari implements Serializable {
 	}
 
 	/**
+	 * @param as
 	 * @param tarih
 	 * @param session
 	 * @param islemYapan
@@ -2426,7 +2444,7 @@ public class IseGelmemeUyari implements Serializable {
 	 * @return
 	 * @throws Exception
 	 */
-	public String iseGelmemeDurumuCalistir(Date tarih, Session session, User islemYapan, boolean manuel, boolean mailGonder) throws Exception {
+	public String iseGelmemeDurumuCalistir(AramaSecenekleri as, Date tarih, Session session, User islemYapan, boolean manuel, boolean mailGonder) throws Exception {
 		uyariNot = null;
 		if (userYoneticiList == null)
 			userYoneticiList = new ArrayList<User>();
@@ -2438,7 +2456,7 @@ public class IseGelmemeUyari implements Serializable {
 		else
 			userIKMailMap.clear();
 		try {
-			iseGelmeDurumu(tarih, islemYapan, manuel, session, mailGonder);
+			iseGelmeDurumu(as, tarih, islemYapan, manuel, session, mailGonder);
 		} catch (Exception e) {
 			e.printStackTrace();
 			userYoneticiList = null;
@@ -2457,7 +2475,7 @@ public class IseGelmemeUyari implements Serializable {
 			sb.append("		select R.ROLENAME DEP_YONETICI_ROL_ADI from " + Role.TABLE_NAME + " R " + PdksEntityController.getSelectLOCK() + " ");
 			sb.append(" where R." + Role.COLUMN_NAME_ROLE_NAME + " = '" + Role.TIPI_DIREKTOR_SUPER_VISOR + "' and R." + Role.COLUMN_NAME_STATUS + " = 1 ");
 			sb.append("	) ");
-			sb.append("	select COALESCE(DY.DEP_YONETICI_ROL_ADI,'') DEP_YONETICI_ROL_ADI, GETDATE() as TARIH from BUGUN B ");
+			sb.append("	select coalesce(DY.DEP_YONETICI_ROL_ADI,'') DEP_YONETICI_ROL_ADI, " + PdksEntityController.getSqlSistemTarihi() + " as TARIH from BUGUN B ");
 			sb.append("	left join DEP_YONETICI DY " + PdksEntityController.getJoinLOCK() + " on 1=1");
 			if (session != null)
 				fields.put(PdksEntityController.MAP_KEY_SESSION, session);

@@ -10,7 +10,6 @@ import javax.faces.model.SelectItem;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
-import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.FlushModeType;
@@ -48,8 +47,9 @@ public class SapServerTanimlamaHome extends EntityHome<SAPSunucu> implements Ser
 
 	@In(required = false, create = true)
 	OrtakIslemler ortakIslemler;
+	
+	public static String sayfaURL = "sapSunucuTanimlama";
 	private List<SAPSunucu> sunucuList = new ArrayList<SAPSunucu>();
-
 	private List<SelectItem> sunucuTipleri;
 	private SAPSunucu seciliSAPSunucu;
 	private Session session;
@@ -154,10 +154,9 @@ public class SapServerTanimlamaHome extends EntityHome<SAPSunucu> implements Ser
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.setFlushMode(FlushMode.MANUAL);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		seciliSAPSunucu = new SAPSunucu();
 		fillSAPSunucuList();
 		fillSAPSunucuTipleri();

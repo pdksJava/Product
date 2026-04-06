@@ -19,6 +19,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
+import org.jboss.seam.annotations.FlushModeType;
 import org.jboss.seam.annotations.In;
 import org.jboss.seam.annotations.Name;
 import org.jboss.seam.annotations.web.RequestParameter;
@@ -57,8 +58,9 @@ public class YemekYiyenlerHome extends EntityHome<VardiyaGun> implements Seriali
 	HashMap<String, String> parameterMap;
 	@In(required = false)
 	FacesMessages facesMessages;
-
-	private List<HareketKGS> hareketList = new ArrayList<HareketKGS>();
+	
+	public static String sayfaURL = "yemekYiyenler";
+ 	private List<HareketKGS> hareketList = new ArrayList<HareketKGS>();
 	private List<YemekOgun> yemekList;
 	private List<Long> yemekKapiList;
 	private boolean ogunVar = false, masrafYeriVar = false;
@@ -81,11 +83,11 @@ public class YemekYiyenlerHome extends EntityHome<VardiyaGun> implements Seriali
 	public void create() {
 		super.create();
 	}
-
+	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		session.clear();
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		ogunVar = false;
 		masrafYeriVar = false;
 		setHareketList(new ArrayList<HareketKGS>());

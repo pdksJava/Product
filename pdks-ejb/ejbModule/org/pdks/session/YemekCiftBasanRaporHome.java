@@ -96,9 +96,9 @@ public class YemekCiftBasanRaporHome extends EntityHome<VardiyaGun> implements S
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
- 		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+ 		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		setHareketList(new ArrayList<HareketKGS>());
 		setCiftYemekList(new ArrayList<HareketKGS>());
 		setToplamYemekList(new ArrayList<HareketKGS>());
@@ -113,8 +113,8 @@ public class YemekCiftBasanRaporHome extends EntityHome<VardiyaGun> implements S
 
 	public void fillYemekList() {
 		HashMap parametreMapYemek = new HashMap();
-		parametreMapYemek.put("bitTarih>=", basTarih);
-		parametreMapYemek.put("basTarih<=", bitTarih);
+		parametreMapYemek.put("bitTarih >= ", basTarih);
+		parametreMapYemek.put("basTarih <= ", bitTarih);
 		parametreMapYemek.put("durum=", Boolean.TRUE);
 		if (session != null)
 			parametreMapYemek.put(PdksEntityController.MAP_KEY_SESSION, session);

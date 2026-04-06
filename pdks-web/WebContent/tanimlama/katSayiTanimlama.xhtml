@@ -1,0 +1,257 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml" xmlns:s="http://jboss.com/products/seam/taglib" xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:f="http://java.sun.com/jsf/core" xmlns:h="http://java.sun.com/jsf/html" xmlns:rich="http://richfaces.org/rich"
+	xmlns:a4j="http://richfaces.org/a4j" xmlns:c="http://java.sun.com/jstl/core" template="/layout/template.xhtml">
+	<ui:define name="title">
+		<h:outputText value="#{ortakIslemler.getMenuAdi('katSayiTanimlama')}" />
+	</ui:define>
+	<ui:define name="body">
+
+		<h:form>
+			<a4j:region>
+
+				<rich:panel header="#{ortakIslemler.getMenuUserAdi(katSayiHome.session,'katSayiTanimlama')}">
+					<a4j:outputPanel id="anaForm">
+						<h:panelGrid columns="1">
+							<c:if test="#{authenticatedUser.admin}">
+
+								<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin and katSayiHome.pasifGoster != null}">
+									<ui:define name="label">Pasif Göster</ui:define>
+									<h:selectBooleanCheckbox value="#{katSayiHome.pasifGoster}">
+										<a4j:support event="onclick" status="ajaxStatus" ajaxSingle="true" reRender="anaForm" action="#{katSayiHome.fillKatSayiList()}" />
+									</h:selectBooleanCheckbox>
+
+
+								</s:decorate>
+							</c:if>
+
+
+							<rich:dataTable rowClasses="acik,koyu" value="#{katSayiHome.katSayiList}" var="katSayi" rows="40" rowKeyVar="row" id="sablonTable">
+								<f:facet name="header">
+									<h:outputText value="Puantaj Kat Sayıları" />
+								</f:facet>
+								<rich:column style="text-align: center;">
+									<f:facet name="header">
+                       		 İşlemler
+               			 </f:facet>
+									<a4j:commandLink status="ajaxStatus" ajaxSingle="true" id="editlink" action="#{katSayiHome.katSayiEkle(katSayi)}"
+										oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel">
+										<h:graphicImage value="/img/edit.gif" style="border:0" />
+
+									</a4j:commandLink>
+									<rich:toolTip for="editlink" value="Güncelle" />
+
+								</rich:column>
+								<rich:column rendered="#{authenticatedUser.admin}">
+									<f:facet name="header">
+										<h:outputText value="Id" />
+									</f:facet>
+									<h:outputText value="#{katSayi.id}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Tipi" />
+									</f:facet>
+									<h:outputText value="#{katSayi.tipAciklama}" />
+								</rich:column>
+								<rich:column width="60" style="text-align:center">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.basTarihAciklama()}" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.dateFormatla(katSayi.basTarih)}" />
+								</rich:column>
+
+								<rich:column width="60" style="text-align:center">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.bitTarihAciklama()}" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.dateFormatla(katSayi.bitTarih)}" />
+								</rich:column>
+								<rich:column rendered="#{katSayiHome.sirketGoster}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.sirketAciklama()}" />
+									</f:facet>
+									<h:outputText value="#{katSayi.sirket.ad}" />
+								</rich:column>
+								<rich:column rendered="#{katSayiHome.tesisGoster}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.tesisAciklama()}" />
+									</f:facet>
+									<h:outputText value="#{katSayi.tesis.aciklama}" />
+								</rich:column>
+								<rich:column rendered="#{katSayiHome.vardiyaGoster}">
+									<f:facet name="header">
+										<h:outputText value="#{ortakIslemler.vardiyaAciklama()}" />
+									</f:facet>
+									<ui:fragment rendered="#{katSayi.vardiya!=null}"></ui:fragment>
+									<h:outputText value="#{katSayi.vardiya.adi} - #{katSayi.vardiya.kisaAdi}" />
+								</rich:column>
+								<rich:column>
+									<f:facet name="header">
+										<h:outputText value="Değeri" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.sayiFormatliGoster(katSayi.deger)}" />
+								</rich:column>
+								<rich:column rendered="#{katSayiHome.pasifGoster}">
+									<f:facet name="header">
+										<h:outputText value="Aktif" />
+									</f:facet>
+									<h:outputText value="#{authenticatedUser.getYesNo(katSayi.durum)}" id="durum" />
+								</rich:column>
+								<f:facet name="footer">
+									<rich:datascroller renderIfSinglePage="false" maxPages="5" />
+								</f:facet>
+							</rich:dataTable>
+							<a4j:commandButton status="ajaxStatus" value="Ekle" action="#{katSayiHome.katSayiEkle(null)}" rendered="#{authenticatedUser.admin}"
+								oncomplete="#{rich:component('editPanel')}.show()" reRender="editPanel" />
+
+						</h:panelGrid>
+					</a4j:outputPanel>
+				</rich:panel>
+			</a4j:region>
+		</h:form>
+
+		<rich:modalPanel id="editPanel" autosized="true" width="650">
+			<f:facet name="header">
+				<h:outputText value="Puantaj Kat Sayı Güncelle" />
+			</f:facet>
+			<f:facet name="controls">
+				<h:panelGroup>
+					<h:form>
+						<h:graphicImage value="/img/close.png" id="hidelink" styleClass="hidelink">
+							<a4j:support event="onclick" action="#{katSayiHome.instanceRefresh}" reRender="sablonTable"
+								oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" ajaxSingle="true" />
+						</h:graphicImage>
+					</h:form>
+				</h:panelGroup>
+			</f:facet>
+			<h:form>
+				<a4j:outputPanel ajaxRendered="true">
+					<h:messages id="messages" styleClass="message" errorClass="errormsg" infoClass="infomsg" warnClass="warnmsg" />
+				</a4j:outputPanel>
+				<a4j:outputPanel id="devamGiris">
+					<h:panelGrid columns="1">
+
+						<s:decorate template="/layout/edit.xhtml">
+							<ui:define name="label">#{ortakIslemler.basTarihAciklama()}</ui:define>
+							<rich:calendar datePattern="#{authenticatedUser.dateFormat}" value="#{katSayiHome.seciliKatSayi.basTarih}" required="true"
+								requiredMessage="#{ortakIslemler.basTarihAciklama()} seçiniz!">
+								<a4j:support event="onchanged" action="#{katSayiHome.sirketDoldur()}" ajaxSingle="true" status="ajaxStatus" reRender="devamGiris" />
+							</rich:calendar>
+						</s:decorate>
+						<s:decorate template="/layout/edit.xhtml">
+							<ui:define name="label">#{ortakIslemler.bitTarihAciklama()}</ui:define>
+							<rich:calendar datePattern="#{authenticatedUser.dateFormat}" value="#{katSayiHome.seciliKatSayi.bitTarih}" required="true"
+								requiredMessage="#{ortakIslemler.bitTarihAciklama()} seçiniz!">
+								<a4j:support event="onchanged" action="#{katSayiHome.sirketDoldur()}" ajaxSingle="true" status="ajaxStatus" reRender="devamGiris" />
+							</rich:calendar>
+						</s:decorate>
+						<c:if test="#{katSayiHome.seciliKatSayi.id==null}">
+							<s:decorate template="/layout/edit.xhtml" rendered="#{katSayiHome.puantajKatSayiTipiList!=null}">
+								<ui:define name="label">Kat Sayı Tipi</ui:define>
+								<h:selectOneMenu value="#{katSayiHome.seciliKatSayi.tipNo}">
+									<f:selectItem itemLabel="Lütfen seçiniz" />
+									<f:selectItems value="#{katSayiHome.puantajKatSayiTipiList}" />
+									<a4j:support event="onchange" status="ajaxStatus" action="#{ortakIslemler.emtpyAjaxFunction()}"
+										reRender="sirketGiris,tesisGiris,vardiyaGiris" />
+								</h:selectOneMenu>
+							</s:decorate>
+							<a4j:outputPanel id="sirketGiris">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{katSayiHome.as.sirketIdList!=null}">
+									<ui:define name="label">#{ortakIslemler.sirketAciklama()}</ui:define>
+									<h:selectOneMenu value="#{katSayiHome.as.sirketId}">
+										<f:selectItem itemLabel="Lütfen seçiniz" />
+										<f:selectItems value="#{katSayiHome.as.sirketIdList}" />
+										<a4j:support event="onchange" status="ajaxStatus" action="#{katSayiHome.tesisDoldur()}" reRender="tesisGiris,vardiyaGiris" />
+									</h:selectOneMenu>
+								</s:decorate>
+							</a4j:outputPanel>
+							<a4j:outputPanel id="tesisGiris">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{katSayiHome.as.sirket.tesisDurumu and katSayiHome.as.tesisList.size()>0 }">
+									<ui:define name="label">#{ortakIslemler.tesisAciklama()}</ui:define>
+									<h:selectOneMenu value="#{katSayiHome.as.tesisId}" disabled="#{katSayiHome.as.tesisList.size() == 1}">
+										<f:selectItem itemLabel="Lütfen seçiniz" />
+										<f:selectItems value="#{katSayiHome.as.tesisList}" />
+										<a4j:support event="onchange" status="ajaxStatus" ajaxSingle="true" action="#{katSayiHome.fillVardiyalar()}" reRender="devamGiris" />
+									</h:selectOneMenu>
+								</s:decorate>
+							</a4j:outputPanel>
+
+							<s:decorate template="/layout/edit.xhtml">
+								<ui:define name="label">#{ortakIslemler.vardiyaAciklama()} Göster</ui:define>
+								<h:selectBooleanCheckbox value="#{katSayiHome.vardiyaGetir}">
+									<a4j:support event="onclick" status="ajaxStatus" action="#{katSayiHome.fillVardiyalar()}" reRender="devamGiris" />
+								</h:selectBooleanCheckbox>
+							</s:decorate>
+							<a4j:outputPanel id="vardiyaGiris">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{katSayiHome.vardiyaGetir}">
+									<ui:define name="label">#{ortakIslemler.vardiyaAciklama()}</ui:define>
+									<h:selectOneMenu value="#{katSayiHome.seciliKatSayi.vardiya}">
+										<s:selectItems var="comp" value="#{katSayiHome.vardiyaList}" label="#{comp.adi} - #{comp.kisaAdi}" noSelectionLabel="Lütfen seçiniz" />
+										<s:convertEntity />
+										<a4j:support event="onchange" reRender="devamGiris" status="ajaxStatus" ajaxSingle="true" action="#{ortakIslemler.emtpyAjaxFunction()}" />
+									</h:selectOneMenu>
+								</s:decorate>
+							</a4j:outputPanel>
+							<s:decorate template="/layout/edit.xhtml" id="deger">
+								<ui:define name="label">Değeri</ui:define>
+								<h:inputText value="#{katSayiHome.seciliKatSayi.deger}" required="true" requiredMessage="Değer giriniz!">
+									<a4j:support event="onchange" action="#{ortakIslemler.emtpyAjaxFunction()}" reRender="deger" ajaxSingle="true" status="ajaxStatus" />
+								</h:inputText>
+							</s:decorate>
+						</c:if>
+						<c:if test="#{katSayiHome.seciliKatSayi.id!=null}">
+							<s:decorate template="/layout/edit.xhtml">
+								<ui:define name="label">Kat Sayı Tipi</ui:define>
+								<h:outputText value="#{katSayiHome.seciliKatSayi.tipAciklama}" />
+							</s:decorate>
+							<s:decorate template="/layout/edit.xhtml" rendered="#{katSayiHome.seciliKatSayi.sirket!=null}">
+								<ui:define name="label">#{ortakIslemler.sirketAciklama()}</ui:define>
+								<h:outputText value="#{katSayiHome.seciliKatSayi.sirket.ad}" />
+							</s:decorate>
+							<s:decorate template="/layout/edit.xhtml" rendered="#{katSayiHome.seciliKatSayi.tesis!=null}">
+								<ui:define name="label">#{ortakIslemler.tesisAciklama()}</ui:define>
+								<h:outputText value="#{katSayiHome.seciliKatSayi.tesis.aciklama}" />
+							</s:decorate>
+							<s:decorate template="/layout/edit.xhtml" rendered="#{katSayiHome.seciliKatSayi.vardiya!=null}">
+								<ui:define name="label">#{ortakIslemler.vardiyaAciklama()}</ui:define>
+								<h:outputText value="#{katSayiHome.seciliKatSayi.vardiya.adi} - #{katSayiHome.seciliKatSayi.vardiya.kisaAdi}" />
+
+							</s:decorate>
+							<s:decorate template="/layout/edit.xhtml">
+								<ui:define name="label">Değeri</ui:define>
+								<h:outputText value="#{authenticatedUser.sayiFormatliGoster(katSayiHome.seciliKatSayi.deger)}" />
+							</s:decorate>
+
+
+							<rich:column>
+								<f:facet name="header">
+									<h:outputText value="Değer" />
+								</f:facet>
+								<h:outputText value="#{authenticatedUser.sayiFormatliGoster(katSayi.deger)}" />
+							</rich:column>
+
+						</c:if>
+
+						<s:decorate template="/layout/edit.xhtml">
+							<ui:define name="label">Aktif</ui:define>
+							<h:selectBooleanCheckbox value="#{katSayiHome.seciliKatSayi.durum}" />
+						</s:decorate>
+					</h:panelGrid>
+				</a4j:outputPanel>
+
+				<a4j:commandButton status="ajaxStatus" value="Kaydet" action="#{katSayiHome.kaydet()}" reRender="sablonTable"
+					rendered="#{authenticatedUser.admin}" oncomplete="if (#{facesContext.maximumSeverity == null}) #{rich:component('editPanel')}.hide();" />
+
+
+
+
+			</h:form>
+		</rich:modalPanel>
+
+
+
+	</ui:define>
+
+</ui:composition>

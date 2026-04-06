@@ -79,9 +79,9 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		admin = authenticatedUser.isAdmin();
 		fillParameterList();
 	}
@@ -92,7 +92,7 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 		pdksEntityController.deleteObject(session, entityManager, parameter);
 		session.flush();
 		try {
-			pdksEntityController.savePrepareTableID(true, Parameter.class, entityManager, session);
+			pdksEntityController.savePrepareTableID(true, parameter, Parameter.class, session);
 		} catch (Exception e) {
 		}
 		session.flush();

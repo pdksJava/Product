@@ -34,6 +34,7 @@ import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelKGS;
 import org.pdks.entity.PersonelView;
 import org.pdks.entity.Sirket;
+import org.pdks.entity.SirketEntegrasyon;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Tatil;
 import org.pdks.erp.action.ERPController;
@@ -208,8 +209,21 @@ public class PersonelERPGuncelleme implements Serializable {
 						// guncellemeDBDurum = true;
 					}
 					if (zamanDurum || guncellemeDBDurum) {
-						if (ortakIslemler.getGuncellemeDurum(Personel.TABLE_NAME, session))
-							personelERPGuncellemeCalistir(session, tarih, true);
+						if (ortakIslemler.getGuncellemeDurum(Personel.TABLE_NAME, session)) {
+							List<SirketEntegrasyon> sirketEntegrasyonList = pdksEntityController.getSQLTableList(SirketEntegrasyon.TABLE_NAME, SirketEntegrasyon.class, session);
+							boolean calistir = true;
+							for (SirketEntegrasyon se : sirketEntegrasyonList) {
+								Sirket sirket = se.getSirket();
+								String url = se.getUrlPersonel();
+								if (sirket.getDurum() && PdksUtil.hasStringValue(url) && url.startsWith("http")) {
+									calistir = false;
+									ortakIslemler.updatePersonelAPI(sirket.getErpKodu(), null, session);
+								}
+							}
+							if (calistir)
+								personelERPGuncellemeCalistir(session, tarih, true);
+						}
+
 					}
 				}
 
@@ -336,7 +350,7 @@ public class PersonelERPGuncelleme implements Serializable {
 
 	@Transactional
 	public void kullaniciGuncelle(Session session, User user) {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSession(entityManager, user == null);
 		Parameter parameterEmailBozuk = ortakIslemler.getParameter(session, "emailBozuk");
 		boolean emailBozuk = parameterEmailBozuk != null;
@@ -345,7 +359,7 @@ public class PersonelERPGuncelleme implements Serializable {
 		fields.put("durum=", Boolean.TRUE);
 		fields.put("pdksPersonel.durum=", Boolean.TRUE);
 		fields.put("pdksPersonel.sirket.ldapDurum=", Boolean.TRUE);
-		fields.put("pdksPersonel.sskCikisTarihi>=", PdksUtil.getDate(Calendar.getInstance().getTime()));
+		fields.put("pdksPersonel.sskCikisTarihi >= ", PdksUtil.getDate(Calendar.getInstance().getTime()));
 		List<User> list = pdksEntityController.getObjectByInnerObjectListInLogic(fields, User.class);
 		logger.info("kullaniciGuncelle in " + list.size() + " --> " + PdksUtil.getCurrentTimeStampStr());
 
@@ -446,7 +460,7 @@ public class PersonelERPGuncelleme implements Serializable {
 		// map.put("durum=", Boolean.TRUE);
 		map.put("sirket.durum=", Boolean.TRUE);
 		map.put("sirket.erpDurum=", Boolean.TRUE);
-		map.put("sskCikisTarihi>=", tarih);
+		map.put("sskCikisTarihi >= ", tarih);
 		map.put(PdksEntityController.MAP_KEY_SESSION, session);
 		hataKonum = "personelERPGuncelle basladi ";
 		List<Personel> list = pdksEntityController.getObjectByInnerObjectListInLogic(map, Personel.class);
@@ -540,7 +554,7 @@ public class PersonelERPGuncelleme implements Serializable {
 		sb.append("select P.* from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK() + " ");
 		sb.append(" inner join " + Sirket.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET + " and S." + Sirket.COLUMN_NAME_DURUM + " = 1 and S." + Sirket.COLUMN_NAME_ERP_DURUM + " = 1 ");
 		sb.append(" and S." + Sirket.COLUMN_NAME_PDKS + " = 1 and S." + Sirket.COLUMN_NAME_FAZLA_MESAI + " = 1   ");
-		sb.append(" where P." + Personel.COLUMN_NAME_DURUM + " = 0 and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
+		sb.append(" where P." + Personel.COLUMN_NAME_DURUM + " = 0 and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= " + PdksEntityController.getSqlBuGun());
 		sb.append(" order by P." + Personel.COLUMN_NAME_PDKS_SICIL_NO);
 		HashMap fields = new HashMap();
 		if (session != null)
@@ -565,7 +579,7 @@ public class PersonelERPGuncelleme implements Serializable {
 				sb.append("select P." + Personel.COLUMN_NAME_PDKS_SICIL_NO + " from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK() + " ");
 				sb.append(" inner join " + Sirket.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + Sirket.COLUMN_NAME_ID + " = P." + Personel.COLUMN_NAME_SIRKET + " and S." + Sirket.COLUMN_NAME_DURUM + " = 1 and S." + Sirket.COLUMN_NAME_DURUM + " = 1 ");
 				sb.append(" and S." + Sirket.COLUMN_NAME_PDKS + " = 1 and S." + Sirket.COLUMN_NAME_FAZLA_MESAI + " = 1 and S.ERP_KODU= :sapKodu ");
-				sb.append(" where P." + Personel.COLUMN_NAME_DURUM + " = 1 and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= convert(date,GETDATE())");
+				sb.append(" where P." + Personel.COLUMN_NAME_DURUM + " = 1 and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >= " + PdksEntityController.getSqlBuGun());
 				sb.append(" order by P." + Personel.COLUMN_NAME_PDKS_SICIL_NO);
 				HashMap fields = new HashMap();
 				fields.put("erpKodu", sapKodu.trim());
@@ -591,7 +605,7 @@ public class PersonelERPGuncelleme implements Serializable {
 		StringBuilder sb = new StringBuilder();
 		sb.append("select distinct P.* from " + Personel.TABLE_NAME + " P " + PdksEntityController.getSelectLOCK() + " ");
 		sb.append(" where P." + Personel.COLUMN_NAME_DURUM + " = 1 and (" + Personel.COLUMN_NAME_MAIL_CC_ID + " is not null or " + Personel.COLUMN_NAME_MAIL_BCC_ID + " is not null or " + Personel.COLUMN_NAME_HAREKET_MAIL_ID + " is not null)");
-		sb.append(" and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + " >=convert(date,GETDATE())   ");
+		sb.append(" and P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI + "  >= " + PdksEntityController.getSqlBuGun());
 		if (session != null)
 			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 		try {

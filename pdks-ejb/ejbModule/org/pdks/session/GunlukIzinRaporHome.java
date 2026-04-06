@@ -101,9 +101,9 @@ public class GunlukIzinRaporHome extends EntityHome<PersonelIzin> {
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
-		if (session == null)
+		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
 		fillEkSahaTanim();
 		fillTarih();
 		setSirket(null);
@@ -160,9 +160,8 @@ public class GunlukIzinRaporHome extends EntityHome<PersonelIzin> {
 		if (session != null)
 			map.put(PdksEntityController.MAP_KEY_SESSION, session);
 		List<Sirket> list = pdksEntityController.getObjectBySQLList(sb, map, Sirket.class);
-
 		if (list.size() > 1)
-			list = PdksUtil.sortObjectStringAlanList(list, "getAd", null);
+			list = PdksUtil.sortSirketList(list);
 		setSirketList(list);
 	}
 
@@ -316,8 +315,8 @@ public class GunlukIzinRaporHome extends EntityHome<PersonelIzin> {
 				izinDurumuList.add(PersonelIzin.IZIN_DURUMU_ERP_GONDERILDI);
 				parametreMap.clear();
 				parametreMap.put("izinSahibi.id", idList);
-				parametreMap.put("baslangicZamani<=", ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 1));
-				parametreMap.put("bitisZamani>=", ortakIslemler.tariheGunEkleCikar(cal, basTarih, -1));
+				parametreMap.put("baslangicZamani <= ", ortakIslemler.tariheGunEkleCikar(cal, bitTarih, 1));
+				parametreMap.put("bitisZamani >= ", ortakIslemler.tariheGunEkleCikar(cal, basTarih, -1));
 				parametreMap.put("izinDurumu", izinDurumuList);
 				if (izinTipiKodu != null) {
 					HashMap fields = new HashMap();
