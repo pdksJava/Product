@@ -69,9 +69,9 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 
 	@In(required = false)
 	FacesMessages facesMessages;
-	
+
 	public static String sayfaURL = "kullanilanIzinler";
- 	private List<PersonelIzin> personelIzinList = new ArrayList<PersonelIzin>(), bakiyeIzinler;
+	private List<PersonelIzin> personelIzinList = new ArrayList<PersonelIzin>(), bakiyeIzinler;
 
 	private TempIzin updateTempIzin;
 	private PersonelIzin updateIzin;
@@ -106,7 +106,6 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -260,8 +259,8 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		if (authenticatedUser.isAdmin() == false || aramaSecenekleri == null)
 			aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
 		aramaSecenekleri.setStajyerOlmayanSirket(Boolean.FALSE);
@@ -509,7 +508,7 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 			}
 		}
 		if (flush) {
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 			bakiyeIzinler.clear();
 			PdksUtil.addMessageAvailableInfo("Güncelleneme başarılı yapıldı.");
 		} else
@@ -872,11 +871,18 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 				col = 0;
 				try {
 					Cell cellPersonelNo = ExcelUtil.getCell(sheet, row, col++);
-					if (PdksUtil.hasStringValue(cellPersonelNo.getStringCellValue())) {
+					String personelNo = "";
+					if (cellPersonelNo.getCellType() == Cell.CELL_TYPE_STRING)
+						personelNo = cellPersonelNo.getStringCellValue();
+					else if (cellPersonelNo.getCellType() == Cell.CELL_TYPE_NUMERIC) {
+						Double value = cellPersonelNo.getNumericCellValue();
+						personelNo = value.longValue() + "";
+					}
+					if (PdksUtil.hasStringValue(personelNo)) {
 						Cell cellAdiSoyad = ExcelUtil.getCell(sheet, row, col++);
 						if (PdksUtil.hasStringValue(cellAdiSoyad.getStringCellValue())) {
 							IzinERP izinERP = new IzinERP();
-							izinERP.setPersonelNo(cellPersonelNo.getStringCellValue());
+							izinERP.setPersonelNo(personelNo);
 
 							izinERP.setIzinSuresi(ExcelUtil.getSheetDoubleValue(sheet, row, col++));
 
@@ -898,7 +904,8 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 								referansNoERP = PersonelIzin.IZIN_MANUEL_EK + "_" + izinERP.getPersonelNo() + PdksUtil.replaceAll(izinERP.getBasZaman().substring(0, 10), "-", "");
 							izinERP.setReferansNoERP(referansNoERP);
 							Cell cellAciklama = ExcelUtil.getCell(sheet, row, col++);
-							izinERP.setAciklama(cellAciklama.getStringCellValue());
+							if (cellAciklama != null)
+								izinERP.setAciklama(cellAciklama.getStringCellValue());
 							String izinTipi = "";
 							Cell cellIzinTipi = ExcelUtil.getCell(sheet, row, col++);
 							if (cellIzinTipi != null) {
@@ -1009,8 +1016,15 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 					IzinERP returnERP = (IzinERP) iterator.next();
 					if (izinMap.containsKey(returnERP.getReferansNoERP())) {
 						IzinERP izinERP = izinMap.get(returnERP.getReferansNoERP());
-						izinERP.setYazildi(returnERP.getYazildi());
-						if (returnERP.getYazildi()) {
+						boolean yazildi = false;
+						try {
+							yazildi = returnERP.getYazildi() != null && returnERP.getYazildi();
+						} catch (Exception e) {
+							logger.error(e);
+							e.printStackTrace();
+						}
+						izinERP.setYazildi(yazildi);
+						if (yazildi) {
 							izinERP.setId(returnERP.getId());
 							izinERPList.add(izinERP);
 							iterator.remove();
@@ -1030,8 +1044,9 @@ public class KullanilanIzinlerHome extends EntityHome<PersonelIzin> implements S
 
 			servisCalisti = Boolean.TRUE;
 		} catch (Exception e) {
-			izinERPReturnList = null;
 			logger.error(e);
+			e.printStackTrace();
+			izinERPReturnList = null;
 		}
 
 		return "";

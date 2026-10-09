@@ -113,7 +113,7 @@ public class FazlaMesaiDonemselPuantajRaporHome extends EntityHome<DepartmanDenk
 	private Boolean normalCalismaGunKod = Boolean.FALSE, haftaTatilCalismaGunKod = Boolean.FALSE, resmiTatilCalismaGunKod = Boolean.FALSE, izinSureGunKod = Boolean.FALSE, ucretliIzinGunKod = Boolean.FALSE, ucretsizIzinGunKod = Boolean.FALSE, hastalikIzinGunKod = Boolean.FALSE;
 	private Boolean normalGunKod = Boolean.FALSE, haftaTatilGunKod = Boolean.FALSE, resmiTatilGunKod = Boolean.FALSE, artikGunKod = Boolean.FALSE, bordroToplamGunKod = Boolean.FALSE, devredenMesaiKod = Boolean.FALSE, ucretiOdenenKod = Boolean.FALSE;
 	private Boolean suaDurum = Boolean.FALSE, sutIzniDurum = Boolean.FALSE, gebeDurum = Boolean.FALSE, partTime = Boolean.FALSE, vardiyaAdiEkle = false;
-	private Boolean eskiKayitGoster = Boolean.FALSE, eskiKayitGetir = Boolean.FALSE, eskiKayitDurum = Boolean.FALSE;
+	private Boolean eskiKayitGoster = Boolean.FALSE, brutUcretGoster = Boolean.FALSE, eskiKayitGetir = Boolean.FALSE, eskiKayitDurum = Boolean.FALSE;
 	private List<Tanim> denklestirmeDinamikAlanlar;
 	private HashMap<String, List<Tanim>> ekSahaListMap;
 	private TreeMap<String, Boolean> baslikMap;
@@ -137,7 +137,7 @@ public class FazlaMesaiDonemselPuantajRaporHome extends EntityHome<DepartmanDenk
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		aylikPuantajListClear();
 		ekSaha4Tanim = null;
@@ -756,7 +756,8 @@ public class FazlaMesaiDonemselPuantajRaporHome extends EntityHome<DepartmanDenk
 		CellStyle styleOff = ExcelUtil.getStyleDataCenter(wb);
 		ExcelUtil.setFontColor(styleOff, Color.WHITE);
 		ExcelUtil.setFillForegroundColor(izinBaslik, 146, 208, 80);
-
+		CellStyle styleIcap = ExcelUtil.getStyleDataCenter(wb);
+		ExcelUtil.setFillForegroundColor(styleIcap, 254, 235, 41);
 		CellStyle styleIzin = ExcelUtil.getStyleDataCenter(wb);
 		ExcelUtil.setFillForegroundColor(styleIzin, 146, 208, 80);
 
@@ -1115,6 +1116,8 @@ public class FazlaMesaiDonemselPuantajRaporHome extends EntityHome<DepartmanDenk
 						styleDay = styleStrDay;
 						if (styleText.equals(VardiyaGun.STYLE_CLASS_HAFTA_TATIL))
 							styleDay = styleTatil;
+						else if (styleText.equals(VardiyaGun.STYLE_CLASS_ICAP))
+							styleDay = styleIcap;
 						else if (styleText.equals(VardiyaGun.STYLE_CLASS_IZIN))
 							styleDay = styleIzin;
 						else if (styleText.equals(VardiyaGun.STYLE_CLASS_OZEL_ISTEK))
@@ -1654,8 +1657,9 @@ public class FazlaMesaiDonemselPuantajRaporHome extends EntityHome<DepartmanDenk
 							if (vardiyaGun.getVardiyaSaatDB() != null) {
 								VardiyaSaat vardiyaSaatDB = vardiyaGun.getVardiyaSaatDB();
 								if (fazlaMesaiOdenir) {
-									if (vardiyaGun.isFcsDahil() && vardiyaGun.getCalismaNetSuresi() > fazlaMesaiMaxSure && gunMaxCalismaOdenir)
-										ucretiOdenenMesaiSure += vardiyaGun.getCalismaNetSuresi() - fazlaMesaiMaxSure;
+									double gunMesaiMaxSure = vardiyaGun.isAksamVardiyaMaxCalismaVar() == false || fazlaMesaiMaxSure < 7.5d ? fazlaMesaiMaxSure : 7.5d;
+									if (vardiyaGun.isFcsDahil() && vardiyaGun.getCalismaNetSuresi() > gunMesaiMaxSure && gunMaxCalismaOdenir)
+										ucretiOdenenMesaiSure += vardiyaGun.getCalismaNetSuresi() - gunMesaiMaxSure;
 
 								}
 								if (vardiyaSaatDB.getUcretiOdenenFazlaMesaiSaat() > 0.0d) {
@@ -2568,6 +2572,14 @@ public class FazlaMesaiDonemselPuantajRaporHome extends EntityHome<DepartmanDenk
 
 	public void setEskiKayitGoster(Boolean eskiKayitGoster) {
 		this.eskiKayitGoster = eskiKayitGoster;
+	}
+
+	public Boolean getBrutUcretGoster() {
+		return brutUcretGoster;
+	}
+
+	public void setBrutUcretGoster(Boolean brutUcretGoster) {
+		this.brutUcretGoster = brutUcretGoster;
 	}
 
 }

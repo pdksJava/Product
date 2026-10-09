@@ -206,14 +206,13 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	/**
@@ -221,7 +220,7 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 	 */
 	private void adminRoleDurum() {
 		adminRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIKAdmin();
-		ikRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIK();
+		ikRole = PdksUtil.getIkRole(authenticatedUser);
 	}
 
 	private void aylikPuantajListClear() {
@@ -241,7 +240,7 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		aylikPuantajListClear();
 		vardiyaOzetPuantajListClear();
@@ -324,12 +323,19 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 				List<Tanim> statuTanimList = null;
 				HashMap fields = new HashMap();
 				if (authenticatedUser.isYonetici() || authenticatedUser.isYoneticiKontratli()) {
-					if (!authenticatedUser.isIKAdmin())
-						fields.put("pdksSicilNo <> ", authenticatedUser.getPdksPersonel().getPdksSicilNo());
-					fields.put("pdksSicilNo", authenticatedUser.getYetkiTumPersonelNoList());
-					if (session != null)
-						fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-					List<Personel> list = pdksEntityController.getObjectByInnerObjectListInLogic(fields, Personel.class);
+					List<String> perNoList = new ArrayList<String>(authenticatedUser.getYetkiTumPersonelNoList());
+					if (!authenticatedUser.isIKAdmin()) {
+						if (perNoList.contains(authenticatedUser.getPdksPersonel().getPdksSicilNo()))
+							perNoList.remove(authenticatedUser.getPdksPersonel().getPdksSicilNo());
+						// fields.put("pdksSicilNo <> ", authenticatedUser.getPdksPersonel().getPdksSicilNo());
+					}
+
+					// fields.put("pdksSicilNo", authenticatedUser.getYetkiTumPersonelNoList());
+					// if (session != null)
+					// fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+					// List<Personel> list = pdksEntityController.getObjectByInnerObjectListInLogic(fields, Personel.class);
+					List<Personel> list = pdksEntityController.getSQLParamByFieldList(Personel.TABLE_NAME, Personel.COLUMN_NAME_PDKS_SICIL_NO, perNoList, Personel.class, session);
+					perNoList = null;
 					TreeMap<Long, Tanim> tanimMap = new TreeMap<Long, Tanim>();
 					for (Personel personel : list) {
 						if (personel.getEkSaha3() != null)
@@ -1263,8 +1269,8 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 										sure -= saat;
 									}
 								}
-
-								ucretiOdenenMesaiSure += vardiyaGun.isFcsDahil() && sure != null && sure.doubleValue() > mesaiMaxSure + vardiyaGun.getResmiTatilSure() ? sure.doubleValue() - mesaiMaxSure - vardiyaGun.getResmiTatilSure() : 0.0d;
+								double gunMesaiMaxSure = vardiyaGun.isAksamVardiyaMaxCalismaVar() == false || fazlaMesaiMaxSure < 7.5d ? fazlaMesaiMaxSure : 7.5d;
+								ucretiOdenenMesaiSure += vardiyaGun.isFcsDahil() && sure != null && sure.doubleValue() > gunMesaiMaxSure + vardiyaGun.getResmiTatilSure() ? sure.doubleValue() - gunMesaiMaxSure - vardiyaGun.getResmiTatilSure() : 0.0d;
 								if (vardiyaGun.getHaftaCalismaSuresi() > 0) {
 									if (!haftaTatilVar)
 										haftaTatilVar = Boolean.TRUE;
@@ -1305,8 +1311,10 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 						hataliPuantajVar = personelDenklestirme.isOnaylandi() == false;
 					if (!fazlaMesaiIzinKullan)
 						fazlaMesaiIzinKullan = personelDenklestirme.getFazlaMesaiIzinKullan() != null && personelDenklestirme.getFazlaMesaiIzinKullan();
-					if (!fazlaMesaiOde)
-						fazlaMesaiOde = personelDenklestirme.getFazlaMesaiOde() != null && !personelDenklestirme.getFazlaMesaiOde().equals(sirketFazlaMesaiOde);
+					if (!fazlaMesaiOde) {
+						CalismaModeli cm = personelDenklestirme.getCalismaModeli();
+						fazlaMesaiOde = cm.isAylikOdeme() && personelDenklestirme.getFazlaMesaiOde() != null && !personelDenklestirme.getFazlaMesaiOde().equals(sirketFazlaMesaiOde);
+					}
 					if (!kimlikGoster)
 						kimlikGoster = PdksUtil.hasStringValue(personel.getPersonelKGS().getKimlikNo());
 					if (!yasalFazlaCalismaAsanSaat && personelDenklestirme.getCalismaModeliAy().isGunMaxCalismaOdenir())
@@ -1845,7 +1853,8 @@ public class VardiyaPlaniTopluRaporHome extends EntityHome<DepartmanDenklestirme
 		CellStyle styleOffRed = ExcelUtil.getStyleDataCenter(wb);
 		ExcelUtil.setFontColor(styleTatilRed, Color.RED);
 		ExcelUtil.setFillForegroundColor(izinBaslik, 146, 208, 80);
-
+		CellStyle styleIcap = ExcelUtil.getStyleDataCenter(wb);
+		ExcelUtil.setFillForegroundColor(styleIcap, 254, 235, 41);
 		CellStyle styleIzin = ExcelUtil.getStyleDataCenter(wb);
 		ExcelUtil.setFillForegroundColor(styleIzin, 146, 208, 80);
 

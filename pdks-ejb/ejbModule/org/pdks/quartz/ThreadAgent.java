@@ -1,12 +1,13 @@
 package org.pdks.quartz;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
-import org.jboss.seam.annotations.Transactional;
 import org.pdks.entity.PdksAgent;
 import org.pdks.session.PdksEntityController;
 import org.pdks.session.PdksUtil;
@@ -35,25 +36,59 @@ public class ThreadAgent extends Thread implements Serializable {
 	}
 
 	@Override
-	@Transactional
 	public void run() {
-		if (session != null) {
-			if (agent != null) {
-				if (PdksUtil.hasStringValue(agent.getStoreProcedureAdi())) {
-					logger.info(agent.getAciklama() + " --> " + agent.getStoreProcedureAdi() + (agent.getStart() ? " (manuel)" : " " + PdksUtil.convertToDateString(new Date(), "HH:mm")) + " " + PdksUtil.getCurrentTimeStampStr());
-					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-					try {
+		if (agent != null) {
+			if (session != null) {
 
-						if (agent.getUpdateSP())
-							pdksEntityController.execSP(session, veriMap, agent.getStoreProcedureAdi());
-						else
-							pdksEntityController.execSPList(session, veriMap, agent.getStoreProcedureAdi(), null);
-					} catch (Exception e) {
-						e.printStackTrace();
+				String programAdi = agent.getStoreProcedureAdi();
+				if (PdksUtil.hasStringValue(programAdi)) {
+					int index = programAdi.indexOf(".page.xml");
+					if (index < 0) {
+						logger.info(agent.getAciklama() + " --> " + programAdi + (agent.getStart() ? " (manuel)" : " " + PdksUtil.convertToDateString(new Date(), "HH:mm")) + " " + PdksUtil.getCurrentTimeStampStr());
+						LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+						try {
+
+							if (agent.getUpdateSP())
+								pdksEntityController.execSP(session, veriMap, programAdi);
+							else
+								pdksEntityController.execSPList(session, veriMap, programAdi, null);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					} else {
+
+						File file = new File("/opt/sertifika/web.txt");
+						if (file.exists()) {
+							List<String> dosyaList = null;
+							try {
+								dosyaList = PdksUtil.getStringListFromFile(file);
+							} catch (Exception e) {
+							}
+							if (dosyaList != null && dosyaList.isEmpty() == false) {
+								for (String string : dosyaList) {
+									if (string.startsWith("http") && string.indexOf("login") > 1) {
+										int beginIndex = index + 9;
+										String parametre = null;
+										try {
+											parametre = programAdi.substring(beginIndex);
+										} catch (Exception e) {
+											parametre = "";
+										}
+										String adres = PdksUtil.replaceAllManuel(string, "login", programAdi.substring(0, index));
+										logger.info(agent.getAciklama() + " --> " + adres + (agent.getStart() ? " (manuel)" : " " + PdksUtil.convertToDateString(new Date(), "HH:mm")) + " " + PdksUtil.getCurrentTimeStampStr());
+										PdksUtil.adresKontrol(adres + "?agentId=" + agent.getId() + (PdksUtil.hasStringValue(parametre) ? "&params=" + PdksUtil.getEncodeStringByBase64(parametre) : ""));
+
+									}
+
+								}
+							}
+						}
+
 					}
+
 				}
-				agent.setStart(false);
 			}
+			agent.setStart(false);
 		}
 	}
 

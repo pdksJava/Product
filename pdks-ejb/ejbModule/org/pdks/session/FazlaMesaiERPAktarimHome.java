@@ -52,7 +52,9 @@ import org.pdks.entity.PersonelMesai;
 import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Vardiya;
+import org.pdks.entity.VardiyaEkSaat;
 import org.pdks.entity.VardiyaGun;
+import org.pdks.entity.VardiyaSaat;
 import org.pdks.enums.MethodAlanAPI;
 import org.pdks.enums.VeriTipiAPI;
 import org.pdks.erp.action.ERPController;
@@ -134,22 +136,21 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		fazlaMesaiERP = null;
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		aylar = ortakIslemler.getAyListesi(Boolean.TRUE);
 		String sapControllerStr = ortakIslemler.getParameterKey("sapController");
 		erpAktarimDurum = sapControllerStr.equals("2") || sapControllerStr.equals("3");
@@ -423,8 +424,9 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 						pdksPersonelDenklestirme.setGuncelleyenUser(authenticatedUser);
 						pdksPersonelDenklestirme.setGuncellemeTarihi(guncellemeTarihi);
 						pdksEntityController.saveOrUpdate(session, entityManager, pdksPersonelDenklestirme);
-						session.flush();
+						pdksEntityController.sessionFlush(session);
 					} catch (Exception e) {
+						logger.error(e);
 						e.printStackTrace();
 						break;
 					}
@@ -684,7 +686,12 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 	public String erpAktarSil(PersonelDenklestirme pdksPersonelDenklestirme) {
 		pdksPersonelDenklestirme.setErpAktarildi(Boolean.FALSE);
 		pdksEntityController.saveOrUpdate(session, entityManager, pdksPersonelDenklestirme);
-		session.flush();
+		try {
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 		PdksUtil.addMessageInfo(pdksPersonelDenklestirme.getPersonel().getAdSoyad() + " ait fazla mesai blokesi açılmıştır.");
 		return "";
 
@@ -1601,6 +1608,8 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 				sb.append("select distinct G.* from " + VardiyaGun.TABLE_NAME + " G " + PdksEntityController.getSelectLOCK() + " ");
 				sb.append(" inner join " + Vardiya.TABLE_NAME + " V " + PdksEntityController.getJoinLOCK() + " on V." + Vardiya.COLUMN_NAME_ID + " = G." + VardiyaGun.COLUMN_NAME_VARDIYA);
 				sb.append(" and  V." + Vardiya.COLUMN_NAME_VARDIYA_TIPI + " IN ('" + Vardiya.TIPI_IZIN + "','" + Vardiya.TIPI_HASTALIK_RAPOR + "') ");
+				sb.append(" left join " + VardiyaSaat.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + VardiyaSaat.COLUMN_NAME_ID + " = G." + VardiyaGun.COLUMN_NAME_VARDIYA_SAAT);
+				sb.append(" left join " + VardiyaEkSaat.TABLE_NAME + " ES " + PdksEntityController.getJoinLOCK() + " on ES." + VardiyaEkSaat.COLUMN_NAME_ID + " =  S." + VardiyaSaat.COLUMN_NAME_VARDIYA_EK_SAAT);
 				sb.append(" where G." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >= :t1 and G." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " < :t2");
 				sb.append(" and G." + VardiyaGun.COLUMN_NAME_PERSONEL + " :" + fieldName);
 				fields.put(fieldName, perIdList);
@@ -1610,7 +1619,6 @@ public class FazlaMesaiERPAktarimHome extends EntityHome<DenklestirmeAy> impleme
 				if (session != null)
 					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 				try {
-					// vgList = pdksEntityController.getObjectBySQLList(sb fields, VardiyaGun.class);
 					vgList = pdksEntityController.getSQLParamList(perIdList, sb, fieldName, fields, VardiyaGun.class, session);
 
 				} catch (Exception e) {

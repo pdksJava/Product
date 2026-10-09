@@ -269,7 +269,7 @@ public class MailManager implements Serializable {
 			mailParametreMap.putAll(parameterMap);
 		MailStatu mailStatu = new MailStatu();
 		Properties props = null;
-		boolean uyariServisMailGonder = false;
+		boolean uyariServisMailGonder = false, testDurum = mailParametreMap.containsKey("testDurum");
 		if (mailParametreMap.containsKey("uyariServisMailGonder")) {
 			try {
 				uyariServisMailGonder = ((String) mailParametreMap.get("uyariServisMailGonder")).equals("1");
@@ -315,8 +315,8 @@ public class MailManager implements Serializable {
 			if (mailParametreMap.containsKey("smtpPassword"))
 				password = (String) mailParametreMap.get("smtpPassword");
 			if (username == null) {
-				if (mailParametreMap.containsKey("fromAdres")) {
-					mailAdresFROM = (String) mailParametreMap.get("fromAdres");
+				if (mailParametreMap.containsKey("smtpUserName")) {
+					mailAdresFROM = (String) mailParametreMap.get("smtpUserName");
 					username = mailAdresFROM;
 				}
 			} else
@@ -415,8 +415,8 @@ public class MailManager implements Serializable {
 			message.setSubject(konu);
 			InternetAddress from = new InternetAddress();
 			from.setAddress(username);
-			if (mailParametreMap.containsKey("fromAdres"))
-				from.setAddress((String) mailParametreMap.get("fromAdres"));
+			if (mailParametreMap.containsKey("smtpUserName"))
+				from.setAddress((String) mailParametreMap.get("smtpUserName"));
 			if (mailParametreMap.containsKey("fromName"))
 				from.setPersonal((String) mailParametreMap.get("fromName"), "UTF-8");
 			message.setFrom(from);
@@ -434,16 +434,13 @@ public class MailManager implements Serializable {
 				mailMap.put("to", mailObject.getToList());
 				mailMap.put("cc", mailObject.getCcList());
 			}
-			if (PdksUtil.isSistemDestekVar()) {
+			if (PdksUtil.isSistemDestekVar() && testDurum == false) {
 				addMailAdresCC(mailObject, "ccAdres", mailParametreMap);
 				addMailAdresCC(mailObject, "ccEntegrasyonAdres", mailParametreMap);
-			}
-			if (PdksUtil.isSistemDestekVar()) {
 				addMailAdresBCC(mailObject, "bccAdres", mailParametreMap);
 				addMailAdresBCC(mailObject, "bccEntegrasyonAdres", mailParametreMap);
 			}
-
-			mailMap.put("bcc", mailObject.getBccList());
+ 			mailMap.put("bcc", mailObject.getBccList());
 			for (String key : mailMap.keySet()) {
 				List<MailPersonel> mailList = mailMap.get(key);
 				for (Iterator iterator = mailList.iterator(); iterator.hasNext();) {

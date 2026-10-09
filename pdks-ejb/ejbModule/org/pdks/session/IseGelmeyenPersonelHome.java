@@ -68,7 +68,6 @@ public class IseGelmeyenPersonelHome extends EntityHome<PersonelIzin> implements
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -76,8 +75,8 @@ public class IseGelmeyenPersonelHome extends EntityHome<PersonelIzin> implements
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		// default bugun icin ise gelmeyen raporu cekili olsun
 		setDate(PdksUtil.buGun());
 		gelmeyenListOlustur();

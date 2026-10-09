@@ -66,7 +66,6 @@ public class DepartmanHome extends EntityHome<Departman> implements Serializable
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -111,7 +110,7 @@ public class DepartmanHome extends EntityHome<Departman> implements Serializable
 					}
 				}
 
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 				fillDepartmanTanimList();
 				cikis = "persisted";
 			} catch (Exception e) {
@@ -253,14 +252,14 @@ public class DepartmanHome extends EntityHome<Departman> implements Serializable
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		fillDepartmanTanimList();
 	}
 

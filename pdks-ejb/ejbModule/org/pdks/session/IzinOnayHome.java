@@ -86,7 +86,6 @@ public class IzinOnayHome extends EntityHome<PersonelIzin> implements Serializab
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -94,8 +93,8 @@ public class IzinOnayHome extends EntityHome<PersonelIzin> implements Serializab
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		String fromAciklama = ortakIslemler.getParameterKey("fromName");
 		if (PdksUtil.hasStringValue(fromAciklama))
 			setKullaniciIslemleriMailAciklama(fromAciklama);
@@ -144,7 +143,7 @@ public class IzinOnayHome extends EntityHome<PersonelIzin> implements Serializab
 	}
 
 	public String hatirlatma(PersonelIzin izin) {
-		session.refresh(izin);
+		pdksEntityController.sessionRefresh(session, entityManager, izin);
 		Personel personel = izin.getIzinSahibi();
 		Personel pdksPersonel = (Personel) personel.clone();
 

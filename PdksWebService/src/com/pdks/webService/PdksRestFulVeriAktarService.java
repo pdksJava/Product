@@ -51,6 +51,7 @@ import org.springframework.stereotype.Service;
 
 import com.google.gson.Gson;
 import com.google.gson.internal.LinkedTreeMap;
+import com.tatil.model.HolidayService;
 
 @Service
 @Path("/servicesPDKS")
@@ -77,6 +78,19 @@ public class PdksRestFulVeriAktarService implements Serializable {
 	private FazlaMesaiERP fazlaMesaiERP;
 
 	private PdksDAO pdksDAO;
+
+	@GET
+	@Path("/getDiniBayram")
+	@Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8" })
+	@Consumes(MediaType.APPLICATION_JSON + ";charset=utf-8")
+	public Response getDiniBayram(@QueryParam("yil") Integer yil) throws Exception {
+		String mediaType = MediaType.APPLICATION_JSON;
+		List tatiller = new HolidayService().calculateHolidays(yil);
+		Gson gson = new Gson();
+		String sonuc = gson.toJson(tatiller);
+		Response response = Response.ok(sonuc).type(mediaType + ";charset=utf-8").build();
+		return response;
+	}
 
 	/**
 	 * @param sirketERPKodu
@@ -643,7 +657,7 @@ public class PdksRestFulVeriAktarService implements Serializable {
 			boolean testDurum = PdksVeriOrtakAktar.getTestDurum();
 			PdksVeriOrtakAktar pdksVeriOrtakAktar = new PdksVeriOrtakAktar();
 			if (testDurum == false && pdksVeriOrtakAktar.getMesaiEntrasyonMailKapali(sirketKoduInput, tesisKoduInput, null) == false) {
- 				try {
+				try {
 					sendIKMail(sirketKoduInput, tesisKoduInput, dosyaAdi, sonuc);
 				} catch (Exception e) {
 					logger.error(e);

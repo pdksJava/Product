@@ -65,7 +65,6 @@ public class FazlaMesaiERPHome extends EntityHome<FazlaMesaiERP> implements Seri
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -74,10 +73,12 @@ public class FazlaMesaiERPHome extends EntityHome<FazlaMesaiERP> implements Seri
 	public String baslikKaydet() {
 		try {
 			pdksEntityController.saveOrUpdate(session, entityManager, seciliFazlaMesaiERP);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 			fillFazlaMesaiERPList();
 			seciliFazlaMesaiERP = null;
 		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
 		}
 
 		return "";
@@ -101,7 +102,7 @@ public class FazlaMesaiERPHome extends EntityHome<FazlaMesaiERP> implements Seri
 	public String detaySil() {
 		try {
 			session.delete(seciliFazlaMesaiERPDetay);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 			pdksEntityController.savePrepareTableID(true, seciliFazlaMesaiERPDetay, FazlaMesaiERPDetay.class, session);
 
 		} catch (Exception e) {
@@ -137,7 +138,7 @@ public class FazlaMesaiERPHome extends EntityHome<FazlaMesaiERP> implements Seri
 				} else
 					seciliFazlaMesaiERPDetay.setAlanDeger("");
 				pdksEntityController.saveOrUpdate(session, entityManager, seciliFazlaMesaiERPDetay);
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 				fillFazlaMesaiERPDetayList();
 				fillMethodAlanList();
 				seciliFazlaMesaiERPDetay = null;
@@ -201,7 +202,12 @@ public class FazlaMesaiERPHome extends EntityHome<FazlaMesaiERP> implements Seri
 			fmd.setSira(sira2);
 			pdksEntityController.saveOrUpdate(session, entityManager, fmd);
 			pdksEntityController.saveOrUpdate(session, entityManager, fmd1);
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
 			fillFazlaMesaiERPDetayList();
 		}
 		return "";
@@ -221,7 +227,12 @@ public class FazlaMesaiERPHome extends EntityHome<FazlaMesaiERP> implements Seri
 			fmd.setSira(sira1);
 			pdksEntityController.saveOrUpdate(session, entityManager, fmd);
 			pdksEntityController.saveOrUpdate(session, entityManager, fmd0);
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
 			fillFazlaMesaiERPDetayList();
 		}
 		return "";
@@ -358,9 +369,10 @@ public class FazlaMesaiERPHome extends EntityHome<FazlaMesaiERP> implements Seri
 			}
 			if (flush)
 				try {
-					session.flush();
+					pdksEntityController.sessionFlush(session);
 				} catch (Exception e) {
-
+					logger.error(e);
+					e.printStackTrace();
 				}
 
 		} else
@@ -394,14 +406,14 @@ public class FazlaMesaiERPHome extends EntityHome<FazlaMesaiERP> implements Seri
 
 	public void instanceRefresh() {
 		if (seciliFazlaMesaiERPDetay != null && seciliFazlaMesaiERPDetay.getId() != null)
-			session.refresh(seciliFazlaMesaiERPDetay);
+			pdksEntityController.sessionRefresh(session, entityManager, seciliFazlaMesaiERPDetay);
 
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		fillFazlaMesaiERPList();
 	}

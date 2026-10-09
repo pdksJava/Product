@@ -46,6 +46,7 @@ public class Vardiya extends BaseObject {
 	public static final String COLUMN_NAME_EKRAN_SIRA = "EKRAN_SIRA";
 	public static final String COLUMN_NAME_FCS_HARIC = "FCS_HARIC";
 	public static final String COLUMN_NAME_CALISMA_SEKLI = "CALISMA_SEKLI";
+	public static final String COLUMN_NAME_MAX_CALISMA_SURESI_VAR = "MAX_CALISMA_SURESI_VAR";
 
 	public static final char TIPI_CALISMA = ' ';
 	public static final char TIPI_HAFTA_TATIL = 'H';
@@ -72,7 +73,7 @@ public class Vardiya extends BaseObject {
 	private Integer yemekSuresi, cikisMolaSaat = 0;
 	private Departman departman;
 	private List<Integer> gunlukList;
-	private Boolean aksamVardiya = Boolean.FALSE, fcsHaric = Boolean.FALSE, icapVardiya = Boolean.FALSE, sutIzni = Boolean.FALSE, gebelik = Boolean.FALSE, kopya = Boolean.FALSE, genel = Boolean.FALSE;
+	private Boolean aksamVardiya = Boolean.FALSE, aksamVardiyaMaxCalismaVar = Boolean.FALSE, fcsHaric = Boolean.FALSE, icapVardiya = Boolean.FALSE, sutIzni = Boolean.FALSE, gebelik = Boolean.FALSE, kopya = Boolean.FALSE, genel = Boolean.FALSE;
 	private String tipi;
 	private VardiyaGun islemVardiyaGun;
 	private char vardiyaTipi;
@@ -247,7 +248,17 @@ public class Vardiya extends BaseObject {
 		if (yemekSuresi == null)
 			yemekSuresi = 0;
 		BigDecimal value = getKatSayi(PuantajKatSayiTipi.GUN_VARDIYA_MOLA.value());
-		return value != null ? value.intValue() : yemekSuresi;
+		Integer sure = value != null ? value.intValue() : yemekSuresi;
+		if (sure == null || sure <= 0) {
+			if (yemekIzinList != null && yemekIzinList.isEmpty() == false) {
+				sure = 0;
+				for (YemekIzin yi : yemekIzinList) {
+					if (yi.getDurum() && yi.getVardiyaMap() != null && yi.getVardiyaMap().containsKey(id))
+						sure += yi.getMaxSure();
+				}
+			}
+		}
+		return sure;
 
 	}
 
@@ -1546,7 +1557,7 @@ public class Vardiya extends BaseObject {
 	}
 
 	@Transient
-	public double getNetCalismaSuresi() {
+	public double getToplamCalismaSuresi() {
 		double sure = 0;
 		if (isCalisma()) {
 			Calendar cal = Calendar.getInstance();
@@ -1563,10 +1574,22 @@ public class Vardiya extends BaseObject {
 				basZaman = cal.getTime();
 			}
 
-			double vardiyaCalismaDakika = PdksUtil.getDakikaFarkiHesapla(bitZaman, basZaman).doubleValue();
-			sure = (vardiyaCalismaDakika - ((double) (getYemekSuresi() != null ? getYemekSuresi().doubleValue() : 0d))) / 60;
+			sure = PdksUtil.getDakikaFarkiHesapla(bitZaman, basZaman).doubleValue() / 60.0d;
 
 		}
+		return sure;
+	}
+
+	@Transient
+	public double getNetCalismaSuresi() {
+		double sure = 0;
+		if (isCalisma()) {
+			sure = getToplamCalismaSuresi();
+			if (getYemekSuresi() != null)
+				sure -= (double) getYemekSuresi().doubleValue() / 60.0d;
+
+		}
+
 		return sure;
 	}
 
@@ -1633,6 +1656,15 @@ public class Vardiya extends BaseObject {
 		this.cikisGecikmeToleransDakika = cikisGecikmeToleransDakika;
 	}
 
+	@Column(name = COLUMN_NAME_MAX_CALISMA_SURESI_VAR)
+	public Boolean getAksamVardiyaMaxCalismaVar() {
+		return aksamVardiyaMaxCalismaVar;
+	}
+
+	public void setAksamVardiyaMaxCalismaVar(Boolean aksamVardiyaMaxCalismaVar) {
+		this.aksamVardiyaMaxCalismaVar = aksamVardiyaMaxCalismaVar;
+	}
+
 	@Transient
 	public Vardiya getSonrakiVardiya() {
 		return sonrakiVardiya;
@@ -1671,7 +1703,7 @@ public class Vardiya extends BaseObject {
 		boolean icapVardiyasi = Boolean.FALSE;
 		if (icapVardiya != null) {
 			icapVardiyasi = icapVardiya.booleanValue();
-			
+
 		}
 
 		return icapVardiyasi;
@@ -1697,10 +1729,13 @@ public class Vardiya extends BaseObject {
 					ek = " - Süt İzni";
 				else if (tmpVardiya.isSuaMi())
 					ek = " - Şua";
+				else if (tmpVardiya.isIcapVardiyasi())
+					ek = " - İcap";
 				else if (tmpVardiya.isGebelikMi())
 					ek = " - Gebe";
 				vardiyaAdi = PdksUtil.convertToDateString(tmpVardiya.getVardiyaBasZaman(), pattern) + " - " + PdksUtil.convertToDateString(tmpVardiya.getVardiyaBitZaman(), pattern) + " [ " + vTemp.getKisaAdi() + ek + " ] ";
-			}
+			} else if (vTemp.isIcapVardiyasi())
+				vardiyaAdi += " - İcap";
 
 			tmp = null;
 		}
@@ -1848,6 +1883,15 @@ public class Vardiya extends BaseObject {
 
 	public void setAyinSonGunDurum(boolean ayinSonGunDurum) {
 		this.ayinSonGunDurum = ayinSonGunDurum;
+	}
+
+	@Transient
+	public boolean isAksamVardiyaMaxCalismaDurum() {
+		boolean aksamVardiyaMaxCalismaDurum = false;
+		if (aksamVardiyaMaxCalismaVar != null && aksamVardiyaMaxCalismaVar.booleanValue())
+			aksamVardiyaMaxCalismaDurum = isAksamVardiyasi() && this.getBasDonem() >= this.getBitDonem();
+
+		return aksamVardiyaMaxCalismaDurum;
 	}
 
 	@Transient

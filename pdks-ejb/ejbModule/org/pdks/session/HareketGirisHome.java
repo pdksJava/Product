@@ -417,7 +417,6 @@ public class HareketGirisHome extends EntityHome<HareketKGS> implements Serializ
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -487,7 +486,7 @@ public class HareketGirisHome extends EntityHome<HareketKGS> implements Serializ
 			}
 
 		}
-		session.flush();
+		pdksEntityController.sessionFlush(session);
 		dosyaSifirla();
 		kgsList = null;
 		return "persisted";
@@ -496,15 +495,15 @@ public class HareketGirisHome extends EntityHome<HareketKGS> implements Serializ
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		try {
-			ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 			if (authenticatedUser.isAdmin() == false || aramaSecenekleri == null)
 				aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
 			aramaSecenekleri.setSessionClear(Boolean.FALSE);

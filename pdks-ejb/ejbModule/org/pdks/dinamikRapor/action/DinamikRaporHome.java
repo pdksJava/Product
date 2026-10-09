@@ -103,7 +103,6 @@ public class DinamikRaporHome extends EntityHome<PdksDinamikRapor> implements Se
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -111,8 +110,8 @@ public class DinamikRaporHome extends EntityHome<PdksDinamikRapor> implements Se
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		tesisAlan = null;
 		sirket = null;
 		String sayfa = "";
@@ -225,13 +224,14 @@ public class DinamikRaporHome extends EntityHome<PdksDinamikRapor> implements Se
 				else if (rp.isSayisal())
 					veriMap.put(adi, rp.getSayisalDeger());
 				else if (rp.isTarih())
-					veriMap.put(adi, rp.getTarihDeger());
+					veriMap.put(adi, PdksUtil.getDate(rp.getTarihDeger()));
 				else if (rp.isMantiksal())
 					veriMap.put(adi, rp.getMantiksalDurum() != null && rp.getMantiksalDurum() ? 1 : 0);
 			}
 			try {
 				list = pdksEntityController.execSPList(session, veriMap, seciliPdksDinamikRapor.getDbTanim(), null);
 			} catch (Exception e) {
+				logger.error(seciliPdksDinamikRapor.getDbTanim() + " " + e);
 
 			}
 		} else {
@@ -360,7 +360,20 @@ public class DinamikRaporHome extends EntityHome<PdksDinamikRapor> implements Se
 				Date tarih = null;
 				if (pdrp.getSecimList() != null) {
 					if (pdrp.getValue() != null) {
-						aciklama = ortakIslemler.getSelectItemText(Long.parseLong((String) pdrp.getValue()), pdrp.getSecimList());
+						try {
+							Long key = null;
+							if (pdrp.getValue() instanceof Long)
+								key = (Long) pdrp.getValue();
+							else if (pdrp.getValue() instanceof String)
+								key = Long.parseLong((String) pdrp.getValue());
+							if (key != null)
+								aciklama = ortakIslemler.getSelectItemText(key, pdrp.getSecimList());
+							else
+								aciklama = "";
+
+						} catch (Exception ex) {
+							logger.error(ex);
+						}
 					}
 				} else if (pdrp.isKarakter()) {
 					if (PdksUtil.hasStringValue(pdrp.getKarakterDeger()))

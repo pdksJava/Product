@@ -80,7 +80,6 @@ public class BinadaKalanPersonellerHome extends EntityHome<VardiyaGun> implement
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -88,8 +87,8 @@ public class BinadaKalanPersonellerHome extends EntityHome<VardiyaGun> implement
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		setHareketList(new ArrayList<HareketKGS>());
 		setVardiyaGunList(new ArrayList<VardiyaGun>());
 		HareketKGS hareket = new HareketKGS();

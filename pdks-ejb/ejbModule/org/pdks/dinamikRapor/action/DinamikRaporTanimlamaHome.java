@@ -28,7 +28,9 @@ import org.pdks.dinamikRapor.enums.ENumAlanHizalaTipi;
 import org.pdks.dinamikRapor.enums.ENumDinamikRaporTipi;
 import org.pdks.dinamikRapor.enums.ENumEsitlik;
 import org.pdks.dinamikRapor.enums.ENumRaporAlanTipi;
-import org.pdks.security.action.StartupAction;
+import org.pdks.entity.MenuIliski;
+import org.pdks.entity.MenuItem;
+import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.Role;
 import org.pdks.security.entity.User;
 import org.pdks.session.ComponentState;
@@ -56,11 +58,13 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 	OrtakIslemler ortakIslemler;
 	@In(required = false, create = true)
 	ComponentState componentState;
-	@In(required = false, create = true)
-	StartupAction startupAction;
 
 	public static String sayfaURL = "dinamikRaporTanimlama";
+	/**
+	 * 
+	 */
 	private List<PdksDinamikRapor> dinamikRaporList;
+	private List<MenuItem> raporMenuList;
 	private PdksDinamikRapor seciliPdksDinamikRapor;
 	private PdksDinamikRaporAlan seciliPdksDinamikRaporAlan;
 	private PdksDinamikRaporParametre seciliPdksDinamikRaporParametre;
@@ -80,7 +84,6 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -88,7 +91,7 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		if (raporTipiList == null)
 			raporTipiList = new ArrayList<SelectItem>();
@@ -174,16 +177,19 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 				dinamikRaporAlanGuncelle(null);
 			else if (tip.equals("P"))
 				dinamikRaporParametreGuncelle(null);
-			else
+			else {
+				fillRaporMenuList();
 				fillDinamikRapoRoleList();
+			}
 		}
+
 		return "";
 
 	}
 
 	public String instanceRefresh() {
 		if (seciliPdksDinamikRapor.getId() != null)
-			session.refresh(seciliPdksDinamikRapor);
+			pdksEntityController.sessionRefresh(session, entityManager, seciliPdksDinamikRapor);
 		return "";
 	}
 
@@ -269,7 +275,7 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 		StringBuilder sb = new StringBuilder();
 		sb.append("select * from " + PdksDinamikRapor.TABLE_NAME + " " + PdksEntityController.getSelectLOCK());
 		dinamikRaporList = pdksEntityController.getObjectBySQLList(sb, fields, PdksDinamikRapor.class);
-		startupAction.fillRaporRole(session);
+
 	}
 
 	@Transactional
@@ -302,7 +308,13 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 		for (PdksDinamikRaporRole raporRole : list)
 			session.delete(raporRole);
 
-		session.flush();
+		try {
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
+
 		fillDinamikRaporList();
 		return "";
 
@@ -323,7 +335,13 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 			}
 		}
 		if (flush)
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
+
 		return "";
 
 	}
@@ -343,7 +361,13 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 			}
 		}
 		if (flush)
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
+
 		return "";
 
 	}
@@ -358,7 +382,8 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 					seciliPdksDinamikRaporAlan.setHizala(ENumAlanHizalaTipi.ORTALA.value());
 			}
 			pdksEntityController.saveOrUpdate(session, entityManager, seciliPdksDinamikRaporAlan);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
+
 			fillDinamikRaporAlanList();
 			if (dinamikRaporAlanList.isEmpty() == false)
 				updateDinamikRaporAlanSira();
@@ -407,6 +432,36 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 
 	}
 
+	/**
+	 * 
+	 */
+	private void fillRaporMenuList() {
+		HashMap fields = new HashMap();
+		StringBuilder sb = new StringBuilder();
+		sb.append("select distinct M.* from " + MenuItem.TABLE_NAME + " U " + PdksEntityController.getSelectLOCK());
+		sb.append(" inner join " + MenuIliski.TABLE_NAME + " I " + PdksEntityController.getJoinLOCK() + " on I." + MenuIliski.COLUMN_NAME_MENU_ITEM + " = U." + MenuItem.COLUMN_NAME_ID);
+		sb.append(" inner join " + MenuItem.TABLE_NAME + " M " + PdksEntityController.getJoinLOCK() + " on I." + MenuIliski.COLUMN_NAME_CHILD_MENU_ITEM + " = M." + MenuItem.COLUMN_NAME_ID);
+		// sb.append(" inner join " + MenuIliski.TABLE_NAME + " B " + PdksEntityController.getJoinLOCK() + " on B." + MenuIliski.COLUMN_NAME_MENU_ITEM + " = M." + MenuItem.COLUMN_NAME_ID);
+		sb.append(" where U." + MenuItem.COLUMN_NAME_ADI + " = :m");
+		sb.append(" order by M." + MenuItem.COLUMN_NAME_SIRA);
+		fields.put("m", MenuItemConstant.raporIslemleri);
+		if (session != null)
+			fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+		raporMenuList = pdksEntityController.getObjectBySQLList(sb, fields, MenuItem.class);
+		MenuItemConstant mc = new MenuItemConstant();
+		for (Iterator iterator = raporMenuList.iterator(); iterator.hasNext();) {
+			MenuItem mi = (MenuItem) iterator.next();
+			String adi = mi.getName();
+			String method = "get" + adi.substring(0, 1).toUpperCase(Locale.ENGLISH) + adi.substring(1);
+			String deger = (String) PdksUtil.getMethodObject(mc, method, null);
+			if (deger != null && deger.indexOf(".") > 0)
+				iterator.remove();
+		}
+	}
+
+	/**
+	 * 
+	 */
 	private void fillDinamikRaporAlanList() {
 		dinamikRaporAlanList = pdksEntityController.getSQLParamByFieldList(PdksDinamikRaporAlan.TABLE_NAME, PdksDinamikRaporAlan.COLUMN_NAME_DINAMIK_RAPOR, seciliPdksDinamikRapor.getId(), PdksDinamikRaporAlan.class, session);
 		if (dinamikRaporAlanList.size() > 1)
@@ -430,13 +485,21 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 	@Transactional
 	public String deleteDinamikRaporParametre(PdksDinamikRaporParametre deleteValue) {
 		session.delete(deleteValue);
-		session.flush();
 		try {
-			pdksEntityController.savePrepareTableID(true, deleteValue, PdksDinamikRaporParametre.class, session);
+			pdksEntityController.sessionFlush(session);
 		} catch (Exception e) {
+			logger.error(e);
 			e.printStackTrace();
 		}
-		session.flush();
+
+		try {
+			pdksEntityController.savePrepareTableID(true, deleteValue, PdksDinamikRaporParametre.class, session);
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
+
 		filllDinamikRaporParametreList();
 		if (dinamikRaporParametreList.isEmpty() == false)
 			updateDinamikRaporParametreSira();
@@ -447,13 +510,21 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 	@Transactional
 	public String deleteDinamikRaporAlan(PdksDinamikRaporAlan deleteValue) {
 		session.delete(deleteValue);
-		session.flush();
 		try {
-			pdksEntityController.savePrepareTableID(true, deleteValue, PdksDinamikRaporAlan.class, session);
+			pdksEntityController.sessionFlush(session);
 		} catch (Exception e) {
+			logger.error(e);
 			e.printStackTrace();
 		}
-		session.flush();
+
+		try {
+			pdksEntityController.savePrepareTableID(true, deleteValue, PdksDinamikRaporAlan.class, session);
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
+
 		fillDinamikRaporAlanList();
 		if (dinamikRaporAlanList.isEmpty() == false)
 			updateDinamikRaporAlanSira();
@@ -503,7 +574,8 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 				}
 			}
 			pdksEntityController.saveOrUpdate(session, entityManager, seciliPdksDinamikRaporParametre);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
+
 			filllDinamikRaporParametreList();
 			if (dinamikRaporParametreList.isEmpty() == false)
 				updateDinamikRaporParametreSira();
@@ -642,5 +714,13 @@ public class DinamikRaporTanimlamaHome extends EntityHome<PdksDinamikRapor> impl
 
 	public void setDinamikRaporBagliAlanList(List<PdksDinamikRaporAlan> dinamikRaporBagliAlanList) {
 		this.dinamikRaporBagliAlanList = dinamikRaporBagliAlanList;
+	}
+
+	public List<MenuItem> getRaporMenuList() {
+		return raporMenuList;
+	}
+
+	public void setRaporMenuList(List<MenuItem> raporMenuList) {
+		this.raporMenuList = raporMenuList;
 	}
 }

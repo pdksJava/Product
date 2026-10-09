@@ -66,7 +66,6 @@ public class PersonelYoneticiGuncelleHome extends EntityHome<Personel> implement
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -121,7 +120,7 @@ public class PersonelYoneticiGuncelleHome extends EntityHome<Personel> implement
 							}
 						}
 
-						session.flush();
+						pdksEntityController.sessionFlush(session);
 						PdksUtil.addMessageWarn("Yeni yöneticiler güncellendi.");
 						sirketDegisti();
 					} catch (Exception e) {
@@ -216,14 +215,14 @@ public class PersonelYoneticiGuncelleHome extends EntityHome<Personel> implement
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		setInstance(new Personel());
 		;
 		sanalPersonelAciklama = ortakIslemler.sanalPersonelAciklama();

@@ -88,7 +88,6 @@ public class BakiyeIzinHome extends EntityHome<PersonelIzin> {
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -120,7 +119,7 @@ public class BakiyeIzinHome extends EntityHome<PersonelIzin> {
 		String durum = "persist";
 		try {
 			ortakIslemler.bakiyeIzinSil(izin, session);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 			fillIzinList();
 		} catch (Exception e) {
 			logger.error("Pdks hata in : \n");
@@ -151,8 +150,8 @@ public class BakiyeIzinHome extends EntityHome<PersonelIzin> {
 
 			PersonelIzin izin = (PersonelIzin) pdksEntityController.getSQLParamByFieldObject(PersonelIzin.TABLE_NAME, PersonelIzin.COLUMN_NAME_ID, updateIzin.getId(), PersonelIzin.class, session);
 
-			session.refresh(izin);
-			session.flush();
+			pdksEntityController.sessionRefresh(session, entityManager, izin);
+			pdksEntityController.sessionFlush(session);
 			fillIzinList();
 
 		} catch (Exception e) {
@@ -170,8 +169,8 @@ public class BakiyeIzinHome extends EntityHome<PersonelIzin> {
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		HashMap fields = new HashMap();
 		fields.put("durum=", Boolean.TRUE);
 		fields.put("bakiyeIzinTipi.izinTipiTanim.kodu <> ", IzinTipi.YILLIK_UCRETLI_IZIN);

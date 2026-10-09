@@ -98,7 +98,6 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -113,8 +112,8 @@ public class VardiyaOzetRaporuHome extends EntityHome<VardiyaGun> implements Ser
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		aylikPuantajListClear();
 		if (aramaSecenekleri == null)
 			aramaSecenekleri = new AramaSecenekleri(authenticatedUser);

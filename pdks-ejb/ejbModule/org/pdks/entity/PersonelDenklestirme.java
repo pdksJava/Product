@@ -55,6 +55,8 @@ public class PersonelDenklestirme extends BaseObject {
 	public static final String COLUMN_NAME_KISMI_ODEME_SAAT = "KISMI_ODEME_SAAT";
 	public static final String COLUMN_NAME_PERSONEL_NO = "PERSONEL_NO";
 	public static final String COLUMN_NAME_EKSIK_CALISMA_SURE = "EKSIK_CALISMA_SURE";
+	public static final String COLUMN_NAME_AYLIK_BRUT_UCRET = "AYLIK_BRUT_UCRET";
+	public static final String COLUMN_NAME_AYLIK_NET_UCRET = "AYLIK_NET_UCRET";
 	public static final String COLUMN_NAME_SUA_DURUM = "SUA_DURUM";
 
 	public static final String COLUMN_NAME_GECEN_AY_DENKLESTIRME = "GECEN_AY_DENKLESTIRME_ID";
@@ -84,6 +86,8 @@ public class PersonelDenklestirme extends BaseObject {
 	private Double planlanSure = 0d, eksikCalismaSure = 0d, hesaplananSure = 0d, resmiTatilSure = 0d, haftaCalismaSuresi = 0d, fazlaMesaiSure = 0d, odenenSure = 0d;
 
 	private Double devredenSure, kesilenSure = 0d, calismaSuaSaati = calismaSaatiSua, kismiOdemeSure = 0d, aksamVardiyaSayisi = 0d, aksamVardiyaSaatSayisi = 0d, sutIzniSaatSayisi = 0d;
+
+	private Double aylikNetUcret = 0d, aylikBrutUcret = 0d;
 
 	private Integer egitimSuresiAksamGunSayisi;
 
@@ -116,8 +120,9 @@ public class PersonelDenklestirme extends BaseObject {
 			da = cmAy.getDenklestirmeAy();
 		this.denklestirmeAy = da;
 		this.calismaModeliAy = cmAy;
+		CalismaModeli cm = null;
 		if (cmAy != null) {
-			CalismaModeli cm = cmAy.getCalismaModeli();
+			cm = cmAy.getCalismaModeli();
 			this.onaylandi = cm.isIlkPlanOnaylidir() || cm.isFazlaMesaiVarMi() == false || cmAy.isHareketKaydiVardiyaBulsunmu();
 			if (cm.isFazlaMesaiVarMi() == false)
 				this.fazlaMesaiOde = false;
@@ -126,11 +131,37 @@ public class PersonelDenklestirme extends BaseObject {
 			this.fazlaMesaiOde = false;
 			this.fazlaMesaiIzinKullan = true;
 		}
+		if (cm == null && pdksPersonel != null)
+			cm = pdksPersonel.getCalismaModeli();
+		if (cm != null && cm.isSaatlikOdeme())
+			this.fazlaMesaiOde = true;
 		this.setDurum(Boolean.FALSE);
 		this.setGuncellendi(Boolean.FALSE);
 
 	}
 
+	/**
+	 * @param pd
+	 */
+	public void setPersonelDenklestirme(PersonelDenklestirme pd) {
+		this.setGuncellendi(false);
+		this.setOdenenSure(pd.getOdenenSure());
+		this.setHesaplananSure(pd.getHesaplananSure());
+		this.setHaftaCalismaSuresi(pd.getHaftaCalismaSuresi());
+		this.setResmiTatilSure(pd.getResmiTatilSure());
+		this.setFazlaMesaiSure(pd.getFazlaMesaiSure());
+		this.setPlanlanSure(pd.getPlanlanSure());
+		this.setDevredenSure(pd.getDevredenSure());
+		this.setKismiOdemeSure(pd.getKismiOdemeSure());
+		this.setAksamVardiyaSayisi(pd.getAksamVardiyaSayisi());
+		this.setEksikCalismaSure(pd.getEksikCalismaSure());
+		this.setAksamVardiyaSaatSayisi(pd.getAksamVardiyaSaatSayisi());
+		this.setSutIzniSaatSayisi(pd.getSutIzniSaatSayisi());
+		this.setKesilenSure(pd.getKesilenSure());
+		this.setOnaylandi(pd.isOnaylandi());
+	}
+
+	// @Version
 	@Column(name = "VERSION")
 	public Integer getVersion() {
 		return version;
@@ -169,9 +200,8 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setCalismaModeliAy(CalismaModeliAy value) {
-		Long oldId = calismaModeliAy != null ? calismaModeliAy.getId() : 0L, newId = value != null ? value.getId() : 0L;
-		if (!this.isGuncellendi())
-			this.setGuncellendi(!oldId.equals(newId));
+		if (guncellendi != null && !guncellendi && value != null)
+			this.setGuncellendi(PdksUtil.isLongDegisti(value != null ? value.getId() : null, calismaModeliAy != null ? calismaModeliAy.getId() : null));
 		this.calismaModeliAy = value;
 	}
 
@@ -203,8 +233,8 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setOdenenSure(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.odenenSure == null || this.odenenSure.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, odenenSure));
 			if (guncellendi)
 				logger.debug(value);
 		}
@@ -227,8 +257,8 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setHesaplananSure(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.hesaplananSure == null || this.hesaplananSure.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, hesaplananSure));
 			if (guncellendi)
 				logger.debug(value);
 		}
@@ -242,8 +272,8 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setHaftaCalismaSuresi(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.haftaCalismaSuresi == null || this.haftaCalismaSuresi.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, haftaCalismaSuresi));
 			if (guncellendi)
 				logger.debug(value);
 		}
@@ -256,12 +286,11 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setResmiTatilSure(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.resmiTatilSure == null || this.resmiTatilSure.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, resmiTatilSure));
 			if (guncellendi)
 				logger.debug(value);
 		}
-
 		this.resmiTatilSure = value;
 	}
 
@@ -271,8 +300,8 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setFazlaMesaiSure(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.fazlaMesaiSure == null || this.fazlaMesaiSure.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, fazlaMesaiSure));
 			if (guncellendi)
 				logger.debug(value);
 		}
@@ -280,14 +309,14 @@ public class PersonelDenklestirme extends BaseObject {
 		this.fazlaMesaiSure = value;
 	}
 
-	@Column(name = "SUA_DURUM")
+	@Column(name = COLUMN_NAME_SUA_DURUM)
 	public Boolean getSuaDurum() {
 		return suaDurum;
 	}
 
 	public void setSuaDurum(Boolean value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.suaDurum == null || !this.suaDurum.equals(value));
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isBooleanDegisti(value, suaDurum));
 			if (guncellendi)
 				logger.debug(value);
 		}
@@ -301,8 +330,8 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setPlanlanSure(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.planlanSure == null || this.planlanSure.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, planlanSure));
 			if (guncellendi)
 				logger.debug(value);
 		}
@@ -316,11 +345,12 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setDevredenSure(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.devredenSure == null || this.devredenSure.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, devredenSure));
 			if (guncellendi)
 				logger.debug(value);
 		}
+
 		this.devredenSure = value;
 	}
 
@@ -330,8 +360,8 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setKismiOdemeSure(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.kismiOdemeSure == null || this.kismiOdemeSure.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, kismiOdemeSure));
 			if (guncellendi)
 				logger.debug(value);
 		}
@@ -343,8 +373,14 @@ public class PersonelDenklestirme extends BaseObject {
 		return erpAktarildi;
 	}
 
-	public void setErpAktarildi(boolean erpAktarildi) {
-		this.erpAktarildi = erpAktarildi;
+	public void setErpAktarildi(boolean value) {
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isBooleanDegisti(value, erpAktarildi));
+			if (guncellendi)
+				logger.debug(value);
+		}
+
+		this.erpAktarildi = value;
 	}
 
 	@Column(name = COLUMN_NAME_FAZLA_MESAI_IZIN_KULLAN)
@@ -353,8 +389,8 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setFazlaMesaiIzinKullan(Boolean value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.fazlaMesaiIzinKullan == null || !this.fazlaMesaiIzinKullan.equals(value));
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isBooleanDegisti(value, fazlaMesaiIzinKullan));
 			if (guncellendi)
 				logger.debug(value);
 		}
@@ -373,12 +409,11 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setFazlaMesaiOde(Boolean value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.fazlaMesaiOde == null || !this.fazlaMesaiOde.equals(value));
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isBooleanDegisti(value, fazlaMesaiOde));
 			if (guncellendi)
 				logger.debug(value);
 		}
-
 		this.fazlaMesaiOde = value;
 	}
 
@@ -387,8 +422,13 @@ public class PersonelDenklestirme extends BaseObject {
 		return onaylandi;
 	}
 
-	public void setOnaylandi(boolean onaylandi) {
-		this.onaylandi = onaylandi;
+	public void setOnaylandi(boolean value) {
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isBooleanDegisti(value, onaylandi));
+			if (guncellendi)
+				logger.debug(value);
+		}
+		this.onaylandi = value;
 	}
 
 	@Column(name = COLUMN_NAME_DENKLESTIRME_DURUM)
@@ -396,8 +436,13 @@ public class PersonelDenklestirme extends BaseObject {
 		return denklestirme;
 	}
 
-	public void setDenklestirme(boolean denklestirme) {
-		this.denklestirme = denklestirme;
+	public void setDenklestirme(boolean value) {
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isBooleanDegisti(value, denklestirme));
+			if (guncellendi)
+				logger.debug(value);
+		}
+		this.denklestirme = value;
 	}
 
 	@Column(name = COLUMN_NAME_AKSAM_VARDIYA_GUN_ADET)
@@ -406,12 +451,30 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setAksamVardiyaSayisi(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.aksamVardiyaSayisi == null || this.aksamVardiyaSayisi.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, aksamVardiyaSayisi));
 			if (guncellendi)
 				logger.debug(value);
 		}
 		this.aksamVardiyaSayisi = value;
+	}
+
+	@Column(name = COLUMN_NAME_AYLIK_NET_UCRET)
+	public Double getAylikNetUcret() {
+		return aylikNetUcret;
+	}
+
+	public void setAylikNetUcret(Double aylikNetUcret) {
+		this.aylikNetUcret = aylikNetUcret;
+	}
+
+	@Column(name = COLUMN_NAME_AYLIK_BRUT_UCRET)
+	public Double getAylikBrutUcret() {
+		return aylikBrutUcret;
+	}
+
+	public void setAylikBrutUcret(Double aylikBrutUcret) {
+		this.aylikBrutUcret = aylikBrutUcret;
 	}
 
 	@Column(name = COLUMN_NAME_EKSIK_CALISMA_SURE)
@@ -420,8 +483,8 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setEksikCalismaSure(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.eksikCalismaSure == null || this.eksikCalismaSure.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, eksikCalismaSure));
 			if (guncellendi)
 				logger.debug(value);
 		}
@@ -434,8 +497,8 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setAksamVardiyaSaatSayisi(Double value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.aksamVardiyaSaatSayisi == null || this.aksamVardiyaSaatSayisi.doubleValue() != value.doubleValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, aksamVardiyaSaatSayisi));
 			if (guncellendi)
 				logger.debug(value);
 		}
@@ -449,11 +512,12 @@ public class PersonelDenklestirme extends BaseObject {
 	}
 
 	public void setPartTime(Boolean value) {
-		if (guncellendi != null && !guncellendi && value != null) {
-			this.setGuncellendi(this.partTime == null || this.partTime.booleanValue() != value.booleanValue());
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isBooleanDegisti(value, partTime));
 			if (guncellendi)
 				logger.debug(value);
 		}
+
 		this.partTime = value;
 	}
 
@@ -462,8 +526,13 @@ public class PersonelDenklestirme extends BaseObject {
 		return sutIzniDurum;
 	}
 
-	public void setSutIzniDurum(Boolean sutIzniDurum) {
-		this.sutIzniDurum = sutIzniDurum;
+	public void setSutIzniDurum(Boolean value) {
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isBooleanDegisti(value, sutIzniDurum));
+			if (guncellendi)
+				logger.debug(value);
+		}
+		this.sutIzniDurum = value;
 	}
 
 	@Column(name = COLUMN_NAME_SUT_IZNI_SAAT)
@@ -471,8 +540,14 @@ public class PersonelDenklestirme extends BaseObject {
 		return sutIzniSaatSayisi;
 	}
 
-	public void setSutIzniSaatSayisi(Double sutIzniSaatSayisi) {
-		this.sutIzniSaatSayisi = sutIzniSaatSayisi;
+	public void setSutIzniSaatSayisi(Double value) {
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, sutIzniSaatSayisi));
+			if (guncellendi)
+				logger.debug(value);
+		}
+
+		this.sutIzniSaatSayisi = value;
 	}
 
 	@Column(name = COLUMN_NAME_EGITIM_SURESI_AKSAM_GUN_SAYISI)
@@ -489,8 +564,13 @@ public class PersonelDenklestirme extends BaseObject {
 		return kesilenSure;
 	}
 
-	public void setKesilenSure(Double kesilenSure) {
-		this.kesilenSure = kesilenSure;
+	public void setKesilenSure(Double value) {
+		if (guncellendi != null && !guncellendi) {
+			this.setGuncellendi(PdksUtil.isDoubleDegisti(value, kesilenSure));
+			if (guncellendi)
+				logger.debug(value);
+		}
+		this.kesilenSure = value;
 	}
 
 	@Transient
@@ -511,7 +591,7 @@ public class PersonelDenklestirme extends BaseObject {
 	 * @return
 	 */
 	private double getPlananSureHesapla(CalismaModeli cm, PersonelDonemselDurum gebePersonelDonemselDurum, List<VardiyaGun> vardiyalar) {
-		double sure = 0.0d, gun = cm.getHaftaIci();
+		double sure = 0.0d;
 		Double sutIzniSabitSaat = null;
 		if (cm.getSutIzniSabitSaat() != null && cm.getSutIzniSabitSaat().doubleValue() > 0.0d)
 			sutIzniSabitSaat = cm.getSutIzniSabitSaat();
@@ -519,23 +599,35 @@ public class PersonelDenklestirme extends BaseObject {
 			double sureGunlukSut = sutIzniSabitSaat == null ? cm.getSutIzinSaat(PdksUtil.getDateField(vg.getVardiyaDate(), Calendar.DAY_OF_WEEK)) : sutIzniSabitSaat;
 			Tatil tatil = vg.getTatil();
 			Vardiya vardiya = vg.getVardiya();
-			double gunPlanSure = gebePersonelDonemselDurum == null ? gun : cm.getSaat(PdksUtil.getDateField(vg.getVardiyaDate(), Calendar.DAY_OF_WEEK)), sutIzniSure = 0.0d;
+			String key = vg.getVardiyaDateStr();
+			if (key.endsWith("0927"))
+				logger.debug("");
+
+			int gunHafta = PdksUtil.getDateField(vg.getVardiyaDate(), Calendar.DAY_OF_WEEK);
+			double gun = (gunHafta != Calendar.SATURDAY && gunHafta != Calendar.SUNDAY) ? cm.getHaftaIci() : 0;
+			if (gun == 0.0d) {
+				if (gunHafta == Calendar.SATURDAY)
+					gun = cm.getCumartesiSaat();
+				else if (gunHafta == Calendar.SUNDAY)
+					gun = cm.getPazarSaat();
+			}
+			double gunPlanSure = gebePersonelDonemselDurum != null ? gun : cm.getSaat(gunHafta), sutIzniSure = 0.0d;
 			if (vg.isSutIzniVar()) {
 				sutIzniSure = gunPlanSure <= 9.0d ? sureGunlukSut : 7.5d;
 				Double deger = vg.getPlanSaatSutIzinSaati();
 				if (deger != null)
 					sutIzniSure = gunPlanSure - deger.doubleValue();
 				gunPlanSure = sutIzniSure;
-				logger.debug(vg.getVardiyaDateStr() + " Sut İzni " + gunPlanSure + " ");
+				logger.debug(key + " Sut İzni " + gunPlanSure + " ");
 			} else if (vg.isGebePersonelDonemselDurum()) {
 				if (gunPlanSure > 0)
 					sutIzniSure = gunPlanSure > 7.5d || vg.getPlanSaatGebeSaatiKontrolEt().equals(Boolean.FALSE) ? 7.5d : gunPlanSure;
 				gunPlanSure = sutIzniSure;
-				logger.debug(vg.getVardiyaDateStr() + " Gebe " + gunPlanSure + " ");
+				logger.debug(key + " Gebe " + gunPlanSure + " ");
 			} else if (isSuaDurumu()) {
 				sutIzniSure = gunPlanSure > 7d ? 7d : gunPlanSure;
 				gunPlanSure = AylikPuantaj.getGunlukCalismaSuresi();
-				logger.debug(vg.getVardiyaDateStr() + " Şua " + gunPlanSure + " ");
+				logger.debug(key + " Şua " + gunPlanSure + " ");
 			}
 			if (vg.isAyinGunu() && vardiya != null && vardiya.getId() != null) {
 				boolean hesapla = !(vg.isIzinli() || vardiya.isHaftaTatil() || tatil != null || (isSuaDurumu() && vardiya.isOff()));
@@ -550,7 +642,7 @@ public class PersonelDenklestirme extends BaseObject {
 				}
 				if (hesapla) {
 					sure += gunPlanSure;
-					logger.debug(vg.getVardiyaDateStr() + " " + gunPlanSure + " " + sure);
+					logger.debug(key + " " + gunPlanSure + " " + sure);
 				}
 			}
 		}
@@ -567,23 +659,10 @@ public class PersonelDenklestirme extends BaseObject {
 		if (vardiyalar != null) {
 			for (VardiyaGun vardiyaGun : vardiyalar) {
 				if (vardiyaGun.isAyinGunu()) {
-					if (vardiyaGun.getIzin() == null && vardiyaGun.getIzinler() != null) {
-						for (PersonelIzin personelIzin : vardiyaGun.getIzinler()) {
-							if (personelIzin.getHesapTipi() != null && personelIzin.getHesapTipi().equals(PersonelIzin.HESAP_TIPI_SAAT)) {
-								IzinTipi izinTipi = personelIzin.getIzinTipi();
-								double sure = personelIzin.getIzinSuresi();
-								if (cgsDus == false) {
-									if (izinTipi.isEkleCGS()) {
-										izinSure += sure;
-										vardiyaGun.addCalismaSuresi(sure);
-									}
+					if (vardiyaGun.getIzinler() != null) {
+						if (cgsDus)
+							izinSure += vardiyaGun.getSaatIzinSuresi(false);
 
-								} else if (cgsDus) {
-									if (izinTipi.isCikarCGS())
-										izinSure += sure;
-								}
-							}
-						}
 					}
 				}
 			}
@@ -607,7 +686,7 @@ public class PersonelDenklestirme extends BaseObject {
 		double aylikSutSure = calismaModeliAy != null && calismaModeliAy.getToplamIzinSure() > 0.0d ? calismaModeliAy.getToplamIzinSure() : denklestirmeAy.getToplamIzinSure();
 		if (calismaModeliAy != null && cm.getToplamGunGuncelle() && sutIzniSaatSayisi > 0)
 			aylikSure = sutIzniSaatSayisi;
-		else if (cm.isHaftaTatilSabitDegil() || sutIzniPersonelDonemselDurum != null || gebePersonelDonemselDurum != null) {
+		else if (cm.isSaatlikOdeme() || cm.isHaftaTatilSabitDegil() || sutIzniPersonelDonemselDurum != null || gebePersonelDonemselDurum != null) {
 			aylikSure = getPlananSureHesapla(cm, gebePersonelDonemselDurum, vardiyalar);
 			if (sutIzniPersonelDonemselDurum != null)
 				aylikSutSure = aylikSure;

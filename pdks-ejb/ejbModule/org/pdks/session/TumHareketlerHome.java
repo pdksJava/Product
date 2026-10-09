@@ -31,6 +31,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.hibernate.Session;
 import org.jboss.seam.annotations.Begin;
+import org.jboss.seam.annotations.FlushModeType;
 import org.jboss.seam.annotations.In;
 import org.jboss.seam.annotations.Name;
 import org.jboss.seam.annotations.Transactional;
@@ -112,7 +113,6 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -157,9 +157,10 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 		return "";
 	}
 
+	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		vardiyaOku = false;
 		if (vardiyaOkuDurum == null) {
@@ -172,7 +173,7 @@ public class TumHareketlerHome extends EntityHome<HareketKGS> implements Seriali
 
 		sayfaGiris(session);
 
-		ikRole = ortakIslemler.getIKRolSayfa(authenticatedUser) || authenticatedUser.isRaporKullanici();
+		ikRole = PdksUtil.getIkRole(authenticatedUser) || authenticatedUser.isRaporKullanici();
 		setHareketList(new ArrayList<HareketKGS>());
 		HareketKGS hareket = new HareketKGS();
 		hareket.setPersonel(new PersonelView());

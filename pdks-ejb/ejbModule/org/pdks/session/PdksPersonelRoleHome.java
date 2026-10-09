@@ -58,8 +58,8 @@ public class PdksPersonelRoleHome extends EntityHome<Role> implements Serializab
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		rolAdi = "";
 		rolAciklama = "";
 		rolAktif = Boolean.TRUE;
@@ -82,7 +82,12 @@ public class PdksPersonelRoleHome extends EntityHome<Role> implements Serializab
 			e.printStackTrace();
 			logger.error("PDKS hata out : " + e.getMessage());
 		}
-		session.flush();
+		try {
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 		rolGetir();
 		return "";
 
@@ -98,7 +103,12 @@ public class PdksPersonelRoleHome extends EntityHome<Role> implements Serializab
 			e.printStackTrace();
 			logger.error("PDKS hata out : " + e.getMessage());
 		}
-		session.flush();
+		try {
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 		rolGetir();
 		return "";
 	}
@@ -117,7 +127,12 @@ public class PdksPersonelRoleHome extends EntityHome<Role> implements Serializab
 			e.printStackTrace();
 			logger.error("PDKS hata out : " + e.getMessage());
 		}
-		session.flush();
+		try {
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 		rolGetir();
 
 		return "";
@@ -125,7 +140,7 @@ public class PdksPersonelRoleHome extends EntityHome<Role> implements Serializab
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	public String rolGuncelleGiris(Role rol) {

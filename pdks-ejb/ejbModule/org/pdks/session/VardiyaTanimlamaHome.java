@@ -156,6 +156,7 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 			map.put(PdksEntityController.MAP_KEY_SESSION, session);
 		denklestirmeAylar = pdksEntityController.getObjectBySQLList(sb, map, DenklestirmeAy.class);
 		List<Long> dmIdList = new ArrayList<Long>();
+
 		for (DenklestirmeAy dm : denklestirmeAylar) {
 			dmIdList.add(dm.getId());
 		}
@@ -207,6 +208,7 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 						flush = true;
 
 					}
+
 					TreeMap<Long, CalismaModeliAy> modelDenkMap = new TreeMap<Long, CalismaModeliAy>();
 					da.setModelMap(modelDenkMap);
 					da.setModeller(new ArrayList<CalismaModeliAy>());
@@ -234,7 +236,12 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 					renk = !renk;
 				}
 				if (flush)
-					xSession.flush();
+					try {
+						pdksEntityController.sessionFlush(session);
+					} catch (Exception e) {
+						logger.error(e);
+						e.printStackTrace();
+					}
 			} catch (Exception e) {
 				logger.error(e);
 				e.printStackTrace();
@@ -248,8 +255,8 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		denklestirmeTipiVar = false;
 		taseronVar = false;
 		if (authenticatedUser.isAdmin()) {
@@ -645,7 +652,11 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 
 						}
 						if (flush)
-							session.flush();
+							try {
+								pdksEntityController.sessionFlush(session);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 						personelIdler = null;
 					}
 				}
@@ -691,7 +702,12 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 		if (adet == 0)
 			PdksUtil.addMessageAvailableWarn("İşlem yapılacak kayıt yok!");
 		else if (flush)
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
 		return "";
 	}
 
@@ -728,7 +744,12 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 			}
 		}
 		if (flush)
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
 		personelDenklestirmeler.clear();
 		devredenBakiyeDosya.setDosyaIcerik(null);
 		return "";
@@ -780,7 +801,9 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 				denklestirmeTipiVar = ortakIslemler.getParameterKeyHasStringValue("denklestirmeTipi");
 
 			}
-
+			Date bugun = ortakIslemler.getBugun();
+			Calendar cal = Calendar.getInstance();
+			boolean flush = false;
 			for (DenklestirmeAy dm : denklestirmeAylar) {
 				if (dt != null && denklestirmeTipiVar == false)
 					denklestirmeTipiVar = dm.getTipi() != null && dt.equals(dm.getTipi()) == false;
@@ -791,7 +814,44 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 					denklestirmeDevredilenAylar = dm.getDenklestirmeDevret() != null && dm.getDenklestirmeDevret();
 				if (!bakiyeSifirlaDurum)
 					bakiyeSifirlaDurum = dm.getBakiyeSifirlaDurum() != null && dm.getBakiyeSifirlaDurum();
+				if (dm.getDurum()) {
+					if (dm.getOtomatikOnayIKTarih() != null && dm.getOtomatikOnayIKTarih().after(bugun) && dm.getOtomatikOnayIKBaslangicTarih() == null) {
+						logger.debug("");
+						cal.set(Calendar.YEAR, dm.getYil());
+						cal.set(Calendar.MONTH, dm.getAy() - 1);
+						cal.set(Calendar.DATE, cal.getActualMaximum(Calendar.DATE));
+						int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+						int fark = 0;
+						switch (dayOfWeek) {
+						case Calendar.MONDAY:
+							fark = 6;
+							break;
+						case Calendar.SUNDAY:
+							fark = 6;
+							break;
+
+						default:
+							fark = dayOfWeek - 1;
+							break;
+						}
+						if (fark != 0)
+							cal.add(Calendar.DATE, -fark);
+
+						Date otomatikOnayIKBaslangicTarih = PdksUtil.getDate(cal.getTime());
+						logger.debug(dm.getAyAdi() + " " + dayOfWeek + " " + fark + " " + PdksUtil.convertToDateString(otomatikOnayIKBaslangicTarih, "yyyMMdd"));
+						dm.setOtomatikOnayIKBaslangicTarih(otomatikOnayIKBaslangicTarih);
+						pdksEntityController.saveOrUpdate(session, entityManager, dm);
+						flush = true;
+					}
+				}
 			}
+			if (flush)
+				try {
+					pdksEntityController.sessionFlush(session);
+				} catch (Exception e) {
+					logger.error(e);
+					e.printStackTrace();
+				}
 			if (denklestirmeTipiVar && taseronVar == false) {
 				HashMap parametreMap = new HashMap();
 				StringBuilder sb = new StringBuilder();
@@ -867,8 +927,9 @@ public class VardiyaTanimlamaHome extends EntityHome<DenklestirmeAy> implements 
 			denklestirmeAy.setGuncellemeTarihi(new Date());
 			denklestirmeAy.setGuncelleyenUser(authenticatedUser);
 			pdksEntityController.saveOrUpdate(session, entityManager, denklestirmeAy);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 		} catch (Exception e) {
+			logger.error(e);
 			e.printStackTrace();
 		}
 

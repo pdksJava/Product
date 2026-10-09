@@ -157,7 +157,8 @@ public class Authenticator implements IAuthenticator, Serializable {
 							if (!parameterMap.containsKey("emailBozuk"))
 								loginUser.setEmail(ldapUser.getEmail());
 							pdksEntityController.saveOrUpdate(session, entityManager, loginUser);
-							session.flush();
+
+							pdksEntityController.sessionFlush(session);
 							userName = ldapUser.getUsername();
 						}
 					}
@@ -165,7 +166,7 @@ public class Authenticator implements IAuthenticator, Serializable {
 					if (loginUser.getShortUsername() == null || !loginUser.getShortUsername().equals(ldapUser.getShortUsername())) {
 						loginUser.setShortUsername(ldapUser.getShortUsername());
 						pdksEntityController.saveOrUpdate(session, entityManager, loginUser);
-						session.flush();
+						pdksEntityController.sessionFlush(session);
 					}
 				}
 
@@ -188,7 +189,7 @@ public class Authenticator implements IAuthenticator, Serializable {
 						if (!parametreMap.containsKey("emailBozuk"))
 							loginUser.setEmail(ldapUser.getEmail());
 						pdksEntityController.saveOrUpdate(session, entityManager, loginUser);
-						session.flush();
+						pdksEntityController.sessionFlush(session);
 					}
 				}
 				if (!test && parameterMap != null && parameterMap.containsKey("sifreKontrol"))
@@ -247,7 +248,7 @@ public class Authenticator implements IAuthenticator, Serializable {
 										if (!parameterMap.containsKey("emailBozuk"))
 											loginUser.setEmail(email);
 										pdksEntityController.saveOrUpdate(session, entityManager, loginUser);
-										session.flush();
+										pdksEntityController.sessionFlush(session);
 									}
 								}
 							} catch (Exception e) {
@@ -296,12 +297,14 @@ public class Authenticator implements IAuthenticator, Serializable {
 								logger.error("PDKS hata out : " + e.getMessage());
 								logger.debug("Hata : " + e.getMessage());
 							}
-							if (!test || adres.startsWith("surum")) {
+							if (ortakIslemler.getCanliDurum() || ortakIslemler.getTestSunucuDurum()) {
 								try {
 									loginUser.setLastLogin(new Date());
 									pdksEntityController.saveOrUpdate(session, entityManager, loginUser);
-									session.flush();
+									pdksEntityController.sessionFlush(session);
 								} catch (Exception e) {
+									logger.error(e);
+									e.printStackTrace();
 								}
 							}
 
@@ -313,6 +316,7 @@ public class Authenticator implements IAuthenticator, Serializable {
 				// sonuc = getSonDurum(sonuc, userName, loginUser);
 				// return sonuc;
 			} catch (Exception ex) {
+				ex.printStackTrace();
 				mesajList.clear();
 				String str = (ex.getMessage() != null ? ex.getMessage() : "Hata oluştu! ") + " " + ex.getClass().getName();
 				addMessageAvailableError(str + " [ " + userName + " ]");
@@ -320,7 +324,8 @@ public class Authenticator implements IAuthenticator, Serializable {
 			}
 		}
 		sonuc = getSonDurum(sonuc, userName, loginUser);
-		authenticatedUser.setSessionSQL(session);
+		if (sonuc && authenticatedUser != null)
+			authenticatedUser.setSessionSQL(session);
 		return sonuc;
 
 	}
@@ -353,17 +358,19 @@ public class Authenticator implements IAuthenticator, Serializable {
 	private User getKullanici(String userName, String fieldName) {
 		User user = null;
 		try {
-			if (userName.indexOf("%") > 0) {
-				StringBuilder sb = new StringBuilder();
-				sb.append("select S.* from " + User.TABLE_NAME + " S " + PdksEntityController.getSelectLOCK());
+			StringBuilder sb = new StringBuilder();
+			sb.append("select S.* from " + User.TABLE_NAME + " S " + PdksEntityController.getSelectLOCK());
+			if (userName.indexOf("%") > 0 == false)
+				sb.append(" where S." + fieldName + " = :userName");
+			else {
 				sb.append(" where S." + fieldName + " like :userName");
-				HashMap fields = new HashMap();
-				fields.put("userName", userName);
-				if (session != null)
-					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-				user = (User) pdksEntityController.getObjectBySQL(sb, fields, User.class);
-			} else
-				user = (User) pdksEntityController.getSQLParamByFieldObject(User.TABLE_NAME, fieldName, userName, User.class, session);
+				sb.append(" order by S." + User.COLUMN_NAME_DURUM + " desc");
+			}
+			HashMap fields = new HashMap();
+			fields.put("userName", userName);
+			if (session != null)
+				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+			user = (User) pdksEntityController.getObjectBySQL(sb, fields, User.class);
 
 		} catch (Exception ex) {
 			mesajList.clear();

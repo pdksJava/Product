@@ -7,18 +7,17 @@ import java.util.List;
 
 import javax.persistence.EntityManager;
 
-import org.pdks.entity.AccountPermission;
-import org.pdks.entity.Parameter;
-import org.pdks.security.entity.Role;
-import org.pdks.security.entity.User;
 import org.hibernate.Session;
-import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.In;
 import org.jboss.seam.annotations.Name;
 import org.jboss.seam.annotations.Transactional;
 import org.jboss.seam.annotations.web.RequestParameter;
 import org.jboss.seam.framework.EntityHome;
 import org.jboss.seam.persistence.PersistenceProvider;
+import org.pdks.entity.AccountPermission;
+import org.pdks.entity.Parameter;
+import org.pdks.security.entity.Role;
+import org.pdks.security.entity.User;
 
 @Name("accountPermissionHome")
 public class AccountPermissionHome extends EntityHome<AccountPermission> implements Serializable {
@@ -48,7 +47,6 @@ public class AccountPermissionHome extends EntityHome<AccountPermission> impleme
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}

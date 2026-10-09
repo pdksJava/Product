@@ -65,7 +65,6 @@ public class TanimHome extends EntityHome<Tanim> implements Serializable {
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -73,8 +72,8 @@ public class TanimHome extends EntityHome<Tanim> implements Serializable {
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		genelTanim = new Tanim();
 		genelTanimId = null;
 		setSelectedParentTanim(new Tanim());
@@ -183,7 +182,8 @@ public class TanimHome extends EntityHome<Tanim> implements Serializable {
 	 */
 	private void getTanimByGenelTanim() {
 		if (genelTanimId != null) {
-			genelTanim = ortakIslemler.getTanimById(genelTanimId, session);
+			genelTanim = (Tanim) pdksEntityController.getSQLParamByFieldObject(Tanim.TABLE_NAME, Tanim.COLUMN_NAME_ID, genelTanimId, Tanim.class, session);
+
 			Tanim childGenelTanim = (Tanim) pdksEntityController.getSQLParamByFieldObject(Tanim.TABLE_NAME, Tanim.COLUMN_NAME_PARENT_ID, genelTanimId, Tanim.class, session);
 			if (childGenelTanim != null && childGenelTanim.getTipi().equals(genelTanim.getTipi()))
 				genelTanim.setChildGenelTanim(childGenelTanim);
@@ -223,27 +223,29 @@ public class TanimHome extends EntityHome<Tanim> implements Serializable {
 		fillChildTanimList(null);
 	}
 
-	public Tanim getSelectedParentTanim() {
-		return selectedParentTanim;
-	}
-
-	public void setSelectedParentTanim(Tanim selectedParentTanim) {
-		this.selectedParentTanim = selectedParentTanim;
-	}
-
+	/**
+	 * @param anaTanim
+	 * @return
+	 */
 	public String tanimEkle(Tanim anaTanim) {
 		Tanim tanim = new Tanim();
-		if (anaTanim == null)
-			tanim.setTipi(genelTanim.getKodu());
-		else {
+		if (anaTanim == null) {
+			anaTanim = genelTanim;
+			tanim.setTipi(anaTanim.getKodu());
+		} else
 			tanim.setTipi(genelTanim.getChildGenelTanim().getKodu());
+		if (anaTanim.getKodu().equals(Tanim.TIPI_GENEL_TANIM) == false) {
 			tanim.setParentTanim(anaTanim);
+			tanim.setGuncelle(!authenticatedUser.isAdmin());
 		}
-		tanim.setGuncelle(!authenticatedUser.isAdmin());
-		setInstance(tanim);
+ 		setInstance(tanim);
 		return "";
 	}
 
+	/**
+	 * @param tanim
+	 * @return
+	 */
 	public String guncelle(Tanim tanim) {
 		setInstance(tanim);
 		return "";
@@ -253,6 +255,7 @@ public class TanimHome extends EntityHome<Tanim> implements Serializable {
 	@Transactional
 	public String save() {
 		Tanim tanim = getInstance();
+
 		tanimKaydet(tanim);
 		getTanimByGenelTanim();
 		return "";
@@ -273,7 +276,12 @@ public class TanimHome extends EntityHome<Tanim> implements Serializable {
 		tanim.setIslemTarihi(new Date());
 		tanim.setIslemYapan(authenticatedUser);
 		pdksEntityController.saveOrUpdate(session, entityManager, tanim);
-		session.flush();
+		try {
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 	}
 
 	public void fiilGenelTanimList() {
@@ -375,22 +383,6 @@ public class TanimHome extends EntityHome<Tanim> implements Serializable {
 		return getInstance().getId() != null ? " Güncelle" : " Ekle";
 	}
 
-	public Session getSession() {
-		return session;
-	}
-
-	public void setSession(Session session) {
-		this.session = session;
-	}
-
-	public static String getSayfaURL() {
-		return sayfaURL;
-	}
-
-	public static void setSayfaURL(String sayfaURL) {
-		TanimHome.sayfaURL = sayfaURL;
-	}
-
 	public List<SelectItem> getGenelTanimIdList() {
 		return genelTanimIdList;
 	}
@@ -407,11 +399,35 @@ public class TanimHome extends EntityHome<Tanim> implements Serializable {
 		this.genelTanimId = genelTanimId;
 	}
 
+	public Tanim getSelectedParentTanim() {
+		return selectedParentTanim;
+	}
+
+	public void setSelectedParentTanim(Tanim selectedParentTanim) {
+		this.selectedParentTanim = selectedParentTanim;
+	}
+
 	public Tanim getGenelTanim() {
 		return genelTanim;
 	}
 
 	public void setGenelTanim(Tanim genelTanim) {
 		this.genelTanim = genelTanim;
+	}
+
+	public Session getSession() {
+		return session;
+	}
+
+	public void setSession(Session session) {
+		this.session = session;
+	}
+
+	public static String getSayfaURL() {
+		return sayfaURL;
+	}
+
+	public static void setSayfaURL(String sayfaURL) {
+		TanimHome.sayfaURL = sayfaURL;
 	}
 }

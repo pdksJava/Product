@@ -79,7 +79,6 @@ public class KGSHareketHome extends EntityHome<HareketKGS> {
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -92,14 +91,14 @@ public class KGSHareketHome extends EntityHome<HareketKGS> {
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		setHareketList(new ArrayList<HareketKGS>());
 		HareketKGS hareket = new HareketKGS();
 		hareket.setPersonel(new PersonelView());
@@ -251,7 +250,12 @@ public class KGSHareketHome extends EntityHome<HareketKGS> {
 	public void onayla() {
 		HareketKGS kgsHareket = this.getInstance();
 		pdksEntityController.hareketOnayla(kgsHareket.getIslem().getId(), authenticatedUser, session);
-		session.flush();
+		try {
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 
 	}
 
@@ -266,7 +270,12 @@ public class KGSHareketHome extends EntityHome<HareketKGS> {
 			pdksId = 0;
 		}
 		pdksEntityController.hareketOnaylama(kgsId, pdksId, authenticatedUser, session);
-		session.flush();
+		try {
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 		fillHareketList();
 	}
 

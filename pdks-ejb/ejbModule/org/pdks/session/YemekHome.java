@@ -70,7 +70,6 @@ public class YemekHome extends EntityHome<YemekOgun> implements Serializable {
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -161,7 +160,7 @@ public class YemekHome extends EntityHome<YemekOgun> implements Serializable {
 		try {
 			if (mesaj == null) {
 				pdksEntityController.saveOrUpdate(session, entityManager, yemekKartsiz);
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 				fillKartSizYemek();
 				yemekKartsiz = new YemekKartsiz();
 			} else
@@ -190,7 +189,7 @@ public class YemekHome extends EntityHome<YemekOgun> implements Serializable {
 				pdksYemek.setGuncellemeTarihi(new Date());
 			}
 			pdksEntityController.saveOrUpdate(session, entityManager, pdksYemek);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 			fillPdksYemekList();
 
 		} catch (Exception e) {
@@ -223,19 +222,19 @@ public class YemekHome extends EntityHome<YemekOgun> implements Serializable {
 
 	public void instanceKartsizRefresh() {
 		if (yemekKartsiz.getId() != null)
-			session.refresh(yemekKartsiz);
+			pdksEntityController.sessionRefresh(session, entityManager,yemekKartsiz);
 	}
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		fillPdksYemekList();
 
 	}
@@ -243,8 +242,8 @@ public class YemekHome extends EntityHome<YemekOgun> implements Serializable {
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaExtraGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, "yemekKartsizTanimlama");
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, "yemekKartsizTanimlama");
 		if (basTarih == null) {
 			Calendar cal = Calendar.getInstance();
 			bitTarih = PdksUtil.getDate(cal.getTime());

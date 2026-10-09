@@ -344,7 +344,7 @@
 																</f:setPropertyActionListener>
 															</a4j:commandLink>
 															<ui:fragment
-																rendered="#{hareketler.terminalKapi != null and (authenticatedUser.IK or authenticatedUser.admin or ortakIslemler.getParameterKey('terminalGuncelle') == '1')}">
+																rendered="#{hareketler.terminalKapi != null and (personelHareketHome.ikRole or authenticatedUser.admin or ortakIslemler.getParameterKey('terminalGuncelle') == '1')}">
 																<a4j:commandLink status="ajaxStatus" id="terminalKapilink" ajaxSingle="true"
 																	action="#{personelHareketHome.terminalGuncelle(hareketler)}" oncomplete="#{rich:component('terminalPanel')}.show()"
 																	reRender="terminalPanel">
@@ -428,8 +428,8 @@
 													</f:facet>
 													<ui:fragment rendered="#{hareketler.islem.onaylayanUser != null}">
 												#{hareketler.islem.onaylayanUser.adSoyad}   
-												<h:outputText value=" #{hareketler.islem.onayDurumAciklama}" rendered="#{hareketler.durum != 0}" />
-														<h:outputText value=" (İptal Edildi)" rendered="#{hareketler.durum == 0}" />
+														<h:outputText value=" #{hareketler.islem.onayDurumAciklama}" rendered="#{hareketler.durum != 0}" />
+	 													<h:outputText value=" (İptal Edildi : #{authenticatedUser.dateTimeLongFormatla(hareketler.islem.olusturmaZamani)})" rendered="#{hareketler.durum == 0}" />
 													</ui:fragment>
 												</rich:column>
 												<rich:column rendered="#{personelHareketHome.kgsUpdateGoster}">

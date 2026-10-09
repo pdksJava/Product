@@ -273,7 +273,9 @@
 								</s:decorate>
 								<s:decorate template="/layout/edit.xhtml">
 									<ui:define name="label">PDKS Dahil</ui:define>
-									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.pdks}" />
+									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.pdks}">
+										<a4j:support event="onchange" ajaxSingle="true" reRender="personelListTable" />
+									</h:selectBooleanCheckbox>
 								</s:decorate>
 								<s:decorate template="/layout/edit.xhtml" rendered="#{sirketHome.seciliSirket.departman.suaOlabilir}">
 									<ui:define name="label">Şua Olabilir</ui:define>
@@ -295,6 +297,10 @@
 									rendered="#{sirketHome.seciliSirket.fazlaMesaiIzinKullan or ortakIslemler.getParameterKey('fazlaMesaiIzinKullan') == '1'}">
 									<ui:define name="label">#{ortakIslemler.fmIzinKullanAciklama()}</ui:define>
 									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.fazlaMesaiIzinKullan}" />
+								</s:decorate>
+								<s:decorate template="/layout/edit.xhtml" rendered="#{sirketHome.seciliSirket.departman.fazlaMesaiTalepGirilebilir}">
+									<ui:define name="label">Fazla Mesai Talep</ui:define>
+									<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.fazlaMesaiTalepGirilebilir}" />
 								</s:decorate>
 								<s:decorate template="/layout/edit.xhtml"
 									rendered="#{ortakIslemler.getParameterKey('fazlaMesaiTalepDurum') == '1' and sirketHome.seciliSirket.departman.fazlaMesaiTalepGirilebilir}">
@@ -396,7 +402,9 @@
 							</c:if>
 							<s:decorate template="/layout/edit.xhtml">
 								<ui:define name="label">Aktif</ui:define>
-								<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.durum}" />
+								<h:selectBooleanCheckbox value="#{sirketHome.seciliSirket.durum}">
+									<a4j:support event="onchange" ajaxSingle="true" reRender="personelListTable" />
+								</h:selectBooleanCheckbox>
 							</s:decorate>
 						</h:panelGrid>
 					</a4j:outputPanel>
@@ -408,15 +416,41 @@
 
 
 					<a4j:outputPanel id="personelListTable">
-						<h:panelGrid columns="3" rendered="#{sirketHome.seciliSirket.id != null and sirketHome.seciliSirket.pdks}">
-							<a4j:commandButton status="ajaxStatus" value="Personel Getir" action="#{sirketHome.fillPersonelList()}" reRender="personelListTable" />
-							<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin or authenticatedUser.IK}">
-								<ui:define name="label">İşten Ayrılanları Getir</ui:define>
-								<h:selectBooleanCheckbox value="#{sirketHome.istenAyrilanlariEkle}" />
-							</s:decorate>
-							<a4j:commandButton status="ajaxStatus" value="Kapat" action="#{sirketHome.personelList.clear()}" reRender="personelListTable"
-								rendered="#{not empty sirketHome.personelList}" />
+						<h:panelGrid columns="1" rendered="#{sirketHome.seciliSirket.pdks and sirketHome.seciliSirket.durum}">
+							<h:panelGrid columns="3" rendered="#{sirketHome.seciliSirket.id != null and sirketHome.seciliSirket.pdks}">
+								<s:decorate template="/layout/edit.xhtml" rendered="#{sirketHome.tesisList != null and sirketHome.tesisList.size()>0}">
+									<ui:define name="label">#{ortakIslemler.tesisAciklama()}</ui:define>
+									<h:selectOneMenu value="#{sirketHome.tesisId}" requiredMessage="#{ortakIslemler.tesisAciklama()} seçiniz!" required="false"
+										disabled="#{sirketHome.tesisList.size() == 1}">
+										<f:selectItem itemLabel="Lütfen seçiniz" />
+										<f:selectItems value="#{sirketHome.tesisList}" />
+										<a4j:support event="onchange" status="ajaxStatus" action="#{ortakIslemler.emtpyAjaxFunction()}" ajaxSingle="true"
+											reRender="personelListTable" />
+									</h:selectOneMenu>
+								</s:decorate>
+								<s:decorate template="/layout/edit.xhtml" rendered="#{authenticatedUser.admin or authenticatedUser.IK}">
+									<ui:define name="label">İşten Ayrılanları Getir</ui:define>
+									<h:selectBooleanCheckbox value="#{sirketHome.istenAyrilanlariEkle}" />
+
+								</s:decorate>
+								<a4j:commandButton status="ajaxStatus" value="Personel Getir" action="#{sirketHome.fillPersonelList()}" reRender="personelListTable" />
+							</h:panelGrid>
+							<h:panelGrid columns="2">
+								<ui:fragment rendered="#{not empty sirketHome.personelList}">
+									<ui:fragment rendered="#{sirketHome.updatePersonelValue}">
+										<a4j:commandButton status="ajaxStatus" value="#{ortakIslemler.getParameterKey('uygulamaBordro')} Personel Güncelle"
+											action="#{sirketHome.personelERPDBGuncelle(true)}" />
+										<ui:fragment rendered="#{sirketHome.updateIzinValue}">
+											<a4j:commandButton status="ajaxStatus" value="#{ortakIslemler.getParameterKey('uygulamaBordro')} İzin Güncelle"
+												action="#{sirketHome.personelERPDBGuncelle(false)}" />
+										</ui:fragment>
+									</ui:fragment>
+								</ui:fragment>
+								<a4j:commandButton status="ajaxStatus" value="Kapat" action="#{sirketHome.personelList.clear()}" reRender="personelListTable"
+									rendered="#{not empty sirketHome.personelList}" />
+							</h:panelGrid>
 						</h:panelGrid>
+
 						<rich:panel style="vardiyaGun" header="Personel Listesi" rendered="#{not empty sirketHome.personelList}">
 							<h:panelGrid id="pdksPersonelList" columns="1" cellpadding="0" cellspacing="0">
 								<rich:dataTable rowClasses="acik,koyu" value="#{sirketHome.personelList}" var="personelView" rows="50" rowKeyVar="row" id="personelViewTable">

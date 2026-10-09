@@ -85,7 +85,6 @@ public class HoldingKalanIzinHome extends EntityHome<HoldingIzin> implements Ser
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -103,14 +102,14 @@ public class HoldingKalanIzinHome extends EntityHome<HoldingIzin> implements Ser
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		istenAyrilanEkle = Boolean.FALSE;
 		if (authenticatedUser.isAdmin() == false || aramaSecenekleri == null)
 			aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
@@ -247,13 +246,13 @@ public class HoldingKalanIzinHome extends EntityHome<HoldingIzin> implements Ser
 
 					}
 					String personelList = sb.toString();
-					 
+
 					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 					veriMap.put("personelList", personelList);
 					veriMap.put("sirketId", aramaSecenekleri.getSirketId() != null ? String.valueOf(aramaSecenekleri.getSirketId()) : null);
 					veriMap.put("tarih", hakedisTarihiStr);
 					veriMap.put("format", "120");
- 					List<HoldingIzin> izinList = pdksEntityController.execSPList(session, veriMap, spName, HoldingIzin.class);
+					List<HoldingIzin> izinList = pdksEntityController.execSPList(session, veriMap, spName, HoldingIzin.class);
 
 					if (!izinList.isEmpty()) {
 						for (HoldingIzin holdingIzin : izinList) {

@@ -56,6 +56,7 @@ import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Tatil;
 import org.pdks.entity.Vardiya;
+import org.pdks.entity.VardiyaEkSaat;
 import org.pdks.entity.VardiyaGun;
 import org.pdks.entity.VardiyaHafta;
 import org.pdks.entity.VardiyaSaat;
@@ -139,19 +140,19 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		return personelDenklestirmeId;
 	}
 
-	@Begin(join = true)
+	@Override
 	public void create() {
 		super.create();
 	}
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	private void adminRoleDurum() {
 		adminRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIKAdmin();
-		ikRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIK();
+		ikRole = PdksUtil.getIkRole(authenticatedUser);
 	}
 
 	public String panelGuncelle() {
@@ -200,8 +201,8 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		aylikPuantajListClear();
 		fazlaMesaiSayfa = false;
 		aksamAdetGoster = false;
@@ -673,7 +674,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			return "";
 		}
 		linkAdres = null;
- 		session.clear();
+		session.clear();
 		try {
 			DepartmanDenklestirmeDonemi denklestirmeDonemi = new DepartmanDenklestirmeDonemi();
 
@@ -760,6 +761,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 					sb.append(" and G.VARDIYA_TARIHI >= P." + Personel.COLUMN_NAME_ISE_BASLAMA_TARIHI + " and G.VARDIYA_TARIHI <= P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI);
 					sb.append(" inner join " + Vardiya.TABLE_NAME + " V " + PdksEntityController.getJoinLOCK() + " on V." + Vardiya.COLUMN_NAME_ID + " = G." + VardiyaGun.COLUMN_NAME_VARDIYA + " and V.AKSAM_VARDIYA=1");
 					sb.append(" inner join " + VardiyaSaat.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + VardiyaSaat.COLUMN_NAME_ID + " = G." + VardiyaGun.COLUMN_NAME_VARDIYA_SAAT + " and S.CALISMA_SURESI>0");
+					sb.append(" left join " + VardiyaEkSaat.TABLE_NAME + " ES " + PdksEntityController.getJoinLOCK() + " on ES." + VardiyaEkSaat.COLUMN_NAME_ID + " =  S." + VardiyaSaat.COLUMN_NAME_VARDIYA_EK_SAAT);
 					sb.append(" where G." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >= :t1 and G." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " <= :t2 ");
 					sb.append(" and G." + VardiyaGun.COLUMN_NAME_PERSONEL + " :" + fieldName + " and G." + VardiyaGun.COLUMN_NAME_DURUM + " = 1 ");
 					fields.put("t1", basTarih);
@@ -985,12 +987,14 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			HashMap parametreMap = new HashMap();
 			StringBuilder sb = new StringBuilder();
 			sb.append("select I.* from " + PersonelFazlaMesai.TABLE_NAME + " I " + PdksEntityController.getSelectLOCK() + " ");
+			sb.append(" inner join " + VardiyaGun.TABLE_NAME + " V " + PdksEntityController.getJoinLOCK() + " on I." + PersonelFazlaMesai.COLUMN_NAME_VARDIYA_GUN + " = V." + VardiyaGun.COLUMN_NAME_ID);
+			sb.append(" left join " + VardiyaSaat.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + VardiyaSaat.COLUMN_NAME_ID + " = V." + VardiyaGun.COLUMN_NAME_VARDIYA_SAAT);
+			sb.append(" left join " + VardiyaEkSaat.TABLE_NAME + " ES " + PdksEntityController.getJoinLOCK() + " on ES." + VardiyaEkSaat.COLUMN_NAME_ID + " =  S." + VardiyaSaat.COLUMN_NAME_VARDIYA_EK_SAAT);
 			sb.append(" where I." + PersonelFazlaMesai.COLUMN_NAME_VARDIYA_GUN + " :" + fieldName);
 			sb.append(" and I." + PersonelFazlaMesai.COLUMN_NAME_DURUM + " = 1 ");
 			parametreMap.put(fieldName, ekCalismaList);
 			if (session != null)
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			// List<PersonelFazlaMesai> list = pdksEntityController.getObjectBySQLList(sb, parametreMap, PersonelFazlaMesai.class);
 			List<PersonelFazlaMesai> list = pdksEntityController.getSQLParamList(ekCalismaList, sb, fieldName, parametreMap, PersonelFazlaMesai.class, session);
 
 			for (PersonelFazlaMesai personelFazlaMesai : list) {
@@ -1192,14 +1196,15 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 			HashMap parametreMap = new HashMap();
 			StringBuilder sb = new StringBuilder();
 			sb.append("select I.* from " + PersonelFazlaMesai.TABLE_NAME + " I " + PdksEntityController.getSelectLOCK() + " ");
+			sb.append(" inner join " + VardiyaGun.TABLE_NAME + " V " + PdksEntityController.getJoinLOCK() + " on I." + PersonelFazlaMesai.COLUMN_NAME_VARDIYA_GUN + " = V." + VardiyaGun.COLUMN_NAME_ID);
+			sb.append(" left join " + VardiyaSaat.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + VardiyaSaat.COLUMN_NAME_ID + " = V." + VardiyaGun.COLUMN_NAME_VARDIYA_SAAT);
+			sb.append(" left join " + VardiyaEkSaat.TABLE_NAME + " ES " + PdksEntityController.getJoinLOCK() + " on ES." + VardiyaEkSaat.COLUMN_NAME_ID + " =  S." + VardiyaSaat.COLUMN_NAME_VARDIYA_EK_SAAT);
 			sb.append(" where I." + PersonelFazlaMesai.COLUMN_NAME_VARDIYA_GUN + " :" + fieldName);
 			sb.append(" and I." + PersonelFazlaMesai.COLUMN_NAME_DURUM + " = 1 ");
 			parametreMap.put(fieldName, idList);
 			if (session != null)
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			// List<PersonelFazlaMesai> list = pdksEntityController.getObjectBySQLList(sb, parametreMap, PersonelFazlaMesai.class);
 			List<PersonelFazlaMesai> list = pdksEntityController.getSQLParamList(idList, sb, fieldName, parametreMap, PersonelFazlaMesai.class, session);
-
 			if (!list.isEmpty()) {
 				String patern = "yyyyMMdd" + (maxGeceCalismaSaatStr.indexOf(":") > 0 ? "HH:mm" : "HHmm");
 				Date tarih2;
@@ -1464,7 +1469,10 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 		ExcelUtil.setFillForegroundColor(styleOff, 13, 12, 89);
 		ExcelUtil.setFontColor(styleOff, Color.WHITE);
 		ExcelUtil.setFontColor(styleOff, 256, 256, 256);
+		CellStyle styleIcap = ExcelUtil.getStyleDataCenter(wb);
+		ExcelUtil.setFillForegroundColor(styleIcap, 254, 235, 41);
 		CellStyle styleIzin = ExcelUtil.getStyleDataCenter(wb);
+
 		ExcelUtil.setFillForegroundColor(styleIzin, 146, 208, 80);
 		CreationHelper helper = wb.getCreationHelper();
 		drawing = sheet.createDrawingPatriarch();
@@ -1647,10 +1655,15 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 								if (styleText != null) {
 									if (styleText.equals(VardiyaGun.STYLE_CLASS_HAFTA_TATIL))
 										styleDay = styleTatil;
+									else if (styleText.equals(VardiyaGun.STYLE_CLASS_ICAP))
+										styleDay = styleIcap;
 									else if (styleText.equals(VardiyaGun.STYLE_CLASS_IZIN))
 										styleDay = styleIzin;
 									else if (styleText.equals(VardiyaGun.STYLE_CLASS_OFF))
 										styleDay = styleOff;
+									else if (styleText.equals(VardiyaGun.STYLE_CLASS_ICAP))
+										styleDay = styleIcap;
+
 								}
 								fmtCell = ExcelUtil.getCell(sheet, row, col++, styleDay);
 								String str = "";
@@ -1662,7 +1675,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 							}
 							if (!maxToplamMesaiDurum) {
 								List sb = new ArrayList();
-								String str = gun.getFazlaMesaiTitle();
+								String str = gun.fazlaMesaiTitle(authenticatedUser);
 								if (str != null)
 									sb.add(str);
 								setCommentCell(wb, helper, fmtCell, sb);
@@ -1700,7 +1713,7 @@ public class FazlaCalismaRaporHome extends EntityHome<DepartmanDenklestirmeDonem
 										fmtCell = ExcelUtil.getCell(sheet, row, col++, styleDay);
 										fmtCell.setCellValue(tutar.doubleValue());
 									}
-									String str = gun.getFazlaMesaiTitle();
+									String str = gun.fazlaMesaiTitle(authenticatedUser);
 									if (str != null) {
 										List sb = new ArrayList();
 										sb.add(str);

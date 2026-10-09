@@ -134,7 +134,6 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -201,10 +200,11 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 				manuelIzin.setGuncelleyenUser(authenticatedUser);
 			}
 			pdksEntityController.saveOrUpdate(session, entityManager, manuelIzin);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 			fillTarihIzinList();
 		} catch (Exception e) {
-
+			logger.error(e);
+			e.printStackTrace();
 		}
 
 		return "";
@@ -225,11 +225,13 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 					personelIzinDetay.setHakEdisIzin(bakiyeIzin);
 					pdksEntityController.saveOrUpdate(session, entityManager, personelIzinDetay);
 				}
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 				if (bakiyeIzin.getPersonelNo() != null)
 					aramaSecenekleri.setSicilNo(bakiyeIzin.getPersonelNo());
 				setPdksPersonelList(new ArrayList<TempIzin>());
 			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
 				PdksUtil.addMessageWarn(e.getMessage());
 			}
 
@@ -773,7 +775,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 					izin.setGuncelleyenUser(authenticatedUser);
 				}
 				pdksEntityController.saveOrUpdate(session, entityManager, izin);
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 				TempIzin tempIzin = updateTempIzin;
 				tempIzin.setToplamBakiyeIzin(0.0d);
 				for (Iterator iterator = tempIzin.getYillikIzinler().iterator(); iterator.hasNext();) {
@@ -803,7 +805,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 		String durum = "persist";
 		try {
 			ortakIslemler.bakiyeIzinSil(izin, session);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 			fillIzinList(null);
 		} catch (Exception e) {
 			logger.error("Pdks hata in : \n");
@@ -835,7 +837,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 				updateIzin.setIzinSuresi(izinSuresi);
 			updateIzin.setIzinKagidiGeldi(kayitDurum.equals(Boolean.FALSE) || izinSuresi > 0.0d ? null : Boolean.FALSE);
 			pdksEntityController.saveOrUpdate(session, entityManager, updateIzin);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 			fillIzinList(null);
 
 		} catch (Exception e) {
@@ -885,14 +887,14 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void bakiyeGuncelleSayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, "bakiyeGuncelle");
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, "bakiyeGuncelle");
 		minYil = PdksUtil.getSistemBaslangicYili();
 		Calendar cal = Calendar.getInstance();
 		maxYil = cal.get(Calendar.YEAR) - 1;
@@ -905,8 +907,8 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() throws Exception {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 
 		aramaSecenekleri = null;
 		if (authenticatedUser.isAdmin() == false || aramaSecenekleri == null)
@@ -1643,7 +1645,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 
 					}
 					if (flush)
-						session.flush();
+						pdksEntityController.sessionFlush(session);
 
 				}
 				if (!hucreMap.isEmpty()) {
@@ -2070,7 +2072,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 							pdksEntityController.saveOrUpdate(session, entityManager, izinDetay);
 						}
 					}
-					// session.refresh(hakEdisIzin);
+					// pdksEntityController.sessionRefresh(session, entityManager,hakEdisIzin);
 
 				}
 				if (!izinERPList.isEmpty()) {
@@ -2109,7 +2111,7 @@ public class PersonelKalanIzinHome extends EntityHome<PersonelIzin> implements S
 					pdksPersonel.setDogumTarihi(tempIzin.getDogumTarihi());
 				}
 				pdksEntityController.saveOrUpdate(session, entityManager, pdksPersonel);
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 			} catch (Exception e) {
 				logger.error(e);
 				e.printStackTrace();

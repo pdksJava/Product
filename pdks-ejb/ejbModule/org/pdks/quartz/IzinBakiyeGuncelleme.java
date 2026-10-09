@@ -22,7 +22,6 @@ import org.jboss.seam.annotations.AutoCreate;
 import org.jboss.seam.annotations.In;
 import org.jboss.seam.annotations.Name;
 import org.jboss.seam.annotations.Scope;
-import org.jboss.seam.annotations.Transactional;
 import org.jboss.seam.annotations.async.Asynchronous;
 import org.jboss.seam.annotations.async.Expiration;
 import org.jboss.seam.annotations.async.IntervalCron;
@@ -38,7 +37,6 @@ import org.pdks.entity.PersonelIzinDetay;
 import org.pdks.entity.Sirket;
 import org.pdks.entity.SirketEntegrasyon;
 import org.pdks.entity.Tanim;
-import org.pdks.security.action.StartupAction;
 import org.pdks.security.entity.User;
 import org.pdks.session.OrtakIslemler;
 import org.pdks.session.PdksEntityController;
@@ -69,8 +67,6 @@ public class IzinBakiyeGuncelleme implements Serializable {
 	Zamanlayici zamanlayici;
 	@In(required = false, create = true)
 	Renderer renderer;
-	@In(required = false, create = true)
-	StartupAction startupAction;
 	private static boolean calisiyor = Boolean.FALSE;
 	private int yil;
 	private String hataKonum;
@@ -82,7 +78,6 @@ public class IzinBakiyeGuncelleme implements Serializable {
 
 	@Asynchronous
 	@SuppressWarnings("unchecked")
-	@Transactional
 	// @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
 	public QuartzTriggerHandle izinBakiyeGuncellemeTimer(@Expiration Date when, @IntervalCron String interval) {
 		hataKonum = "izinBakiyeGuncellemeTimer başladı ";
@@ -90,8 +85,8 @@ public class IzinBakiyeGuncelleme implements Serializable {
 			Session session = null;
 
 			zamanDurum = false;
-
-			izinGuncelemeCalistir(false, session);
+			if (PdksUtil.getCanliSunucuDurum() || PdksUtil.getTestSunucuDurum())
+				izinGuncelemeCalistir(false, session);
 		}
 		return null;
 	}
@@ -114,7 +109,7 @@ public class IzinBakiyeGuncelleme implements Serializable {
 			Date time = cal.getTime();
 			hataGonder = Boolean.TRUE;
 			hataKonum = "Paramatre okunuyor ";
-			Parameter parameter = ortakIslemler.getParameter(session, PARAMETER_KEY);
+			Parameter parameter = ortakIslemler.getParameterAktif(session, PARAMETER_KEY);
 			String value = (parameter != null) ? parameter.getValue() : null;
 			String izinERPTableViewAdi = ortakIslemler.getParameterKey(ortakIslemler.getParametreIzinERPTableView());
 			boolean izinBakiye = value != null && (manuel || PdksUtil.zamanKontrol(PARAMETER_KEY, value, time));
@@ -211,7 +206,8 @@ public class IzinBakiyeGuncelleme implements Serializable {
 
 											pdksEntityController.execSP(session, veriMap, PersonelIzinDetay.SP_NAME);
 										}
-										session.flush();
+										pdksEntityController.sessionFlush(session);
+
 									}
 									izinList = null;
 								}
@@ -235,8 +231,8 @@ public class IzinBakiyeGuncelleme implements Serializable {
 					logger.error("izinBakiyeGuncellemeTimer 2 : " + e2.getMessage());
 				}
 		} finally {
-			if (manuel == false && session != null)
-				session.close();
+			if (manuel == false)
+				pdksEntityController.sessionClose(session);
 			setCalisiyor(Boolean.FALSE);
 
 		}
@@ -267,7 +263,7 @@ public class IzinBakiyeGuncelleme implements Serializable {
 	 * @param session
 	 * @throws Exception
 	 */
-	@Transactional
+
 	public void ciftBakiyeIzinKontrol(Session session) throws Exception {
 		HashMap parametreMap = new HashMap();
 		StringBuilder sb = new StringBuilder();
@@ -293,9 +289,12 @@ public class IzinBakiyeGuncelleme implements Serializable {
 						personelIzin.setGuncelleyenUser(guncelleyenUser);
 					pdksEntityController.saveOrUpdate(session, entityManager, personelIzin);
 				}
-				session.flush();
+				pdksEntityController.sessionFlush(session);
+
 			}
 		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
 			izinList = new ArrayList<PersonelIzin>();
 		}
 		parametreMap = null;
@@ -308,7 +307,7 @@ public class IzinBakiyeGuncelleme implements Serializable {
 	private void senelikSuaIzinKontrol(Session session) throws Exception {
 
 		try {
-			Parameter parameter = ortakIslemler.getParameter(session, "suaSenelikKullan");
+			Parameter parameter = ortakIslemler.getParameterAktif(session, "suaSenelikKullan");
 			boolean suaSenelikKullan = parameter != null && parameter.getValue().equals("1");
 			Calendar cal = Calendar.getInstance();
 			HashMap parametreMap = new HashMap();
@@ -370,7 +369,7 @@ public class IzinBakiyeGuncelleme implements Serializable {
 	 * @param manuel
 	 * @throws Exception
 	 */
-	@Transactional
+
 	// @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
 	public void izinleriHesapla(User user, Session session, boolean manuel) throws Exception {
 		logger.info("izinBakiyeGuncellemeTimer in " + PdksUtil.getCurrentTimeStampStr());
@@ -414,7 +413,7 @@ public class IzinBakiyeGuncelleme implements Serializable {
 			izinleriBakiyeleriniHesapla(session, null, null, user, Boolean.TRUE, Boolean.FALSE, manuel, Boolean.TRUE);
 			flush = true;
 			if (ozelKontrol) {
-				Parameter parameter = ortakIslemler.getParameter(session, "suaSenelikKullan");
+				Parameter parameter = ortakIslemler.getParameterAktif(session, "suaSenelikKullan");
 				boolean suaSenelikKullanma = parameter == null || parameter.getValue() == null || !parameter.getValue().equals("1");
 				cal = Calendar.getInstance();
 				int haftaGun = cal.get(Calendar.DAY_OF_WEEK);
@@ -424,7 +423,8 @@ public class IzinBakiyeGuncelleme implements Serializable {
 					senelikSuaIzinKontrol(session);
 			}
 			if (flush)
-				session.flush();
+				pdksEntityController.sessionFlush(session);
+
 		} catch (Exception e) {
 			logger.error("PDKS hata in : \n");
 			e.printStackTrace();
@@ -450,7 +450,7 @@ public class IzinBakiyeGuncelleme implements Serializable {
 	 * @param manuel
 	 * @param calisanPersonel
 	 */
-	@Transactional
+
 	public void izinleriBakiyeleriniHesapla(Session userSession, List<String> siciller, Sirket sirket, User user, boolean yeni, boolean gecmisHesapla, boolean manuel, boolean calisanPersonel) {
 		if (PdksUtil.isSessionKapali(userSession))
 			userSession = PdksUtil.getSession(entityManager, yeni);
@@ -553,7 +553,12 @@ public class IzinBakiyeGuncelleme implements Serializable {
 
 			}
 			if (!list.isEmpty()) {
-				userSession.flush();
+				try {
+					pdksEntityController.sessionFlush(userSession);
+				} catch (Exception e) {
+					logger.error(e);
+					e.printStackTrace();
+				}
 				if (yeni)
 					userSession = PdksUtil.getSession(entityManager, yeni);
 
@@ -561,7 +566,12 @@ public class IzinBakiyeGuncelleme implements Serializable {
 					Collections.shuffle(list);
 			}
 		}
-		userSession.flush();
+		try {
+			pdksEntityController.sessionFlush(userSession);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 		logger.info("izinleriBakiyeleriniHesapla out " + PdksUtil.getCurrentTimeStampStr());
 		if (yeni)
 			logger.info("izinBakiyeGuncelleme tamam " + PdksUtil.getCurrentTimeStampStr());

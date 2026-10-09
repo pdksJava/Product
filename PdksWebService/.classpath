@@ -19,14 +19,17 @@
 	<classpathentry kind="lib" path="C:/opt/lib/gl/poi-2.5.1-final-20040804.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/quartz-1.6.0.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/spring-2.5.6.jar"/>
+	<classpathentry kind="lib" path="/pdks-test/lib/hibernate-all.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jst.ws.cxf.core.CXF_CLASSPATH_CONTAINER/Apache CXF/2.6.1">
 		<attributes>
 			<attribute name="org.eclipse.jst.component.dependency" value="/WEB-INF/lib"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/pdks-test/lib/hibernate-all.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/json-smart-1.0.6.3.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/oauth2-oidc-sdk-6.5.jar"/>
 	<classpathentry kind="lib" path="C:/opt/lib/gl/adal4j-1.6.7.jar"/>
+	<classpathentry kind="lib" path="C:/opt/lib/gl/core-3.3.3.jar"/>
+	<classpathentry kind="lib" path="C:/opt/lib/gl/javase-3.3.3.jar"/>
+	<classpathentry kind="lib" path="C:/opt/lib/gl/icu4j-60.3.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>

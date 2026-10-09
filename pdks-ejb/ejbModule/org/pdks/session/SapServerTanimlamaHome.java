@@ -47,7 +47,7 @@ public class SapServerTanimlamaHome extends EntityHome<SAPSunucu> implements Ser
 
 	@In(required = false, create = true)
 	OrtakIslemler ortakIslemler;
-	
+
 	public static String sayfaURL = "sapSunucuTanimlama";
 	private List<SAPSunucu> sunucuList = new ArrayList<SAPSunucu>();
 	private List<SelectItem> sunucuTipleri;
@@ -72,7 +72,6 @@ public class SapServerTanimlamaHome extends EntityHome<SAPSunucu> implements Ser
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -82,7 +81,7 @@ public class SapServerTanimlamaHome extends EntityHome<SAPSunucu> implements Ser
 
 		try {
 			pdksEntityController.saveOrUpdate(session, entityManager, seciliSAPSunucu);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 			fillSAPSunucuList();
 
 		} catch (Exception e) {
@@ -149,14 +148,14 @@ public class SapServerTanimlamaHome extends EntityHome<SAPSunucu> implements Ser
 
 	public void instanceRefresh() {
 		if (seciliSAPSunucu.getId() != null)
-			session.refresh(seciliSAPSunucu);
+			pdksEntityController.sessionRefresh(session, entityManager,seciliSAPSunucu);
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		seciliSAPSunucu = new SAPSunucu();
 		fillSAPSunucuList();
 		fillSAPSunucuTipleri();

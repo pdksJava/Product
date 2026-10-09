@@ -92,7 +92,6 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -100,8 +99,8 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		sicilNo = "";
 		setHareketList(new ArrayList<HareketKGS>());
 		setVardiyaGunList(new ArrayList<VardiyaGun>());
@@ -299,11 +298,7 @@ public class CalismaSaatleriHome extends EntityHome<VardiyaGun> implements Seria
 		}
 		TreeMap<Long, List<PersonelFazlaMesai>> fmMap = new TreeMap<Long, List<PersonelFazlaMesai>>();
 		if (!idList.isEmpty()) {
-			HashMap parametreMap2 = new HashMap();
-			parametreMap2.put("vardiyaGun.id", idList);
-			if (session != null)
-				parametreMap2.put(PdksEntityController.MAP_KEY_SESSION, session);
-			List<PersonelFazlaMesai> fmList = pdksEntityController.getObjectByInnerObjectList(parametreMap2, PersonelFazlaMesai.class);
+			List<PersonelFazlaMesai> fmList = ortakIslemler.getVardiyaTableList(PersonelFazlaMesai.TABLE_NAME, PersonelFazlaMesai.COLUMN_NAME_VARDIYA_GUN, idList, PersonelFazlaMesai.class, session);
 			for (PersonelFazlaMesai personelFazlaMesai : fmList) {
 				if (personelFazlaMesai.getDurum() && personelFazlaMesai.isOnaylandi()) {
 					Long key = personelFazlaMesai.getVardiyaGun().getId();

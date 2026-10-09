@@ -79,7 +79,6 @@ public class IzinTipiHome extends EntityHome<IzinTipi> implements Serializable {
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -402,13 +401,13 @@ public class IzinTipiHome extends EntityHome<IzinTipi> implements Serializable {
 				}
 				adresler = null;
 				mailMap = null;
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 				if (sirala) {
 					try {
 						pdksEntityController.savePrepareTableID(true, null, IzinTipiMailAdres.class, session);
 					} catch (Exception e) {
 					}
-					session.flush();
+					pdksEntityController.sessionFlush(session);
 				}
 				fillIzinTipiList();
 
@@ -593,18 +592,19 @@ public class IzinTipiHome extends EntityHome<IzinTipi> implements Serializable {
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		durumCGSList = ortakIslemler.getSelectItemList("durumCGS", authenticatedUser);
 		durumCGSList.add(new SelectItem(IzinTipi.CGS_DURUM_YOK, IzinTipi.getDurumCGSAciklama(IzinTipi.CGS_DURUM_YOK)));
 		durumCGSList.add(new SelectItem(IzinTipi.CGS_DURUM_CIKAR, IzinTipi.getDurumCGSAciklama(IzinTipi.CGS_DURUM_CIKAR)));
 		durumCGSList.add(new SelectItem(IzinTipi.CGS_DURUM_EKLE, IzinTipi.getDurumCGSAciklama(IzinTipi.CGS_DURUM_EKLE)));
+		durumCGSList.add(new SelectItem(IzinTipi.TCS_DURUM_EKLE, IzinTipi.getDurumCGSAciklama(IzinTipi.TCS_DURUM_EKLE)));
 		IzinTipi izinTipi = new IzinTipi();
 		fillPersonelGirisTipiList(izinTipi);
 		fillBakiyeDevirTipiList(izinTipi);

@@ -1,0 +1,51 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml" xmlns:s="http://jboss.com/products/seam/taglib" xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:f="http://java.sun.com/jsf/core" xmlns:h="http://java.sun.com/jsf/html" xmlns:rich="http://richfaces.org/rich"
+	xmlns:a4j="http://richfaces.org/a4j" xmlns:c="http://java.sun.com/jstl/core" template="/layout/popup.xhtml">
+
+	<ui:define name="body">
+
+		<h:form>
+			<a4j:region>
+				<div style="text-align: center; padding: 20px;background-color: #{startupAction.projeHeaderBackgroundColor};">
+
+					<ui:fragment rendered="#{startupAction.projeHeaderImage != null}">
+						<div width="#{startupAction.projeHeaderImageWidth+4}" height="#{startupAction.projeHeaderImageHeight+2}" align="center">
+							<ui:fragment rendered="#{startupAction.projeURL != null}">
+								<a href="#" title="#{startupAction.projeURL}" id="imageURL" onclick="createPop('#{startupAction.projeURL}',this.id);return false;"> <s:graphicImage
+										value="#{startupAction.projeHeaderImage}" width="#{startupAction.projeHeaderImageWidth}" height="#{startupAction.projeHeaderImageHeight}"
+										style="padding: 40px;" /></a>
+							</ui:fragment>
+							<ui:fragment rendered="#{startupAction.projeURL == null}">
+								<s:graphicImage value="#{startupAction.projeHeaderImage}" width="#{startupAction.projeHeaderImageWidth}"
+									height="#{startupAction.projeHeaderImageHeight}" style="padding: 40px;"/>
+							</ui:fragment>
+
+
+						</div>
+					</ui:fragment>
+					<!-- QR Kod (Görsel olarak bean'den veya static gelmeli) -->
+					<ui:fragment rendered="#{cihazHome.data!=null}">
+						<ui:fragment rendered="#{cihazHome.adi != null}">
+							<span style="font-weight: bold; font-size: 24px; color: #{startupAction.projeHeaderColor}; padding: 40px;">#{cihazHome.adi}</span>
+							<br></br>
+						</ui:fragment>
+						<s:graphicImage value="#{cihazHome.data}" style="padding: 40px;" />
+						<ui:fragment rendered="#{cihazHome.tipAciklama != null}">
+							<br></br>
+							<span style="font-weight: bold; font-size: 24px; color: red; padding: 40px;">#{cihazHome.tipAciklama}</span>
+						</ui:fragment>
+					</ui:fragment>
+
+					<br />
+
+
+				</div>
+			</a4j:region>
+		</h:form>
+
+
+	</ui:define>
+
+</ui:composition>

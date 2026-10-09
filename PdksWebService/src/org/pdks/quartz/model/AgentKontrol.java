@@ -91,6 +91,10 @@ public final class AgentKontrol extends QuartzJobBean {
 		HashMap fields = new HashMap();
 		StringBuffer sp = new StringBuffer();
 		sp.append("select * from " + PdksAgent.TABLE_NAME + " " + PdksVeriOrtakAktar.getSelectLOCK());
+		sp.append(" where " + PdksAgent.COLUMN_NAME_DURUM + " = 1 ");
+		if (PdksUtil.isSistemDestekVar() == false)
+			sp.append(" and coalesce(" + PdksAgent.COLUMN_NAME_DURUM + ", 1) = 0 ");
+
 		List<PdksAgent> list = dAO != null ? dAO.getNativeSQLList(fields, sp, PdksAgent.class) : null;
 		if (list != null && !list.isEmpty()) {
 			int dakika = cal.get(Calendar.MINUTE);
@@ -160,14 +164,13 @@ public final class AgentKontrol extends QuartzJobBean {
 	 * @param dAO
 	 */
 	private void dbEPostaGonder(PdksDAO dAO) {
+		//
 		String paramName = "dbEPosta";
 		HashMap fields = new HashMap();
 		StringBuffer sp = new StringBuffer();
 		sp.append("select S.* from " + ServiceData.TABLE_NAME + " S " + PdksVeriOrtakAktar.getSelectLOCK());
-		// sp.append(" inner join " + ServiceData.TABLE_NAME + " S " + PdksVeriOrtakAktar.getJoinLOCK() + " on S." + ServiceData.COLUMN_NAME_FONKSIYON_ADI + " = P." + Parameter.COLUMN_NAME_ADI);
 		sp.append(" where S." + ServiceData.COLUMN_NAME_FONKSIYON_ADI + " = :f");
 		sp.append(" and S." + ServiceData.COLUMN_NAME_ICERIK_OUT + " is not null");
-		// sp.append(" and P." + Parameter.COLUMN_NAME_DURUM + " = 1 and P." + Parameter.COLUMN_NAME_DEGER + " = '1'");
 		sp.append(" order by S." + ServiceData.COLUMN_NAME_ID);
 		fields.put("f", paramName);
 		List<ServiceData> mailDataList = dAO != null ? dAO.getNativeSQLList(fields, sp, ServiceData.class) : null;

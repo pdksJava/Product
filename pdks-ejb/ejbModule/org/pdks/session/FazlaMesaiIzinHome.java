@@ -101,7 +101,6 @@ public class FazlaMesaiIzinHome extends EntityHome<PersonelIzin> implements Seri
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -117,8 +116,8 @@ public class FazlaMesaiIzinHome extends EntityHome<PersonelIzin> implements Seri
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		fillEkSahaTanim();
 		setBitTarih(new Date());
 		Calendar cal = Calendar.getInstance();
@@ -148,7 +147,7 @@ public class FazlaMesaiIzinHome extends EntityHome<PersonelIzin> implements Seri
 		try {
 
 			ortakIslemler.bakiyeIzinSil(izin, session);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 			fillIzinList();
 
 		} catch (Exception e) {
@@ -179,10 +178,10 @@ public class FazlaMesaiIzinHome extends EntityHome<PersonelIzin> implements Seri
 			query.setParameter(3, kullanilanIzinSuresi);
 			query.setParameter(4, updateIzin.getId());
 			query.executeUpdate();
-			 
-			PersonelIzin izin = (PersonelIzin)pdksEntityController.getSQLParamByFieldObject(PersonelIzin.TABLE_NAME, PersonelIzin.COLUMN_NAME_ID, updateIzin.getId(), PersonelIzin.class, session);
-			session.refresh(izin);
-			session.flush();
+
+			PersonelIzin izin = (PersonelIzin) pdksEntityController.getSQLParamByFieldObject(PersonelIzin.TABLE_NAME, PersonelIzin.COLUMN_NAME_ID, updateIzin.getId(), PersonelIzin.class, session);
+			pdksEntityController.sessionRefresh(session, entityManager, izin);
+			pdksEntityController.sessionFlush(session);
 			fillIzinList();
 
 		} catch (Exception e) {
@@ -199,7 +198,7 @@ public class FazlaMesaiIzinHome extends EntityHome<PersonelIzin> implements Seri
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	public void fillIzinList() {

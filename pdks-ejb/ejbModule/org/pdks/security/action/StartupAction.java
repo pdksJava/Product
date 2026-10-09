@@ -251,6 +251,7 @@ public class StartupAction implements Serializable {
 	public void startupMethodBasla() {
 		// pdksUtil.setTimeZome();
 		Session session = PdksUtil.getSession(entityManager, Boolean.TRUE);
+		logger.info("Versiyon : " + Constants.VERSION);
 		startupMethod(session);
 		OrtakIslemler ortakIslemler = new OrtakIslemler();
 		String spName = "SP_DROP_NOT_USED_TABLES";
@@ -276,7 +277,7 @@ public class StartupAction implements Serializable {
 		} catch (Exception e) {
 
 		}
-		session.close();
+		pdksEntityController.sessionClose(session);
 
 		ortakIslemler = null;
 	}
@@ -323,13 +324,14 @@ public class StartupAction implements Serializable {
 				if (adet != null) {
 					toplamAdet += adet;
 					if (adet > 0)
-						session.flush();
+						pdksEntityController.sessionFlush(session);
 				}
 
 				iterator.remove();
 			}
 		} catch (Exception e) {
 			logger.error(e);
+			e.printStackTrace();
 		}
 		if (toplamAdet > 0)
 			logger.info(toplamAdet + " adet kayıt id güncellendi. " + PdksUtil.getCurrentTimeStampStr());
@@ -341,6 +343,7 @@ public class StartupAction implements Serializable {
 	 * @param session
 	 */
 	public void startupMethod(Session session) {
+
 		Calendar cal = Calendar.getInstance();
 		logger.debug("startupMethod : " + cal.getTime());
 		if (cal.get(Calendar.HOUR_OF_DAY) < 7)
@@ -379,7 +382,7 @@ public class StartupAction implements Serializable {
 		if (PdksUtil.isSessionKapali(session)) {
 			session = user != null ? user.getSessionSQL() : null;
 			if (PdksUtil.isSessionKapali(session))
-				session = PdksUtil.getSession(entityManager, Boolean.FALSE);
+				session = PdksUtil.getSession(entityManager, user == null || user.getLogin().booleanValue() == false);
 		}
 		logger.info("Sistem verileri yukleniyor in " + PdksUtil.getCurrentTimeStampStr());
 		fillParameter(session, lockVar);
@@ -452,27 +455,6 @@ public class StartupAction implements Serializable {
 
 	/**
 	 * @param session
-	 */
-	public void fillRaporRole(Session session) {
-		raporRoleMap.clear();
-		HashMap fields = new HashMap();
-		List<PdksDinamikRaporRole> list = null;
-		try {
-			StringBuilder sb = new StringBuilder();
-			sb.append("select * from " + PdksDinamikRaporRole.TABLE_NAME + " " + PdksEntityController.getSelectLOCK());
-			if (session != null)
-				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
-			list = pdksEntityController.getObjectBySQLList(sb, fields, PdksDinamikRaporRole.class);
-			for (PdksDinamikRaporRole raporRole : list) {
-				raporRoleMap.put(raporRole.getKey(), raporRole.getId());
-			}
-			list = null;
-		} catch (Exception e) {
-		}
-	}
-
-	/**
-	 * @param session
 	 * @param lockVar
 	 */
 	public void fillParameter(Session session, boolean lockVar) {
@@ -486,13 +468,16 @@ public class StartupAction implements Serializable {
 			parameterList = pdksEntityController.getObjectBySQLList(sb, fields, Parameter.class);
 		} catch (Exception e) {
 			try {
+				e = null;
 				if (session != null)
 					fields.put(PdksEntityController.MAP_KEY_SESSION, session);
 				parameterList = pdksEntityController.getObjectByInnerObjectList(fields, Parameter.class);
 			} catch (Exception e2) {
-				logger.error("PDKS hata out : " + e2.getMessage());
-				e2.printStackTrace();
+
+				e = e2;
 			}
+			if (e != null)
+				logger.error("PDKS hata out : " + e.getMessage());
 		}
 		parameterMap.clear();
 		List<String> helpDeskList = new ArrayList<String>();
@@ -854,6 +839,27 @@ public class StartupAction implements Serializable {
 
 	/**
 	 * @param session
+	 */
+	public void fillRaporRole(Session session) {
+		raporRoleMap.clear();
+		HashMap fields = new HashMap();
+		List<PdksDinamikRaporRole> list = null;
+		try {
+			StringBuilder sb = new StringBuilder();
+			sb.append("select * from " + PdksDinamikRaporRole.TABLE_NAME + " " + PdksEntityController.getSelectLOCK());
+			if (session != null)
+				fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+			list = pdksEntityController.getObjectBySQLList(sb, fields, PdksDinamikRaporRole.class);
+			for (PdksDinamikRaporRole raporRole : list) {
+				raporRoleMap.put(raporRole.getKey(), raporRole.getId());
+			}
+			list = null;
+		} catch (Exception e) {
+		}
+	}
+
+	/**
+	 * @param session
 	 * @param pmMap
 	 */
 	@Transactional
@@ -902,8 +908,8 @@ public class StartupAction implements Serializable {
 			if (degisti) {
 				if (helpDeskStatus.getId() != null)
 					helpDeskStatus.setChangeDate(bugun);
-				session.saveOrUpdate(helpDeskStatus);
-				session.flush();
+				pdksEntityController.saveOrUpdate(session, entityManager, helpDeskStatus);
+				pdksEntityController.sessionFlush(session);
 			}
 
 		} catch (Exception ex) {
@@ -1025,7 +1031,12 @@ public class StartupAction implements Serializable {
 					parameterMap.put(helpDeskLastDateKey, helpDeskLastDateStr);
 					parameter.setValue(helpDeskLastDateStr);
 					pdksEntityController.saveOrUpdate(session, entityManager, parameter);
-					session.flush();
+					try {
+						pdksEntityController.sessionFlush(session);
+					} catch (Exception e) {
+						logger.error(e);
+						e.printStackTrace();
+					}
 				}
 			}
 		}
@@ -1090,7 +1101,12 @@ public class StartupAction implements Serializable {
 					parameterMap.put(helpDeskLastDateKey, servisHelpDeskLastDateStr);
 					parameter.setValue(servisHelpDeskLastDateStr);
 					pdksEntityController.saveOrUpdate(session, entityManager, parameter);
-					session.flush();
+					try {
+						pdksEntityController.sessionFlush(session);
+					} catch (Exception e) {
+						logger.error(e);
+						e.printStackTrace();
+					}
 				}
 			}
 			if (helpDeskLastDate == null) {
@@ -1181,7 +1197,12 @@ public class StartupAction implements Serializable {
 				if (lu.getLdapHost() != null)
 					pdksEntityController.saveOrUpdate(session, entityManager, lu);
 			}
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
 		}
 
 		saveList = null;
@@ -1195,7 +1216,7 @@ public class StartupAction implements Serializable {
 			if (user != null)
 				session = user.getSessionSQL();
 			if (PdksUtil.isSessionKapali(session))
-				session = PdksUtil.getSession(entityManager, Boolean.FALSE);
+				session = PdksUtil.getSession(entityManager, user == null || user.getLogin().booleanValue() == false);
 		}
 
 		List<AccountPermission> permissionList = (ArrayList<AccountPermission>) pdksEntityController.getSQLParamByFieldList(AccountPermission.TABLE_NAME, AccountPermission.COLUMN_NAME_DURUM, Boolean.TRUE, AccountPermission.class, session);
@@ -1345,7 +1366,7 @@ public class StartupAction implements Serializable {
 		this.smtpTLSDurum = smtpTLSDurum;
 	}
 
-	public boolean getSmtpSSL() {
+	public Boolean getSmtpSSL() {
 		boolean smtpSSL = Boolean.FALSE;
 		try {
 			smtpSSL = smtpSSLDurum != null && smtpSSLDurum.equals("1");
@@ -1355,7 +1376,7 @@ public class StartupAction implements Serializable {
 		return smtpSSL;
 	}
 
-	public boolean getSmtpTLS() {
+	public Boolean getSmtpTLS() {
 		boolean smtpTLS = Boolean.FALSE;
 		try {
 			smtpTLS = smtpTLSDurum != null && smtpTLSDurum.equals("1");

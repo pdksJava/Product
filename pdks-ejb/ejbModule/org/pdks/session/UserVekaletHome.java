@@ -160,7 +160,6 @@ public class UserVekaletHome extends EntityHome<UserVekalet> implements Serializ
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 
@@ -168,14 +167,14 @@ public class UserVekaletHome extends EntityHome<UserVekalet> implements Serializ
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		if (bitDate == null) {
 			Calendar cal = Calendar.getInstance();
 			cal.add(Calendar.MONTH, 6);
@@ -325,9 +324,7 @@ public class UserVekaletHome extends EntityHome<UserVekalet> implements Serializ
 				parametreMap.put("iseBaslamaTarihi <= ", bugun);
 				if (session != null)
 					parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-				// parametreMap.put(PdksEntityController.MAP_KEY_MAP, "getId");
-				// TreeMap<Long, Personel> yoneticiMap = pdksEntityController.getObjectByInnerObjectMapInLogic(parametreMap, Personel.class, false);
-				TreeMap<Long, Personel> yoneticiMap = ortakIslemler.getParamTreeMap(Boolean.TRUE, "getId", Boolean.FALSE, dataIdList, fieldName, parametreMap, Personel.class, session);
+	 			TreeMap<Long, Personel> yoneticiMap = ortakIslemler.getParamTreeMap(Boolean.TRUE, "getId", Boolean.FALSE, dataIdList, fieldName, parametreMap, Personel.class, session);
 				for (Long ld : yoneticiMap.keySet()) {
 					if (userMap.containsKey(ld))
 						list.add(userMap.get(ld));
@@ -546,7 +543,7 @@ public class UserVekaletHome extends EntityHome<UserVekalet> implements Serializ
 						}
 						pdksEntityController.saveOrUpdate(session, entityManager, userVekalet);
 
-						session.flush();
+						pdksEntityController.sessionFlush(session);
 						girisSifirla();
 						setInstance(new UserVekalet());
 						fillUserTotalVekaletList();
@@ -657,7 +654,7 @@ public class UserVekaletHome extends EntityHome<UserVekalet> implements Serializ
 						userVekaletDevir.setGuncellemeTarihi(new Date());
 						pdksEntityController.saveOrUpdate(session, entityManager, userVekaletDevir);
 					}
-					session.flush();
+					pdksEntityController.sessionFlush(session);
 					fillUserTotalVekaletList();
 
 				} catch (Exception e) {

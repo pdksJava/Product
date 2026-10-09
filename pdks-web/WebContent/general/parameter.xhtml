@@ -67,7 +67,7 @@
 									<h:outputText value="#{parameter.description}" />
 								</rich:column>
 
-								<rich:column>
+								<rich:column filterBy="#{parameter.value}" filterEvent="onkeyup">
 									<f:facet name="header">
 										<h:outputText value="Değeri" />
 									</f:facet>
@@ -148,12 +148,9 @@
 									rendered="#{ortakIslemler.getParameterKeyHasStringValue('smtpYedekUserNameaa')}"
 									action="#{personelERPGuncelleme.mailSatusKontrol(parameterHome.session)}" />
 								<ui:fragment rendered="#{ortakIslemler.canliDurum==false}">
-									<a4j:commandButton status="ajaxStatus" value="vardiyaHareketGuncelleme Calistir"
-										rendered="#{ortakIslemler.getParameterKeyHasStringValue('hareketVardiyaZamani')}"
-										action="#{planVardiyaHareketGuncelleme.vardiyaHareketGuncelleme(null,parameterHome.session)}" />
 									<a4j:commandButton status="ajaxStatus" value="fazlaMesaiGuncelleme Calistir"
-										rendered="#{ortakIslemler.getParameterKeyHasStringValue('fazlaMesaiHesaplamaZamani')}"
-										action="#{planVardiyaHareketGuncelleme.fazlaMesaiGuncelleme(null,parameterHome.session)}" />
+										rendered="#{ortakIslemler.canliDurum==false and ortakIslemler.testSunucuDurum==false }"
+										action="#{fazlaMesaiGuncelleme.fazlaMesaiGuncelleme(null,parameterHome.session)}" />
 								</ui:fragment>
 							</c:if>
 							<a4j:commandButton status="ajaxStatus" value="Sistem Saati Güncelle Calistir"

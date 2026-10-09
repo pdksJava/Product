@@ -75,20 +75,19 @@ public class KatSayiHome extends EntityHome<KatSayi> implements Serializable {
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
 
 	public void instanceRefresh() {
 		if (seciliKatSayi.getId() != null)
-			session.refresh(seciliKatSayi);
+			pdksEntityController.sessionRefresh(session, entityManager, seciliKatSayi);
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		pasifGoster = false;
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		fillKatSayiList();
@@ -188,11 +187,12 @@ public class KatSayiHome extends EntityHome<KatSayi> implements Serializable {
 
 			pdksEntityController.saveOrUpdate(session, entityManager, seciliKatSayi);
 
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 
 			fillKatSayiList();
 
 		} catch (Exception e) {
+			logger.error(e);
 			e.printStackTrace();
 		}
 

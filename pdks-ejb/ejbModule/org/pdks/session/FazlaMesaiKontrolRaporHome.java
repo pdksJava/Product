@@ -118,7 +118,7 @@ public class FazlaMesaiKontrolRaporHome extends EntityHome<AylikPuantaj> impleme
 	private Boolean hataYok, fazlaMesaiIzinKullan = Boolean.FALSE, yetkili = Boolean.FALSE, resmiTatilVar = Boolean.FALSE, haftaTatilVar = Boolean.FALSE, kaydetDurum = Boolean.FALSE;
 	private Boolean sutIzniGoster = Boolean.FALSE, partTimeGoster = Boolean.FALSE, onayla, hastaneSuperVisor = Boolean.FALSE, sirketIzinGirisDurum = Boolean.FALSE;
 
-	private Boolean aksamGun = Boolean.FALSE, maasKesintiGoster = Boolean.FALSE, aksamSaat = Boolean.FALSE, hataliPuantajGoster = Boolean.FALSE, stajerSirket, departmanBolumAyni = Boolean.FALSE;
+	private Boolean aksamGun = Boolean.FALSE, brutUcretGoster = Boolean.FALSE, maasKesintiGoster = Boolean.FALSE, aksamSaat = Boolean.FALSE, hataliPuantajGoster = Boolean.FALSE, stajerSirket, departmanBolumAyni = Boolean.FALSE;
 	private Boolean modelGoster = Boolean.FALSE, kullaniciPersonel = Boolean.FALSE, denklestirmeAyDurum = Boolean.FALSE;
 	private boolean adminRole, ikRole;
 
@@ -179,7 +179,6 @@ public class FazlaMesaiKontrolRaporHome extends EntityHome<AylikPuantaj> impleme
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -189,7 +188,7 @@ public class FazlaMesaiKontrolRaporHome extends EntityHome<AylikPuantaj> impleme
 	 */
 	private void adminRoleDurum() {
 		adminRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIKAdmin();
-		ikRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIK();
+		ikRole = PdksUtil.getIkRole(authenticatedUser);
 	}
 
 	private void aylikPuantajListClear() {
@@ -202,7 +201,7 @@ public class FazlaMesaiKontrolRaporHome extends EntityHome<AylikPuantaj> impleme
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		aylikPuantajListClear();
 		boolean ayniSayfa = authenticatedUser.getCalistigiSayfa() != null && authenticatedUser.getCalistigiSayfa().equals(sayfaURL);
@@ -1263,9 +1262,9 @@ public class FazlaMesaiKontrolRaporHome extends EntityHome<AylikPuantaj> impleme
 									normalSure -= saat;
 								}
 							}
-
-							if (vardiyaGun.isFcsDahil() && normalSure > mesaiMaxSure && gunMaxCalismaOdenir)
-								puantajUcretiOdenenSure += normalSure - mesaiMaxSure;
+							double gunMesaiMaxSure = vardiyaGun.isAksamVardiyaMaxCalismaVar() == false || fazlaMesaiMaxSure < 7.5d ? fazlaMesaiMaxSure : 7.5d;
+							if (vardiyaGun.isFcsDahil() && normalSure > gunMesaiMaxSure && gunMaxCalismaOdenir)
+								puantajUcretiOdenenSure += normalSure - gunMesaiMaxSure;
 							puantajSaatToplami += toplamSure;
 							vardiyalar.put(vardiyaGun.getVardiyaKeyStr(), vardiyaGun);
 
@@ -2533,6 +2532,14 @@ public class FazlaMesaiKontrolRaporHome extends EntityHome<AylikPuantaj> impleme
 
 	public static void setSayfaURL(String sayfaURL) {
 		FazlaMesaiKontrolRaporHome.sayfaURL = sayfaURL;
+	}
+
+	public Boolean getBrutUcretGoster() {
+		return brutUcretGoster;
+	}
+
+	public void setBrutUcretGoster(Boolean brutUcretGoster) {
+		this.brutUcretGoster = brutUcretGoster;
 	}
 
 }

@@ -79,7 +79,6 @@ public class IzinKagidiHome extends EntityHome<PersonelIzin> implements Serializ
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -87,8 +86,8 @@ public class IzinKagidiHome extends EntityHome<PersonelIzin> implements Serializ
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		// setPersonelizinList(new ArrayList());
 		fillIzinKagidiList();
 	}

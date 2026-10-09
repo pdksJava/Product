@@ -83,7 +83,12 @@ public class ExcelUtil implements Serializable {
 		}
 		return comment;
 	}
-
+	public static CellStyle closeStyle(Workbook wb, CellStyle orjCellStyle) {
+		CellStyle cloneCellStyle = wb.createCellStyle();
+		cloneCellStyle.cloneStyleFrom(orjCellStyle);
+	
+		return cloneCellStyle;
+	}
 	/**
 	 * @param rgb1
 	 * @param rgb2
@@ -428,7 +433,7 @@ public class ExcelUtil implements Serializable {
 	 * @param style
 	 * @return
 	 */
-	private static CellStyle formatCellStyle(String formatStr, Workbook wb, CellStyle style) {
+	public static CellStyle formatCellStyle(String formatStr, Workbook wb, CellStyle style) {
 		String str = null;
 		if (formatStr != null) {
 

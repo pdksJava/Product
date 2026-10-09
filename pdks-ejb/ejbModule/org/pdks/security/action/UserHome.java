@@ -68,6 +68,7 @@ public class UserHome extends EntityHome<User> implements Serializable {
 	private static boolean menuKapali = false;
 	private List<String> izinRaporlari = Arrays.asList("aylikIzinRapor", "bakiyeIzin", "fazlaMesaiIzin", "holdingKalanIzin", "iseGelmeyenPersonelDagilimi", "izinKagidi", "izinOnay", "personelKalanIzin");
 	private List<String> izinIslemler = Arrays.asList("izinIslemleri", "izinERPAktarim", "izinHakedisHakkiTanimlama", "onayimaGelenIzinler", "personelIzinKopyala", "sskIzinGirisi", "personelIzinGirisi");
+	private List<String> ekranIK = Arrays.asList("pdksVardiyaTanimlama", "personelTanimlama", "tatilTanimlama", "parameter", "tanim");
 
 	private User currentUser;
 	private String newPassword1, newPassword2, passwordHash, oldUserName;
@@ -112,7 +113,12 @@ public class UserHome extends EntityHome<User> implements Serializable {
 
 			}
 			pdksEntityController.saveOrUpdate(session, entityManager, currentUser);
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
 			assignId(PersistenceProvider.instance().getId(getInstance(), entityManager));
 			// createdMessage();
 			raiseAfterTransactionSuccessEvent();
@@ -144,7 +150,12 @@ public class UserHome extends EntityHome<User> implements Serializable {
 				String newPassword = PdksUtil.encodePassword(newPassword1);
 				user.setPasswordHash(newPassword);
 				pdksEntityController.saveOrUpdate(session, entityManager, user);
-				session.flush();
+				try {
+					pdksEntityController.sessionFlush(session);
+				} catch (Exception e) {
+					logger.error(e);
+					e.printStackTrace();
+				}
 				facesMessages.add("Yeni şifre değiştirilmiştir.", "");
 				if (authenticatedUser != null)
 					ekran = "anaSayfa";
@@ -209,8 +220,8 @@ public class UserHome extends EntityHome<User> implements Serializable {
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sifreUnuttumAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, "sifreUnuttum");
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, "/sifreUnuttum");
+		ortakIslemler.setUserMenuItemTime(entityManager, session, "sifreUnuttum");
 		String str = MenuItemConstant.login;
 		HttpServletRequest req = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
 		String username = (String) req.getParameter("username");
@@ -351,7 +362,14 @@ public class UserHome extends EntityHome<User> implements Serializable {
 						if (adminRole)
 							sonuc = adminRole || getSonuc(target);
 						else if (yetkiliRollerim != null) {
+							boolean ikRole = ortakIslemler.getIkRole(authenticatedUser);
+							boolean ikEkran = ekranIK.contains(target);
+							if (ikEkran && ikRole)
+								ikEkran = authenticatedUser.isIK_Tesis() || authenticatedUser.isIKSirket();
+
 							for (Role role : yetkiliRollerim) {
+								if (role.getId() == null && ikEkran)
+									continue;
 								String roleName = role.getRolename();
 								if (roleName.equals(AccountPermission.ADMIN_ROLE)) {// admin
 									// herşeye
@@ -365,12 +383,19 @@ public class UserHome extends EntityHome<User> implements Serializable {
 									break;
 								}
 							}
+							if (sonuc == false && ikRole && ikEkran == false) {
+								key = startKey + "-" + Role.TIPI_IK + "-" + AccountPermission.DISCRIMINATOR_ROLE;
+								if (accountPermissionMap.containsKey(key)) {
+									sonuc = getSonuc(target);
+								}
+							}
 						}
 						yetkiliRollerim = null;
 					}
 					if (sonuc && adminRole == false && menuKapali) {
 						String menuKapaliStr = ortakIslemler.getParameterKey("menuKapali");
-						if (!(menuKapaliStr.equalsIgnoreCase("ik") && (authenticatedUser.isIK() || authenticatedUser.isSistemYoneticisi())))
+						boolean ikRole = PdksUtil.getIkRole(authenticatedUser);
+						if (!(menuKapaliStr.equalsIgnoreCase("ik") && (ikRole || authenticatedUser.isSistemYoneticisi())))
 							sonuc = !menuKapali;
 					}
 					menuYetkiMap.put(startKey, sonuc);
@@ -381,7 +406,7 @@ public class UserHome extends EntityHome<User> implements Serializable {
 			logger.error(e);
 			e.printStackTrace();
 		}
-
+		logger.debug(target + " " + sonuc);
 		return sonuc;
 	}
 
@@ -392,7 +417,7 @@ public class UserHome extends EntityHome<User> implements Serializable {
 	private boolean getSonuc(Object target) {
 		boolean sonuc = Boolean.TRUE;
 		if (target != null) {
-			boolean sistemYoneticisi = authenticatedUser.isAdmin() || authenticatedUser.isIKAdmin() || authenticatedUser.isSistemYoneticisi();
+			boolean sistemYoneticisi = PdksUtil.getIkRole(authenticatedUser);
 			boolean izinGirebilir = authenticatedUser != null && authenticatedUser.isIzinGirebilir();
 			if (izinRaporlari.contains(target) || izinIslemler.contains(target)) {
 				sonuc = izinGirebilir;
@@ -427,7 +452,7 @@ public class UserHome extends EntityHome<User> implements Serializable {
 				String fazlaMesaiTalepDurum = ortakIslemler.getParameterKey("fazlaMesaiTalepDurum");
 				sonuc = fazlaMesaiTalepDurum.equals("1");
 			}
-			if (sonuc && ortakIslemler.getSistemDestekVar() && authenticatedUser.isAdmin() == false && authenticatedUser.isSistemYoneticisi() == false) {
+			if (sonuc && ortakIslemler.getSistemDestekVar() && sistemYoneticisi == false) {
 				if (target.equals("vardiyaTanimlama") || target.equals("vardiyaSablonTanimlama") || target.equals("calismaModeliTanimlama") || target.equals("kapiTanimlama"))
 					sonuc = false;
 			}

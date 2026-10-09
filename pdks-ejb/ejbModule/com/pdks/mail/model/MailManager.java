@@ -235,7 +235,7 @@ public class MailManager implements Serializable {
 				String body = mailObject.getBody();
 				if (mailObject.getToList().size() == 1) {
 					MailPersonel mailPersonel = mailObject.getToList().get(0);
-					if (!body.contains(mailPersonel.getAdiSoyadi()) && body.indexOf("Sayın ") < 0) {
+					if (PdksUtil.hasStringValue(mailPersonel.getAdiSoyadi()) && !body.contains(mailPersonel.getAdiSoyadi()) && body.indexOf("Sayın ") < 0) {
 						body = "<P>Sayın " + mailPersonel.getAdiSoyadi() + ",</P>" + body;
 						mailObject.setBody(body);
 					}
@@ -319,8 +319,8 @@ public class MailManager implements Serializable {
 				if (mailMap.containsKey("smtpHostPort"))
 					port = Integer.parseInt((String) mailMap.get("smtpHostPort"));
 				if (username == null) {
-					if (mailMap.containsKey("fromAdres")) {
-						mailAdresFROM = (String) mailMap.get("fromAdres");
+					if (mailMap.containsKey("smtpUserName")) {
+						mailAdresFROM = (String) mailMap.get("smtpUserName");
 						username = mailAdresFROM;
 					}
 				} else
@@ -416,8 +416,8 @@ public class MailManager implements Serializable {
 				if (!mailList.isEmpty()) {
 					InternetAddress from = new InternetAddress();
 					from.setAddress(username);
-					if (mailMap.containsKey("fromAdres"))
-						from.setAddress((String) mailMap.get("fromAdres"));
+					if (mailMap.containsKey("smtpUserName"))
+						from.setAddress((String) mailMap.get("smtpUserName"));
 					if (mailMap.containsKey("fromName"))
 						from.setPersonal((String) mailMap.get("fromName"), "UTF-8");
 					message.setFrom(from);
@@ -567,8 +567,8 @@ public class MailManager implements Serializable {
 				if (mailParametreMap.containsKey("smtpHostPort"))
 					port = Integer.parseInt((String) mailParametreMap.get("smtpHostPort"));
 				if (username == null) {
-					if (mailParametreMap.containsKey("fromAdres")) {
-						mailAdresFROM = (String) mailParametreMap.get("fromAdres");
+					if (mailParametreMap.containsKey("smtpUserName")) {
+						mailAdresFROM = (String) mailParametreMap.get("smtpUserName");
 						username = mailAdresFROM;
 					}
 				} else
@@ -682,8 +682,8 @@ public class MailManager implements Serializable {
 				if (!mailList.isEmpty()) {
 					InternetAddress from = new InternetAddress();
 					from.setAddress(username);
-					if (mailParametreMap.containsKey("fromAdres"))
-						from.setAddress((String) mailParametreMap.get("fromAdres"));
+					if (mailParametreMap.containsKey("smtpUserName"))
+						from.setAddress((String) mailParametreMap.get("smtpUserName"));
 					if (mailParametreMap.containsKey("fromName"))
 						from.setPersonal((String) mailParametreMap.get("fromName"), "UTF-8");
 					message.setFrom(from);
@@ -766,6 +766,7 @@ public class MailManager implements Serializable {
 
 			}
 		} catch (Exception e) {
+			e.printStackTrace();
 			ee = e;
 
 		}
@@ -957,7 +958,7 @@ public class MailManager implements Serializable {
 						attachmentFiles = null;
 						String jsonMailStrings = map.containsKey("jsonMailStrings") ? map.get("jsonMailStrings") : null;
 						serviceData.setOutputData(getJsonObject(jsonMailStrings, mailObject, gson));
-						pdksEntityController.save(serviceData, sessionDB);
+						pdksEntityController.saveOrUpdate(sessionDB, null, serviceData);
 					} catch (Exception ex) {
 
 					}
@@ -1019,20 +1020,17 @@ public class MailManager implements Serializable {
 				else
 					list.add(string);
 			}
-			HashMap map = new HashMap();
-			map.put("email", list.size() > 1 ? list : list.get(0));
-			if (session != null)
-				map.put(PdksEntityController.MAP_KEY_SESSION, session);
 			TreeMap<String, User> userMap = new TreeMap<String, User>();
-			List<User> userList = pdksEntityController.getObjectByInnerObjectList(map, User.class);
+			List<User> userList = pdksEntityController.getSQLParamByAktifFieldList(User.TABLE_NAME, User.COLUMN_NAME_EMAIL, list, User.class, session);
 			List<String> pasifList = new ArrayList<String>();
-			for (User user : userList) {
-				String mailStr = user.getEmail();
-				if (user.isDurum() && user.getPdksPersonel().isCalisiyor())
-					userMap.put(mailStr, user);
-				else if (!pasifList.contains(mailStr))
-					pasifList.add(mailStr);
-			}
+			if (userList != null)
+				for (User user : userList) {
+					String mailStr = user.getEmail();
+					if (user.isDurum() && user.getPdksPersonel().isCalisiyor())
+						userMap.put(mailStr, user);
+					else if (!pasifList.contains(mailStr))
+						pasifList.add(mailStr);
+				}
 			if (!userMap.isEmpty()) {
 				mailUserListKontrol(mailObject.getToList(), userMap);
 				mailUserListKontrol(mailObject.getCcList(), userMap);

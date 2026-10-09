@@ -118,6 +118,7 @@ public class PersonelIzin extends BaseObject {
 
 	private List<VardiyaGun> calisilanGunler;
 
+	// @Version
 	@Column(name = COLUMN_NAME_VERSION)
 	public Integer getVersion() {
 		return version;
@@ -520,6 +521,15 @@ public class PersonelIzin extends BaseObject {
 		else if (tipi != null && tipi.getHesapTipi() != null)
 			gunlukIzin = tipi.getHesapTipi().equals(HESAP_TIPI_GUN) || tipi.equals(HESAP_TIPI_SAAT_GUN_SECILDI);
 		return gunlukIzin;
+	}
+
+	@Transient
+	public boolean isSaatlikIzin() {
+		IzinTipi tipi = izinTipi.getBakiyeIzinTipi() == null ? izinTipi : izinTipi.getBakiyeIzinTipi();
+		boolean saatIzin = tipi.getSaatGosterilecek();
+		if (saatIzin && tipi != null && tipi.getHesapTipi() != null)
+			saatIzin = tipi.getHesapTipi().equals(HESAP_TIPI_SAAT) || tipi.equals(HESAP_TIPI_SAAT_GUN_SECILDI);
+		return saatIzin;
 	}
 
 	@Transient

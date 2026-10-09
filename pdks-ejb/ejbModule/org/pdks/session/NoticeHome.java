@@ -9,7 +9,6 @@ import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
-import org.jboss.seam.annotations.Begin;
 import org.jboss.seam.annotations.In;
 import org.jboss.seam.annotations.Name;
 import org.jboss.seam.annotations.Transactional;
@@ -36,7 +35,7 @@ public class NoticeHome extends EntityHome<Notice> {
 	EntityManager entityManager;
 	@In(required = false, create = true)
 	OrtakIslemler ortakIslemler;
-	
+
 	public static String sayfaURL = "notice";
 	private List<SelectItem> duyuruTipleri;
 	private String duyuruTip;
@@ -53,7 +52,6 @@ public class NoticeHome extends EntityHome<Notice> {
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -65,7 +63,7 @@ public class NoticeHome extends EntityHome<Notice> {
 			notice.setChangeUser(authenticatedUser);
 			notice.setChangeDate(new Date());
 			pdksEntityController.saveOrUpdate(session, entityManager, notice);
-			session.flush();
+			pdksEntityController.sessionFlush(session);
 
 		} catch (Exception e) {
 			logger.error("PDKS hata in : \n");
@@ -75,15 +73,15 @@ public class NoticeHome extends EntityHome<Notice> {
 		}
 		// fillNotice();
 		startupAction.fillStartMethod(authenticatedUser, true, session);
-		// session.refresh(notice);
+		// pdksEntityController.sessionRefresh(session, entityManager,notice);
 		return "persisted";
 
 	}
 
 	public void fillNotice() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		List<Tanim> list = ortakIslemler.getTanimList(Tanim.TIPI_DUYURU, session);
 
 		duyuruTipleri = ortakIslemler.getSelectItemList("duyuruTip", authenticatedUser);

@@ -11,6 +11,7 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.pdks.session.PdksUtil;
@@ -22,6 +23,7 @@ public class PersonelFazlaMesai extends BaseObject implements Cloneable {
 	 * 
 	 */
 	private static final long serialVersionUID = -8455550990499778693L;
+	static Logger logger = Logger.getLogger(PersonelFazlaMesai.class);
 
 	public static final String TABLE_NAME = "PERSONELFAZLAMESAI";
 	public static final String COLUMN_NAME_VARDIYA_GUN = "VARDIYA_GUN";
@@ -60,6 +62,10 @@ public class PersonelFazlaMesai extends BaseObject implements Cloneable {
 	private Integer onayDurum = DURUM_ONAYLANDI, tatilDurum;
 
 	private String aciklama;
+
+	public PersonelFazlaMesai() {
+		super();
+	}
 
 	@Column(name = COLUMN_NAME_HAREKET)
 	public String getHareketId() {

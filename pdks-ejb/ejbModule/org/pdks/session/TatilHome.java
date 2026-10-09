@@ -9,8 +9,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import javax.faces.context.FacesContext;
 import javax.faces.model.SelectItem;
 import javax.persistence.EntityManager;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
@@ -23,14 +25,19 @@ import org.jboss.seam.annotations.web.RequestParameter;
 import org.jboss.seam.faces.Renderer;
 import org.jboss.seam.framework.EntityHome;
 import org.pdks.entity.IzinTipi;
+import org.pdks.entity.PdksAgent;
 import org.pdks.entity.Personel;
 import org.pdks.entity.PersonelIzin;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Tatil;
+import org.pdks.quartz.Zamanlayici;
+import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.Role;
 import org.pdks.security.entity.User;
 import org.pdks.security.entity.UserRoles;
 
+import com.ibm.icu.util.IslamicCalendar;
+import com.ibm.icu.util.ULocale;
 import com.pdks.webservice.MailObject;
 
 @Name("tatilHome")
@@ -59,10 +66,13 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 	@In(required = false, create = true)
 	OrtakIslemler ortakIslemler;
 
+	@In(required = false, create = true)
+	Zamanlayici zamanlayici;
+
 	public static String sayfaURL = "tatilTanimlama";
 	private List<String> mesajList = new ArrayList<String>();
 	private List<Tanim> tatilTanimList = new ArrayList<Tanim>();
-	private List<Tatil> tatilList = new ArrayList<Tatil>();
+	private List<Tatil> tatilList = new ArrayList<Tatil>(), diniList = new ArrayList<Tatil>();
 	private List<SelectItem> ayList;
 	private List<SelectItem> basGunList, bitisGunList;
 	private List<User> userList = new ArrayList<User>();
@@ -72,23 +82,8 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 	private int yilSayisi = 1;
 	private Tatil oldPdksTatil;
 	private User islemYapan;
+	private Long agentId;
 	private Session session;
-
-	public List<Tanim> getTatilTanimList() {
-		return tatilTanimList;
-	}
-
-	public void setTatilTanimList(List<Tanim> tatilTanimList) {
-		this.tatilTanimList = tatilTanimList;
-	}
-
-	public List<Tatil> getTatilList() {
-		return tatilList;
-	}
-
-	public void setTatilList(List<Tatil> value) {
-		this.tatilList = value;
-	}
 
 	@Override
 	public Object getId() {
@@ -100,9 +95,183 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
+	}
+
+	@Transactional
+	public String diniBayramBasla() {
+		try {
+			HttpServletRequest req = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
+			agentId = req != null ? Long.parseLong(req.getParameter("agentId")) : null;
+		} catch (Exception e) {
+		}
+		try {
+			if (PdksUtil.isSessionKapali(session)) {
+				if (authenticatedUser != null)
+					session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+				else
+					session = PdksUtil.getSession(entityManager, Boolean.TRUE);
+			}
+
+			if ((PdksUtil.getTestSunucuDurum() == false && PdksUtil.getCanliSunucuDurum() == false) || PdksUtil.isSistemDestekVar())
+				diniBayramEkle();
+		} catch (Exception e) {
+		}
+		pdksEntityController.sessionClose(session);
+		return MenuItemConstant.home;
+
+	}
+
+	/**
+	 * @param year
+	 * @param tatilTipi
+	 * @return
+	 */
+	private List<Tatil> diniBayramlarGuncelle(int year, Tanim tatilTipi) {
+		List<Tatil> tatiller = new ArrayList<Tatil>();
+		Date buYilBasi = PdksUtil.convertToJavaDate(year + "0101", "yyyyMMdd");
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(buYilBasi);
+		cal.add(Calendar.DATE, -4);
+		Date date = cal.getTime();
+		cal.setTime(buYilBasi);
+		cal.add(Calendar.YEAR, 1);
+		cal.set(Calendar.DATE, 4);
+		Date stopDate = cal.getTime();
+		cal.setTime(date);
+		ULocale locale = new ULocale("@calendar=islamic-umalqura");
+		IslamicCalendar calIs = new IslamicCalendar(locale);
+		Tatil holiday = null;
+		while (date.after(stopDate) == false && tatilTipi != null) {
+			cal.setTime(date);
+			calIs.setTime(date);
+			int hijriMonth = calIs.get(IslamicCalendar.MONTH);
+			int hijriDay = calIs.get(IslamicCalendar.DAY_OF_MONTH);
+			if (hijriMonth == 9) {// 1. Ramazan Bayramı Hesaplama (Şevval Ayı 1, 2, 3. Günler)
+				if (hijriDay == 1) {
+					Date tarih = PdksUtil.tariheGunEkleCikar(date, -1);
+					cal.setTime(tarih);
+					if (cal.get(Calendar.YEAR) == year) {
+						holiday = new Tatil("R", tarih, 3);
+						tatiller.add(holiday);
+					}
+
+				} else if (hijriDay == 2) {
+					// createHolidayMap(holidayMap, "RB2", date);
+				} else if (hijriDay == 3) {
+					if (holiday != null)
+						holiday.setBitTarih(date);
+					// createHolidayMap(holidayMap, "RB3", date);
+				}
+			}
+
+			if (hijriMonth == 11) {// 2. Kurban Bayramı Hesaplama (Zilhicce Ayı 9, 10, 11, 12, 13. Günler)
+				if (hijriDay == 9) {
+					Date tarih = date;
+					cal.setTime(tarih);
+					if (cal.get(Calendar.YEAR) == year) {
+						holiday = new Tatil("K", tarih, 4);
+						tatiller.add(holiday);
+					}
+					// createHolidayMap(holidayMap, "KB0", date);
+				} else if (hijriDay == 10) {
+					// createHolidayMap(holidayMap, "KB1", date);
+				} else if (hijriDay == 11) {
+					// createHolidayMap(holidayMap, "KB2", date);
+				} else if (hijriDay == 12) {
+					// createHolidayMap(holidayMap, "KB3", date);
+				} else if (hijriDay == 13) {
+					if (holiday != null)
+						holiday.setBitTarih(date);
+					// createHolidayMap(holidayMap, "KB4", date);
+				}
+			}
+
+			date = PdksUtil.tariheGunEkleCikar(date, 1);
+		}
+		if (holiday != null && holiday.getBitGun() == null) {
+			cal.setTime(holiday.getBasTarih());
+			cal.add(Calendar.DATE, holiday.getGunAdet());
+			holiday.setBitTarih(cal.getTime());
+		}
+		if (tatiller.isEmpty() == false) {
+			List<Tatil> list = new ArrayList<Tatil>(tatiller);
+			tatiller.clear();
+			for (Tatil tatil : list)
+				ortakIslemler.updateTatilGunleri(year, tatil.getBasTarih(), tatil.getBitTarih(), tatil.getAd(), tatilTipi, tatiller, session);
+			list = null;
+		}
+
+		return tatiller;
+	}
+
+	/**
+	 * @return
+	 */
+	public String diniBayramEkle() {
+		diniList.clear();
+		Calendar cal = Calendar.getInstance();
+		int basYil = cal.get(Calendar.YEAR), sonYil = cal.get(Calendar.YEAR) + (authenticatedUser == null ? 1 : 5);
+		List<Tanim> tatilTipList = pdksEntityController.getSQLParamByAktifFieldList(Tanim.TABLE_NAME, Tanim.COLUMN_NAME_TIPI, Tanim.TIPI_TATIL_TIPI, Tanim.class, session);
+		Tanim tatilTipi = null;
+		for (Tanim tanim : tatilTipList) {
+			if (tanim.getKodu().equals(Tatil.TATIL_TIPI_TEK_SEFER))
+				tatilTipi = tanim;
+		}
+
+		for (int yil = basYil; yil <= sonYil; yil++) {
+			try {
+				// <Tatil> list = ortakIslemler.diniBayramlarGuncelle(yil, session);
+				List<Tatil> list = diniBayramlarGuncelle(yil, tatilTipi);
+				if (list.isEmpty() == false)
+					diniList.addAll(list);
+				list = null;
+			} catch (Exception e) {
+			}
+
+		}
+		try {
+			if (authenticatedUser == null)
+				if (PdksUtil.getTestSunucuDurum() || PdksUtil.getCanliSunucuDurum()) {
+					String konu = "Tatil günleri kontrol";
+					if (agentId != null) {
+						PdksAgent agent = (PdksAgent) pdksEntityController.getSQLParamByFieldObject(PdksAgent.TABLE_NAME, PdksAgent.COLUMN_NAME_ID, agentId, PdksAgent.class, session);
+						if (agent != null)
+							konu = agent.getAciklama();
+					}
+					zamanlayici.mailGonder(session, null, konu, diniList.isEmpty() ? "Tatil günleri güncelleme olmadı" : "Tatil günlerine " + diniList.size() + " adet tatil eklendi", null, false);
+
+				}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		tatilList = null;
+		return "";
+
+	}
+
+	@Transactional
+	public String diniBayramKaydet() {
+		boolean flush = false;
+		for (Tatil tatil : diniList) {
+			if (tatil.isCheckBoxDurum()) {
+				pdksEntityController.saveOrUpdate(session, entityManager, tatil);
+				tatil.setCheckBoxDurum(false);
+				flush = true;
+			}
+
+		}
+		if (flush) {
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			fillPdksTatilList();
+		} else
+			PdksUtil.addMessageAvailableWarn("Ekleme yapılacak dini bayram seçili değildir!");
+		return "";
 	}
 
 	public void tatilEkle() {
@@ -390,7 +559,7 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 					pdksEntityController.deleteObject(session, entityManager, pdksTatil);
 				}
 
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 				fillPdksTatilList();
 				cikis = "persist";
 
@@ -407,6 +576,10 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 
 	public void fillPdksTatilList() {
 		session.clear();
+		if (diniList == null)
+			diniList = new ArrayList<Tatil>();
+		else
+			diniList.clear();
 		HashMap parametreMap = new HashMap();
 		if (session != null)
 			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -556,7 +729,12 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 			kayitGuncelle(pdksTatil);
 		} else {
 			if (flush)
-				session.flush();
+				try {
+					pdksEntityController.sessionFlush(session);
+				} catch (Exception e) {
+					logger.error(e);
+					e.printStackTrace();
+				}
 			fillPdksTatilList();
 		}
 
@@ -653,14 +831,14 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		setIslemYapan(authenticatedUser);
 		fillPdksTatilList();
 		fillAyList();
@@ -762,11 +940,35 @@ public class TatilHome extends EntityHome<Tatil> implements Serializable {
 		this.yilSayisi = yilSayisi;
 	}
 
+	public List<Tanim> getTatilTanimList() {
+		return tatilTanimList;
+	}
+
+	public void setTatilTanimList(List<Tanim> tatilTanimList) {
+		this.tatilTanimList = tatilTanimList;
+	}
+
+	public List<Tatil> getTatilList() {
+		return tatilList;
+	}
+
+	public void setTatilList(List<Tatil> value) {
+		this.tatilList = value;
+	}
+
 	public Session getSession() {
 		return session;
 	}
 
 	public void setSession(Session session) {
 		this.session = session;
+	}
+
+	public List<Tatil> getDiniList() {
+		return diniList;
+	}
+
+	public void setDiniList(List<Tatil> diniList) {
+		this.diniList = diniList;
 	}
 }

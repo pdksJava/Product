@@ -89,7 +89,7 @@ public class AylikPuantaj implements Serializable, Cloneable {
 
 	private Double izinSuresi = 0d, saatlikIzinSuresi = 0d, fazlaMesaiMaxSure = 0d, eksikCalismaSure = 0d, gecenAyFazlaMesai = 0d, hesaplananSure = 0d, devredenSure = 0d, aksamVardiyaSaatSayisi = 0d, kesilenSure = 0d;
 
-	private Double eksiBakiyeSuresi = 0d;
+	private Double eksiBakiyeSuresi = 0d, aylikNetUcret = 0d, aylikBrutUcret = 0d;
 
 	private boolean fazlaMesaiHesapla = Boolean.FALSE, vardiyaSua = Boolean.FALSE, eksikGunVar = Boolean.FALSE, denklestirilmeyenDevredenVar = Boolean.FALSE;
 
@@ -249,14 +249,6 @@ public class AylikPuantaj implements Serializable, Cloneable {
 		if (vardiyalar == null)
 			vardiyalar = new ArrayList<VardiyaGun>(bosVardiya().values());
 		return vardiyalar;
-	}
-
-	public void addVardiya(VardiyaGun value) {
-		if (vardiyalar == null)
-			vardiyalar = new ArrayList<VardiyaGun>(bosVardiya().values());
-		if (value != null && value.getPersonel() != null)
-			vardiyalar.add(value);
-
 	}
 
 	public void setVardiyalar(List<VardiyaGun> value) {
@@ -1338,7 +1330,8 @@ public class AylikPuantaj implements Serializable, Cloneable {
 	}
 
 	public boolean isFazlaMesaiDurum() {
-		Boolean fazlaMesaiDurum = sirket != null && sirket.isFazlaMesaiTalepGirer();
+		boolean fazlaMesaiVar = calismaModeli != null && calismaModeli.isFazlaMesaiVarMi();
+		Boolean fazlaMesaiDurum = fazlaMesaiVar && sirket != null && sirket.isFazlaMesaiTalepGirer();
 		if (vardiyalar != null && fazlaMesaiDurum) {
 			fazlaMesaiDurum = false;
 			for (VardiyaGun vg : vardiyalar) {
@@ -1436,6 +1429,7 @@ public class AylikPuantaj implements Serializable, Cloneable {
 
 	public void setPersonelDenklestirme(PersonelDenklestirme pd) {
 		if (pd != null) {
+			pd.setGuncellendi(false);
 			this.denklestirmeAy = pd.getDenklestirmeAy();
 			this.setPdksPersonel(pd.getPdksPersonel());
 			this.setCalismaModeliAy(pd.getCalismaModeliAy());
@@ -1530,6 +1524,22 @@ public class AylikPuantaj implements Serializable, Cloneable {
 
 	public void setResmiTatilKanunenEklenenSure(Double resmiTatilKanunenEklenenSure) {
 		this.resmiTatilKanunenEklenenSure = resmiTatilKanunenEklenenSure;
+	}
+
+	public Double getAylikNetUcret() {
+		return aylikNetUcret;
+	}
+
+	public void setAylikNetUcret(Double aylikNetUcret) {
+		this.aylikNetUcret = aylikNetUcret;
+	}
+
+	public Double getAylikBrutUcret() {
+		return aylikBrutUcret;
+	}
+
+	public void setAylikBrutUcret(Double aylikBrutUcret) {
+		this.aylikBrutUcret = aylikBrutUcret;
 	}
 
 }

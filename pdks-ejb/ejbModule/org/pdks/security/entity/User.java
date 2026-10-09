@@ -90,6 +90,7 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 	private boolean operatorSSK = Boolean.FALSE, yetkiSet = Boolean.FALSE, tesisSuperVisor = Boolean.FALSE, direktorSuperVisor = Boolean.FALSE, taseronAdmin = Boolean.FALSE;
 	private boolean browserIE, izinGirebilir = Boolean.FALSE, izinSSKGirebilir = Boolean.FALSE, izinOnaylayabilir = Boolean.FALSE, testLogin = Boolean.FALSE;
 	private boolean sirketSuperVisor = Boolean.FALSE, raporKullanici = Boolean.FALSE;
+	private Boolean adminIK;
 	private ArrayList<User> userVekaletList;
 
 	private List<Personel> yetkiliPersoneller, ikinciYoneticiPersonel;
@@ -251,13 +252,6 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 	}
 
 	@Transient
-	public boolean isIK() {
-		if (!yetkiSet)
-			PdksUtil.setUserYetki(this);
-		return IK;
-	}
-
-	@Transient
 	public boolean isIK_Tesis() {
 		if (!yetkiSet)
 			PdksUtil.setUserYetki(this);
@@ -273,8 +267,10 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 		return pdksPersonel != null && pdksPersonel.getSirket() != null && pdksPersonel.getSirket().isErp();
 	}
 
-	public void setIK(Boolean ik) {
-		IK = ik;
+	public void setIK(Boolean value) {
+		if (value == null || value.booleanValue() == false)
+			logger.debug("");
+		IK = value;
 	}
 
 	@Transient
@@ -715,8 +711,22 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 
 	@Transient
 	public boolean isIKAdmin() {
-		boolean adminDurum = IK && departman != null && departman.isAdminMi();
+		boolean adminDurum = false;
+		if (adminIK == null) {
+			if (yetkiliRollerim != null) {
+				adminDurum = IK && departman != null && departman.isAdminMi();
+				if (adminDurum)
+					adminDurum = IK_Tesis == false && IKSirket == false;
+				adminIK = adminDurum;
+			}
+		} else
+			adminDurum = adminIK;
 		return adminDurum;
+	}
+
+	@Transient
+	public boolean isIK() {
+		return IK;
 	}
 
 	@Transient
@@ -1197,6 +1207,15 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 	}
 
 	@Transient
+	public Boolean getAdminIK() {
+		return adminIK;
+	}
+
+	public void setAdminIK(Boolean adminIK) {
+		this.adminIK = adminIK;
+	}
+
+	@Transient
 	public Session getSessionSQL() {
 		return sessionSQL;
 	}
@@ -1217,6 +1236,12 @@ public class User extends BasePDKSObject implements Serializable, Cloneable {
 
 	public void setEntityManager(EntityManager entityManager) {
 		this.entityManager = entityManager;
+	}
+
+	@Transient
+	public Boolean getDurum() {
+		// TODO Auto-generated method stub
+		return durum;
 	}
 
 }

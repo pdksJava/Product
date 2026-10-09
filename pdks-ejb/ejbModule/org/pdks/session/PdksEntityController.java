@@ -20,6 +20,7 @@ import javax.persistence.Query;
 import org.apache.log4j.Logger;
 import org.hibernate.SQLQuery;
 import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.hibernate.engine.SessionImplementor;
 import org.jboss.seam.ScopeType;
 import org.jboss.seam.annotations.In;
@@ -48,7 +49,7 @@ public class PdksEntityController implements Serializable {
 	 */
 	private static final long serialVersionUID = -1084375085063213335L;
 
-	public static final int LIST_MAX_SIZE = 1000;
+	public static final int LIST_MAX_SIZE = 512;
 	private static boolean showSQL = Boolean.FALSE;
 
 	public static final String MAP_KEY_MAP = "Map";
@@ -58,6 +59,7 @@ public class PdksEntityController implements Serializable {
 	public static final String MAP_KEY_SHOW_SQL = "key_Show_Sql";
 	public static final String MAP_KEY_SELECT = "select";
 	public static final String MAP_KEY_SESSION = "session";
+	public static final String MAP_KEY_LOCK = "lock";
 	public static final String MAP_KEY_SQLADD = "sql_add";
 	public static final String MAP_KEY_SQLPARAMS = "sql_params";
 	public static final String MAP_KEY_TRANSACTION = "transaction";
@@ -236,6 +238,7 @@ public class PdksEntityController implements Serializable {
 		else if (authenticatedUser != null) {
 			session = authenticatedUser.getSessionSQL();
 		}
+
 		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSession(entityManager, Boolean.FALSE);
 		List list = new ArrayList((Collection) parametreMap.get(keyAlan));
@@ -268,10 +271,9 @@ public class PdksEntityController implements Serializable {
 
 			}
 			SQLQuery queryReadUnCommitted = null;
-			if (readUnCommitted) {
-				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
-				queryReadUnCommitted.executeUpdate();
-			}
+			if (readUnCommitted)
+				queryReadUnCommitted = readUnCommitted(session);
+
 			org.hibernate.Query qry1 = session.createQuery(sql);
 			if (!parametreList.isEmpty()) {
 				for (int i = 0; i < parametreList.size(); i++) {
@@ -281,10 +283,9 @@ public class PdksEntityController implements Serializable {
 				parametreList.clear();
 			}
 			List liste = qry1.list();
-			if (queryReadUnCommitted != null) {
-				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
-				queryReadUnCommitted.executeUpdate();
-			}
+			if (queryReadUnCommitted != null)
+				readCommitted(session);
+
 			if (showSQL)
 				logger.info(sql + " out " + PdksUtil.convertToDateString(new Date(), PdksUtil.getDateFormat() + " H:mm:ss"));
 
@@ -435,10 +436,9 @@ public class PdksEntityController implements Serializable {
 
 			if (session != null) {
 				SQLQuery queryReadUnCommitted = null;
-				if (readUnCommitted) {
-					queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
-					queryReadUnCommitted.executeUpdate();
-				}
+				if (readUnCommitted)
+					queryReadUnCommitted = readUnCommitted(session);
+
 				org.hibernate.Query qry1 = session.createQuery(sql);
 				if (!parametreList.isEmpty()) {
 					if (parametreList.size() > 1500)
@@ -449,10 +449,8 @@ public class PdksEntityController implements Serializable {
 					}
 				}
 				list = qry1.list();
-				if (queryReadUnCommitted != null) {
-					queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
-					queryReadUnCommitted.executeUpdate();
-				}
+				if (queryReadUnCommitted != null)
+					readCommitted(session);
 
 				qry1 = null;
 			} else {
@@ -485,19 +483,6 @@ public class PdksEntityController implements Serializable {
 
 	}
 
-	public Object save(Object object, Session session) {
-		if (PdksUtil.isSessionKapali(session)) {
-			if (authenticatedUser != null)
-				session = authenticatedUser.getSessionSQL();
-			if (PdksUtil.isSessionKapali(session))
-				session = PdksUtil.getSession(entityManager, Boolean.FALSE);
-		}
-
-		session.saveOrUpdate(object);
-
-		return object;
-	}
-
 	/**
 	 * @param ses
 	 * @param em
@@ -509,6 +494,10 @@ public class PdksEntityController implements Serializable {
 		} catch (Exception e) {
 			if (em != null)
 				ses.saveOrUpdate(getEntityManagerObject(em, saveObject));
+			else if (ses.contains(saveObject) == false) {
+				Object object = ses.merge(saveObject);
+				ses.saveOrUpdate(object);
+			}
 		}
 	}
 
@@ -517,11 +506,11 @@ public class PdksEntityController implements Serializable {
 	 * @param ortakIslemler
 	 * @param del
 	 */
-	public void deleteObject(Session ses, Object object, Object del) {
+	public void deleteObject(Session session, Object object, Object del) {
 		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
-		if (del != null && ses != null) {
+		if (del != null && session != null) {
 			try {
-				ses.delete(del);
+				session.delete(del);
 			} catch (Exception e) {
 				try {
 					if (object != null) {
@@ -540,16 +529,16 @@ public class PdksEntityController implements Serializable {
 
 							if (id != null && tableName != null) {
 								String sp = "SP_DELETE_OBJECT_BY_ID";
-								if (ortakIslemler.isExisStoreProcedure(sp, ses)) {
+								if (ortakIslemler.isExisStoreProcedure(sp, session)) {
 									veriMap.put("id", id);
 									veriMap.put("tableName", tableName);
-									execSP(ses, veriMap, sp);
+									execSP(session, veriMap, sp);
 								}
 							}
 						} else if (object instanceof EntityManager) {
 							EntityManager em = (EntityManager) object;
 							if (em != null)
-								ses.delete(getEntityManagerObject(em, del));
+								session.delete(getEntityManagerObject(em, del));
 						}
 
 					}
@@ -684,18 +673,16 @@ public class PdksEntityController implements Serializable {
 				session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 			}
 			SQLQuery queryReadUnCommitted = null;
-			if (readUnCommitted || manuelReadUnCommitted) {
-				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
-				queryReadUnCommitted.executeUpdate();
-			}
+			if (readUnCommitted || manuelReadUnCommitted)
+				queryReadUnCommitted = readUnCommitted(session);
+
 			SQLQuery query = prepareFunction(session, veriMap, sp);
 			sonucList = query.list();
-			if (queryReadUnCommitted != null) {
-				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
-				queryReadUnCommitted.executeUpdate();
-			}
+			if (queryReadUnCommitted != null)
+				readCommitted(session);
+
 			if (sessinYok)
-				session.close();
+				sessionClose(session);
 		} catch (Exception e) {
 			Gson gson = new Gson();
 			logger.error(sp.toString() + (veriMap != null && !veriMap.isEmpty() ? "\n" + gson.toJson(veriMap) : "") + "\n" + e);
@@ -706,6 +693,125 @@ public class PdksEntityController implements Serializable {
 			veriMap.put("readUnCommitted", true);
 
 		return sonucList;
+
+	}
+
+	/**
+	 * @param session
+	 */
+	public Transaction startTransaction(Session session) {
+		Transaction t = null;
+//		if (session != null) {
+//			try {
+//				t = session.getTransaction();
+//				if (t == null || t.isActive() == false)
+//					t = session.beginTransaction();
+//			} catch (Exception e) {
+//				logger.error(e);
+//				e.printStackTrace();
+//			}
+//		}
+//		if (t != null && t.isActive())
+//			logger.debug("");
+		return t;
+	}
+
+	/**
+	 * @param session
+	 */
+	public void sessionFlush(Session session) throws Exception {
+		if (session != null) {
+			Transaction t = null;
+			boolean rollBack = false;
+			try {
+				t = session.getTransaction();
+				rollBack = t != null && t.isActive();
+				session.flush();
+				if (rollBack)
+					t.commit();
+			} catch (Exception e) {
+				if (rollBack)
+					t.rollback();
+				logger.error(e);
+				throw e;
+			}
+		}
+	}
+
+	/**
+	 * @param session
+	 */
+	public void sessionClose(Session session) {
+		if (session != null) {
+			try {
+				if (authenticatedUser == null && PdksUtil.isSessionKapali(session) == false) {
+					session.clear();
+					session.close();
+				}
+
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
+
+		}
+
+	}
+
+	/**
+	 * @param session
+	 * @param em
+	 * @param object
+	 */
+	public Object sessionRefresh(Session session, EntityManager em, Object object) {
+		if (session != null && object != null) {
+			try {
+				BasePDKSObject pdksObject = null;
+				Object id = null;
+				if (object instanceof BasePDKSObject) {
+					pdksObject = (BasePDKSObject) object;
+					id = pdksObject.getId();
+				}
+				if (id == null)
+					id = PdksUtil.getMethodObject(object, "getId", null);
+				if (id != null) {
+					if (session.contains(object))
+						session.refresh(object);
+					else {
+						if (pdksObject != null) {
+							StringBuffer sb = new StringBuffer();
+							sb.append("select D.* from " + pdksObject.getTableName() + " D " + selectLOCK);
+							sb.append(" where D." + BasePDKSObject.COLUMN_NAME_ID + " = :v");
+							HashMap fields = new HashMap();
+							fields.put("v", id);
+							fields.put(PdksEntityController.MAP_KEY_SESSION, session);
+							List list = getObjectBySQLList(sb.toString(), fields, object.getClass());
+							if (list != null) {
+								if (list.isEmpty() == false)
+									object = list.get(0);
+								list = null;
+							}
+							fields = null;
+						} else {
+							if (id instanceof Long)
+								object = session.get(object.getClass(), (Long) id);
+							else if (id instanceof Integer)
+								object = session.get(object.getClass(), (Integer) id);
+						}
+					}
+					if (em != null && object == null) {
+						if (em.contains(object) == false)
+							object = em.merge(object);
+						em.refresh(object);
+					}
+				}
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
+
+		}
+		return object;
 
 	}
 
@@ -735,17 +841,23 @@ public class PdksEntityController implements Serializable {
 				sessinYok = true;
 				session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
 			}
-
+			SQLQuery queryReadUnCommitted = null;
+			if (readUnCommitted)
+				queryReadUnCommitted = readUnCommitted(session);
 			SQLQuery query = prepareProcedure(session, veriMap, sp);
+
 			if (class1 != null)
 				query.addEntity(class1);
 			sonucList = query.list();
+			if (queryReadUnCommitted != null)
+				readCommitted(session);
 			if (sessinYok)
-				session.close();
+				sessionClose(session);
 		} catch (Exception e) {
-			Gson gson = new Gson();
-			logger.error(sp.toString() + (veriMap != null && !veriMap.isEmpty() ? "\n" + gson.toJson(veriMap) : "") + "\n" + e);
-			gson = null;
+			StringBuffer sb = getExecStringSP(veriMap, sp);
+
+			logger.error(sb.toString() + "\n" + e);
+			sb = null;
 			throw new Exception(e);
 		}
 		if (manuelReadUnCommitted)
@@ -753,6 +865,31 @@ public class PdksEntityController implements Serializable {
 
 		return sonucList;
 
+	}
+
+	/**
+	 * @param veriMap
+	 * @param sp
+	 * @return
+	 */
+	private StringBuffer getExecStringSP(LinkedHashMap<String, Object> veriMap, String sp) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("exec " + sp + " ");
+		if (veriMap != null) {
+			for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
+				String key = (String) iterator.next();
+				Object value = veriMap.get(key);
+				if (value == null)
+					sb.append(" null ");
+				else if (value instanceof String)
+					sb.append("'" + value.toString().replace("'", "''") + "'");
+				else
+					sb.append(String.valueOf(value));
+				if (iterator.hasNext())
+					sb.append(", ");
+			}
+		}
+		return sb;
 	}
 
 	/**
@@ -784,11 +921,11 @@ public class PdksEntityController implements Serializable {
 			SQLQuery query = prepareProcedure(session, veriMap, sp);
 			sonuc = query.executeUpdate();
 			if (sessinYok)
-				session.close();
+				sessionClose(session);
 		} catch (Exception e) {
-			Gson gson = new Gson();
-			logger.error(sp.toString() + (veriMap != null && !veriMap.isEmpty() ? "\n" + gson.toJson(veriMap) : "") + "\n" + e);
-			gson = null;
+			StringBuffer sb = getExecStringSP(veriMap, sp);
+			logger.error(sb.toString() + "\n" + e);
+			sb = null;
 		}
 		if (manuelReadUnCommitted)
 			veriMap.put("readUnCommitted", true);
@@ -829,6 +966,7 @@ public class PdksEntityController implements Serializable {
 		SQLQuery query = null;
 		if (session != null) {
 			query = session.createSQLQuery(queryStr);
+
 			logger.debug(queryStr);
 			if (veriMap != null) {
 				for (Iterator iterator = veriMap.keySet().iterator(); iterator.hasNext();) {
@@ -1176,8 +1314,9 @@ public class PdksEntityController implements Serializable {
 				if (kayitAdet != null && kayitAdet > 0) {
 					logger.info(tableName + " " + kayitAdet);
 					veriMap.clear();
-					execSP(session, veriMap, "SP_CHECKIDENT_VIEW");
-					session.flush();
+					veriMap.put("tableName", tableName);
+					execSP(session, veriMap, "SP_CHECKIDENT_TABLE");
+					sessionFlush(session);
 				}
 				veriMap = null;
 			}
@@ -1342,7 +1481,11 @@ public class PdksEntityController implements Serializable {
 
 			if (showSQL)
 				logger.info(sql + " in " + PdksUtil.convertToDateString(new Date(), PdksUtil.getDateFormat() + " H:mm:ss"));
+			// SQLQuery queryReadUnCommitted = null;
 			try {
+				// if (readUnCommitted)
+				// queryReadUnCommitted = readUnCommitted(session);
+				query.setTimeout(30);
 				List listNew = query.list();
 				if (!listNew.isEmpty())
 					listAll.addAll(listNew);
@@ -1353,7 +1496,8 @@ public class PdksEntityController implements Serializable {
 				logger.info(sql + " " + e.getMessage());
 
 			}
-
+			// if (queryReadUnCommitted != null)
+			// readCommitted(session);
 			if (showSQL)
 				logger.info(sql + " out " + PdksUtil.convertToDateString(new Date(), PdksUtil.getDateFormat() + " H:mm:ss"));
 
@@ -1485,6 +1629,7 @@ public class PdksEntityController implements Serializable {
 		} catch (Exception e) {
 			logger.error(tableName + " --> " + fieldName + " = " + value + " : " + class1.getName() + "\n" + e.getMessage());
 			e.printStackTrace();
+			list = new ArrayList();
 		}
 		if (list != null)
 			PdksUtil.getAktifList(list);
@@ -1521,11 +1666,7 @@ public class PdksEntityController implements Serializable {
 				fields.remove(MAP_KEY_TRANSACTION);
 			}
 			String sql = sb.toString();
-			SQLQuery queryReadUnCommitted = null;
-			if (readUnCommitted) {
-				queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
-				queryReadUnCommitted.executeUpdate();
-			}
+
 			TreeMap fieldsOther = new TreeMap();
 			sb = null;
 			Boolean devam = Boolean.TRUE;
@@ -1558,6 +1699,9 @@ public class PdksEntityController implements Serializable {
 					fieldsOther.put(key, object);
 			}
 			if (devam) {
+				// SQLQuery queryReadUnCommitted = null;
+				// if (readUnCommitted)
+				// queryReadUnCommitted = readUnCommitted(session);
 				SQLQuery query = session.createSQLQuery(sql);
 				if (class1 != null)
 					query.addEntity(class1);
@@ -1572,10 +1716,9 @@ public class PdksEntityController implements Serializable {
 
 				list = query.list();
 
-				if (queryReadUnCommitted != null) {
-					queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
-					queryReadUnCommitted.executeUpdate();
-				}
+				// if (queryReadUnCommitted != null)
+				// readCommitted(session);
+
 				if (showSQL)
 					logger.info(sql + " out " + PdksUtil.convertToDateString(new Date(), PdksUtil.getDateFormat() + " H:mm:ss"));
 
@@ -1659,23 +1802,22 @@ public class PdksEntityController implements Serializable {
 	public Object getSQLParamByFieldObject(String tableName, String fieldName, Object value, Class class1, Session session) {
 		HashMap parametreMap = new HashMap();
 		StringBuffer sb = new StringBuffer();
-		sb.append("select top 1 * from " + tableName + " " + selectLOCK);
+		sb.append("select D.* from " + tableName + " D " + selectLOCK);
 		if (value != null) {
-			sb.append(" where " + fieldName + " = :u");
+			sb.append(" where D." + fieldName + " = :u");
 			parametreMap.put("u", value);
 		} else
-			sb.append(" where " + fieldName + "  is null");
+			sb.append(" where D." + fieldName + "  is null");
 
 		if (session != null)
 			parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 		List list = getObjectBySQLList(sb.toString(), parametreMap, class1);
-
-		Object object = list != null && !list.isEmpty() ? list.get(0) : null;
+		Object object = list != null && list.isEmpty() == false ? list.get(0) : null;
 		if (object == null && class1 != null) {
 			StringBuffer sb1 = new StringBuffer();
-			if (authenticatedUser != null && PdksUtil.hasStringValue(authenticatedUser.getCalistigiSayfa())) {
+			if (authenticatedUser != null && PdksUtil.hasStringValue(authenticatedUser.getCalistigiSayfa()))
 				sb1.append(authenticatedUser.getCalistigiSayfa() + "\n");
-			}
+
 			sb1.append(sb.toString() + " --> " + value + " " + class1.getName());
 			if (value != null)
 				logger.debug(sb1.toString());
@@ -1762,6 +1904,29 @@ public class PdksEntityController implements Serializable {
 		}
 		sb = null;
 		return veriList;
+	}
+
+	/**
+	 * @param session
+	 * @return
+	 */
+	private SQLQuery readUnCommitted(Session session) {
+		SQLQuery queryReadUnCommitted = null;
+		if (PdksUtil.isSessionKapali(session) == false) {
+			queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED));
+			queryReadUnCommitted.executeUpdate();
+		}
+		return queryReadUnCommitted;
+	}
+
+	/**
+	 * @param session
+	 */
+	private void readCommitted(Session session) {
+		if (PdksUtil.isSessionKapali(session) == false) {
+			SQLQuery queryReadUnCommitted = session.createSQLQuery(setTransactionIsolationLevel(TRANSACTION_ISOLATION_LEVEL_READ_COMMITTED));
+			queryReadUnCommitted.executeUpdate();
+		}
 	}
 
 	public static boolean isShowSQL() {

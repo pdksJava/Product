@@ -50,7 +50,9 @@ import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Tatil;
 import org.pdks.entity.Vardiya;
+import org.pdks.entity.VardiyaEkSaat;
 import org.pdks.entity.VardiyaGun;
+import org.pdks.entity.VardiyaSaat;
 import org.pdks.security.action.UserHome;
 import org.pdks.security.entity.User;
 
@@ -149,14 +151,13 @@ public class FazlaMesaiOnayRaporHome extends EntityHome<DepartmanDenklestirmeDon
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	/**
@@ -164,14 +165,14 @@ public class FazlaMesaiOnayRaporHome extends EntityHome<DepartmanDenklestirmeDon
 	 */
 	private void adminRoleDurum() {
 		adminRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIKAdmin();
-		ikRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIK();
+		ikRole = PdksUtil.getIkRole(authenticatedUser);
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		fazlaMesaiSayfa = false;
 		adminRoleDurum();
 		boolean ayniSayfa = authenticatedUser.getCalistigiSayfa() != null && authenticatedUser.getCalistigiSayfa().equals(sayfaURL);
@@ -660,6 +661,8 @@ public class FazlaMesaiOnayRaporHome extends EntityHome<DepartmanDenklestirmeDon
 				sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksEntityController.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_ID + " = V." + VardiyaGun.COLUMN_NAME_PERSONEL);
 				sb.append(" and V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >= P." + Personel.getIseGirisTarihiColumn());
 				sb.append(" and V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " <= P." + Personel.COLUMN_NAME_SSK_CIKIS_TARIHI);
+				sb.append(" left join " + VardiyaSaat.TABLE_NAME + " S " + PdksEntityController.getJoinLOCK() + " on S." + VardiyaSaat.COLUMN_NAME_ID + " = V." + VardiyaGun.COLUMN_NAME_VARDIYA_SAAT);
+				sb.append(" left join " + VardiyaEkSaat.TABLE_NAME + " ES " + PdksEntityController.getJoinLOCK() + " on ES." + VardiyaEkSaat.COLUMN_NAME_ID + " =  S." + VardiyaSaat.COLUMN_NAME_VARDIYA_EK_SAAT);
 				sb.append(" where V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " >= :basTarih and V." + VardiyaGun.COLUMN_NAME_VARDIYA_TARIHI + " <= :bitTarih");
 				sb.append(" and V." + VardiyaGun.COLUMN_NAME_DURUM + " = 1");
 				sb.append(" and V." + VardiyaGun.COLUMN_NAME_PERSONEL + ":pId ");

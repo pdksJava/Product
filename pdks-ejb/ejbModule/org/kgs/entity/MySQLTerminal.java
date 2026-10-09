@@ -16,13 +16,19 @@ public class MySQLTerminal implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = -6541019309141599811L;
+
+	public static final String JSON_KODU = "subeKodu";
+	public static final String JSON_ADI = "sube";
+	public static final String JSON_TIPI = "islemTipi";
+
 	public static final String TABLE_NAME = "MYSQL_TERMINAL";
 	public static final String COLUMN_NAME_ID = "TerminalId";
 	public static final String COLUMN_NAME_YON = "Yon";
 	public static final String COLUMN_NAME_ACIKLAMA = "Aciklama";
+	public static final String COLUMN_NAME_KODU = "Kodu";
 	public static final String COLUMN_NAME_DURUM = "Aktif";
 	private Integer id, yonDurum;
-	private String aciklama;
+	private String aciklama, kodu;
 	private Boolean durum;
 	private ENumHareketYon hareketYon;
 
@@ -56,14 +62,43 @@ public class MySQLTerminal implements Serializable {
 		this.aciklama = aciklama;
 	}
 
+	@Column(name = COLUMN_NAME_KODU)
+	public String getKodu() {
+		return kodu;
+	}
+
+	public void setKodu(String kodu) {
+		this.kodu = kodu;
+	}
+
 	@Column(name = COLUMN_NAME_DURUM)
 	public Boolean getDurum() {
 		return durum;
 	}
 
-	@Column(name = COLUMN_NAME_DURUM)
 	public void setDurum(Boolean durum) {
 		this.durum = durum;
+	}
+
+	@Transient
+	public static String getTipAciklama(ENumHareketYon hareketYon) {
+		String str = "";
+		if (hareketYon != null) {
+			if (hareketYon.equals(ENumHareketYon.GIRIS))
+				str = "Giriş";
+			else if (hareketYon.equals(ENumHareketYon.CIKIS))
+				str = "Çıkış";
+			else if (hareketYon.equals(ENumHareketYon.CIFT_YON))
+				str = "Seçimli";
+
+		}
+		return str;
+	}
+
+	@Transient
+	public String getTipAciklama() {
+		String str = hareketYon != null ? getTipAciklama(hareketYon) : "";
+		return str;
 	}
 
 	@Transient
@@ -74,4 +109,5 @@ public class MySQLTerminal implements Serializable {
 	public void setHareketYon(ENumHareketYon hareketYon) {
 		this.hareketYon = hareketYon;
 	}
+
 }

@@ -78,7 +78,6 @@ public class IzinERPAktarimHome extends EntityHome<PersonelIzin> implements Seri
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -86,8 +85,8 @@ public class IzinERPAktarimHome extends EntityHome<PersonelIzin> implements Seri
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		try {
 			if (authenticatedUser.isAdmin() == false || aramaSecenekleri == null)
 				aramaSecenekleri = new AramaSecenekleri(authenticatedUser);
@@ -152,7 +151,12 @@ public class IzinERPAktarimHome extends EntityHome<PersonelIzin> implements Seri
 
 		}
 		if (flush) {
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
 		} else
 			PdksUtil.addMessageWarn("İzin seçiniz!");
 
@@ -281,7 +285,12 @@ public class IzinERPAktarimHome extends EntityHome<PersonelIzin> implements Seri
 				}
 				if (!list.isEmpty()) {
 					PdksUtil.addMessageInfo(list.size() + " adet izin aktarıldı.");
-					session.flush();
+					try {
+						pdksEntityController.sessionFlush(session);
+					} catch (Exception e) {
+						logger.error(e);
+						e.printStackTrace();
+					}
 				}
 				if (adet > 0)
 					PdksUtil.addMessageAvailableWarn(adet + " adet izin hatalıdır!");
@@ -311,7 +320,12 @@ public class IzinERPAktarimHome extends EntityHome<PersonelIzin> implements Seri
 			izin.setGuncelleyenUser(authenticatedUser);
 			izin.setIzinDurumu(PersonelIzin.IZIN_DURUMU_ERP_GONDERILDI);
 			pdksEntityController.saveOrUpdate(session, entityManager, izin);
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			}
 			PdksUtil.addMessageInfo("İzin başarı ile SAP sistemine aktarılmıştır.");
 			fillIzinList();
 		}

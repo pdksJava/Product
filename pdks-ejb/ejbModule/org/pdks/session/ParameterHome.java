@@ -72,7 +72,6 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -80,7 +79,7 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		admin = authenticatedUser.isAdmin();
 		fillParameterList();
@@ -90,12 +89,20 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 	public String delete() {
 		Parameter parameter = getInstance();
 		pdksEntityController.deleteObject(session, entityManager, parameter);
-		session.flush();
+		try {
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 		try {
 			pdksEntityController.savePrepareTableID(true, parameter, Parameter.class, session);
+			pdksEntityController.sessionFlush(session);
 		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
 		}
-		session.flush();
+
 		session.clear();
 
 		fillParameterList();
@@ -121,7 +128,12 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 		if (parameter.isHelpDeskMi())
 			parameter.setGuncelle(Boolean.FALSE);
 		pdksEntityController.saveOrUpdate(session, entityManager, parameter);
-		session.flush();
+		try {
+			pdksEntityController.sessionFlush(session);
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 		session.clear();
 		fillParameterList();
 		startupAction.fillStartMethod(authenticatedUser, true, session);// fill all list fillParameter();
@@ -192,7 +204,7 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 						skinParameter.setChangeUser(authenticatedUser);
 						skinParameter.setChangeDate(new Date());
 						pdksEntityController.saveOrUpdate(session, entityManager, skinParameter);
-						session.flush();
+						pdksEntityController.sessionFlush(session);
 						guncelle = true;
 					}
 				} catch (Exception e) {
@@ -283,7 +295,7 @@ public class ParameterHome extends EntityHome<Parameter> implements Serializable
 
 	public void refreshInstance() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	public Parameter getCurrentParameter() {

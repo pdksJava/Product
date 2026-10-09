@@ -21,7 +21,6 @@ import org.jboss.seam.annotations.AutoCreate;
 import org.jboss.seam.annotations.In;
 import org.jboss.seam.annotations.Name;
 import org.jboss.seam.annotations.Scope;
-import org.jboss.seam.annotations.Transactional;
 import org.jboss.seam.annotations.async.Asynchronous;
 import org.jboss.seam.annotations.async.Expiration;
 import org.jboss.seam.annotations.async.IntervalCron;
@@ -38,7 +37,6 @@ import org.pdks.entity.SirketEntegrasyon;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Tatil;
 import org.pdks.erp.action.ERPController;
-import org.pdks.security.action.StartupAction;
 import org.pdks.security.entity.User;
 import org.pdks.session.LDAPUserManager;
 import org.pdks.session.OrtakIslemler;
@@ -74,8 +72,7 @@ public class PersonelERPGuncelleme implements Serializable {
 	EntityManager entityManager;
 	@In(required = false, create = true)
 	Renderer renderer;
-	@In(required = false, create = true)
-	StartupAction startupAction;
+
 	@In(required = false, create = true)
 	MailManager mailManager;
 
@@ -94,7 +91,6 @@ public class PersonelERPGuncelleme implements Serializable {
 
 	@Asynchronous
 	@SuppressWarnings("unchecked")
-	@Transactional
 	// @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
 	public QuartzTriggerHandle personelERPGuncellemeTimer(@Expiration Date when, @IntervalCron String interval) {
 		hataKonum = "personelERPGuncellemeTimer başladı ";
@@ -128,8 +124,7 @@ public class PersonelERPGuncelleme implements Serializable {
 
 					}
 			} finally {
-				if (session != null)
-					session.close();
+				pdksEntityController.sessionClose(session);
 				setCalisiyor(Boolean.FALSE);
 
 			}
@@ -192,7 +187,7 @@ public class PersonelERPGuncelleme implements Serializable {
 
 				hataKonum = "Paramatre okunuyor ";
 
-				Parameter parameter = ortakIslemler.getParameter(session, PARAMETER_KEY);
+				Parameter parameter = ortakIslemler.getParameterAktif(session, PARAMETER_KEY);
 				String value = (parameter != null) ? parameter.getValue() : null;
 				hataKonum = "Paramatre okundu ";
 				String personelERPTableViewAdi = ortakIslemler.getParameterKey(ortakIslemler.getParametrePersonelERPTableView());
@@ -242,7 +237,6 @@ public class PersonelERPGuncelleme implements Serializable {
 	 * @param time
 	 * @throws Exception
 	 */
-	@Transactional
 	public void personelERPGuncellemeCalistir(Session session, Date time, Boolean mailGonder) throws Exception {
 		logger.info("personelERPGuncelleme  basladi " + PdksUtil.getCurrentTimeStampStr());
 		if (time == null)
@@ -348,11 +342,10 @@ public class PersonelERPGuncelleme implements Serializable {
 		return kisaKullanici;
 	}
 
-	@Transactional
 	public void kullaniciGuncelle(Session session, User user) {
 		if (PdksUtil.isSessionKapali(session))
 			session = PdksUtil.getSession(entityManager, user == null);
-		Parameter parameterEmailBozuk = ortakIslemler.getParameter(session, "emailBozuk");
+		Parameter parameterEmailBozuk = ortakIslemler.getParameterAktif(session, "emailBozuk");
 		boolean emailBozuk = parameterEmailBozuk != null;
 		HashMap fields = new HashMap();
 		fields.put(PdksEntityController.MAP_KEY_SESSION, session);
@@ -389,7 +382,7 @@ public class PersonelERPGuncelleme implements Serializable {
 							try {
 								session.clear();
 								pdksEntityController.saveOrUpdate(session, entityManager, kullanici);
-								session.flush();
+								pdksEntityController.sessionFlush(session);
 
 							} catch (Exception ee) {
 								logger.error("PDKS hata in : \n" + (kullanici != null ? kullanici.getUsername() : ""));
@@ -427,7 +420,6 @@ public class PersonelERPGuncelleme implements Serializable {
 
 	}
 
-	@Transactional
 	public List<Long> personelERPGuncelle(User user, Session session) throws Exception {
 		boolean ekran = user == null;
 		if (ekran)
@@ -502,7 +494,8 @@ public class PersonelERPGuncelleme implements Serializable {
 							logger.error(pdksPersonel.getSicilNo() + " " + pdksPersonel.getAdSoyad() + " SAP'den anaveri bilgisi okunamadı! ");
 						}
 
-						session.flush();
+						pdksEntityController.sessionFlush(session);
+
 						if (pdksPersonel.getPersonelKGS() != null)
 							personelList.add(pdksPersonel.getPersonelKGS().getId());
 					}
@@ -570,7 +563,7 @@ public class PersonelERPGuncelleme implements Serializable {
 	 * @throws Exception
 	 */
 	private void sapOlmayanPersonelBul(Session session) throws Exception {
-		Parameter parameter = ortakIslemler.getParameter(session, "sapKodu");
+		Parameter parameter = ortakIslemler.getParameterAktif(session, "sapKodu");
 		List<Personel> list = null;
 		if (parameter != null && parameter.getActive() != null && parameter.getActive()) {
 			String sapKodu = parameter.getValue();
@@ -599,7 +592,7 @@ public class PersonelERPGuncelleme implements Serializable {
 	 * @param session
 	 * @return
 	 */
-	@Transactional
+
 	public String aktifMailAdressGuncelle(Session session) {
 		HashMap fields = new HashMap();
 		StringBuilder sb = new StringBuilder();
@@ -691,7 +684,8 @@ public class PersonelERPGuncelleme implements Serializable {
 									}
 								}
 							}
-							session.flush();
+							pdksEntityController.sessionFlush(session);
+
 						}
 
 					}

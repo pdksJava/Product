@@ -43,6 +43,7 @@ import org.pdks.entity.Sirket;
 import org.pdks.entity.Tanim;
 import org.pdks.entity.Vardiya;
 import org.pdks.entity.VardiyaGun;
+import org.pdks.security.action.UserHome;
 import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.User;
 
@@ -65,7 +66,8 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 	User authenticatedUser;
 	@In(required = false, create = true)
 	EntityManager entityManager;
-
+	@In(required = false, create = true)
+	UserHome userHome;
 	@In(required = false, create = true)
 	OrtakIslemler ortakIslemler;
 	@In(required = false, create = true)
@@ -124,7 +126,6 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -134,14 +135,6 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 	 */
 	private void sessionClear() {
 		session.clear();
-	}
-
-	/**
-	 * 
-	 */
-	@Transactional
-	private void sessionFlush() {
-		session.flush();
 	}
 
 	public String fillPersonelList() {
@@ -293,7 +286,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	/**
@@ -301,14 +294,15 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 	 */
 	private void adminRoleDurum() {
 		adminRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIKAdmin();
-		ikRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIK();
+		ikRole = PdksUtil.getIkRole(authenticatedUser);
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() throws Exception {
+		String donusStr = "";
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		if (personelList == null)
 			personelList = new ArrayList<Personel>();
 		else
@@ -379,68 +373,77 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 
 		} else
 			aramaSecenekleri.setSirket(authenticatedUser.getPdksPersonel().getSirket());
-		if (dateStr != null) {
-			donusAdres = linkAdres;
-			Date vardiyaDate = PdksUtil.convertToJavaDate(dateStr, "yyyyMMdd");
-			setTarih(vardiyaDate);
-			if (perKGSId != null) {
+		if (authenticatedUser.isAdmin() == false && PdksUtil.hasStringValue(planKey) == false) {
+			donusStr = MenuItemConstant.home;
+			if (userHome.hasPermission("fazlaMesaiHesapla", "view")) {
+				PdksUtil.addMessageWarn("Bu ekrandan " + ortakIslemler.getMenuAdi("personelFazlaMesai") + " sayfasına geçiş yapma yetkisi vardır!");
+				donusStr = MenuItemConstant.fazlaMesaiHesapla;
+			}
 
-				PersonelKGS personelKGS = (PersonelKGS) pdksEntityController.getSQLParamByFieldObject(PersonelKGS.TABLE_NAME, PersonelKGS.COLUMN_NAME_ID, perKGSId, PersonelKGS.class, session);
+		} else {
+			if (dateStr != null) {
+				donusAdres = linkAdres;
+				Date vardiyaDate = PdksUtil.convertToJavaDate(dateStr, "yyyyMMdd");
+				setTarih(vardiyaDate);
+				if (perKGSId != null) {
 
-				PersonelView personelView = personelKGS != null ? personelKGS.getPersonelView() : null;
-				if (personelView != null && fazlaMesaiPersonel == null)
-					fazlaMesaiPersonel = personelView.getPdksPersonel();
-				hareket.setPersonel(personelView);
-				if (fazlaMesaiPersonel != null) {
-					Personel pdksPersonel = fazlaMesaiPersonel;
-					Sirket pdksSirket = pdksPersonel.getSirket();
-					if (pdksPersonel.getTesis() != null) {
-						aramaSecenekleri.setTesisId(pdksPersonel.getTesis().getId());
+					PersonelKGS personelKGS = (PersonelKGS) pdksEntityController.getSQLParamByFieldObject(PersonelKGS.TABLE_NAME, PersonelKGS.COLUMN_NAME_ID, perKGSId, PersonelKGS.class, session);
+
+					PersonelView personelView = personelKGS != null ? personelKGS.getPersonelView() : null;
+					if (personelView != null && fazlaMesaiPersonel == null)
+						fazlaMesaiPersonel = personelView.getPdksPersonel();
+					hareket.setPersonel(personelView);
+					if (fazlaMesaiPersonel != null) {
+						Personel pdksPersonel = fazlaMesaiPersonel;
+						Sirket pdksSirket = pdksPersonel.getSirket();
+						if (pdksPersonel.getTesis() != null) {
+							aramaSecenekleri.setTesisId(pdksPersonel.getTesis().getId());
+						}
+						if (pdksSirket != null) {
+							aramaSecenekleri.setDepartmanId(pdksSirket.getDepartman().getId());
+							aramaSecenekleri.setSirket(pdksSirket);
+							aramaSecenekleri.setSirketId(pdksSirket.getId());
+							Date bugun = PdksUtil.getDate(tarih);
+							ortakIslemler.setAramaSecenekSirketVeTesisData(aramaSecenekleri, bugun, bugun, true, session);
+							aramaSecenekleri.setSirketId(pdksSirket.getId());
+						}
+						if (pdksPersonel.getEkSaha3() != null) {
+							aramaSecenekleri.setEkSaha3Id(pdksPersonel.getEkSaha3().getId());
+						}
+						if (pdksPersonel.getEkSaha1() != null) {
+							aramaSecenekleri.setEkSaha1Id(pdksPersonel.getEkSaha1().getId());
+						}
+						if (pdksPersonel.getEkSaha4() != null) {
+							aramaSecenekleri.setEkSaha4Id(pdksPersonel.getEkSaha4().getId());
+						}
+						aramaSecenekleri.setSicilNo(pdksPersonel.getPdksSicilNo());
+						aramaSecenekleri.setAd(pdksPersonel.getAd());
+						aramaSecenekleri.setSoyad(pdksPersonel.getSoyad());
+
 					}
-					if (pdksSirket != null) {
-						aramaSecenekleri.setDepartmanId(pdksSirket.getDepartman().getId());
-						aramaSecenekleri.setSirket(pdksSirket);
-						aramaSecenekleri.setSirketId(pdksSirket.getId());
-						Date bugun = PdksUtil.getDate(tarih);
-						ortakIslemler.setAramaSecenekSirketVeTesisData(aramaSecenekleri, bugun, bugun, true, session);
-						aramaSecenekleri.setSirketId(pdksSirket.getId());
-					}
-					if (pdksPersonel.getEkSaha3() != null) {
-						aramaSecenekleri.setEkSaha3Id(pdksPersonel.getEkSaha3().getId());
-					}
-					if (pdksPersonel.getEkSaha1() != null) {
-						aramaSecenekleri.setEkSaha1Id(pdksPersonel.getEkSaha1().getId());
-					}
-					if (pdksPersonel.getEkSaha4() != null) {
-						aramaSecenekleri.setEkSaha4Id(pdksPersonel.getEkSaha4().getId());
-					}
-					aramaSecenekleri.setSicilNo(pdksPersonel.getPdksSicilNo());
-					aramaSecenekleri.setAd(pdksPersonel.getAd());
-					aramaSecenekleri.setSoyad(pdksPersonel.getSoyad());
 
 				}
+				Personel sakla = fazlaMesaiPersonel;
+				fillHareketList();
+				fazlaMesaiPersonel = sakla;
 
 			}
-			Personel sakla = fazlaMesaiPersonel;
-			fillHareketList();
-			fazlaMesaiPersonel = sakla;
-
+			donemBul(tarih);
+			if (ikRole)
+				aramaSecenekleriPer = (AramaSecenekleri) aramaSecenekleri.clone();
+			else
+				aramaSecenekleriPer = new AramaSecenekleri();
+			if (fazlaMesaiGiris)
+				aramaSecenekleri = new AramaSecenekleri();
+			if (!ayniSayfa)
+				authenticatedUser.setCalistigiSayfa("");
+			Boolean kullaniciPersonel = ortakIslemler.getKullaniciPersonel(authenticatedUser);
+			if (kullaniciPersonel) {
+				PdksUtil.addMessageAvailableWarn("'" + ortakIslemler.getMenuAdi("personelHareket") + "' sayfasına giriş yetkiniz yoktur!");
+				return MenuItemConstant.home;
+			}
 		}
-		donemBul(tarih);
-		if (ikRole)
-			aramaSecenekleriPer = (AramaSecenekleri) aramaSecenekleri.clone();
-		else
-			aramaSecenekleriPer = new AramaSecenekleri();
-		if (fazlaMesaiGiris)
-			aramaSecenekleri = new AramaSecenekleri();
-		if (!ayniSayfa)
-			authenticatedUser.setCalistigiSayfa("");
-		Boolean kullaniciPersonel = ortakIslemler.getKullaniciPersonel(authenticatedUser);
-		if (kullaniciPersonel) {
-			PdksUtil.addMessageAvailableWarn("'" + ortakIslemler.getMenuAdi("personelHareket") + "' sayfasına giriş yetkiniz yoktur!");
-			return MenuItemConstant.home;
-		}
-		return "";
+		return donusStr;
 	}
 
 	/**
@@ -629,7 +632,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 				KapiView terminalKapi = terminalKapiManuelUpdate(kgsHareket.getTerminalKapi());
 				String name = "SP_HAREKET_TERMINAL_SIRKET";
 				if (ortakIslemler.isExisStoreProcedure(name, session)) {
- 					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
 					veriMap.put("kgsId", kgsId);
 					veriMap.put("pdksId", pdksId);
 					veriMap.put("kapi", terminalKapi.getId());
@@ -639,7 +642,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 					veriMap.put("nedenId", neden.getId());
 					veriMap.put("aciklama", aciklama);
 					veriMap.put("sirketId", kgsHareket.getKgsSirketId());
- 					pdksEntityController.execSP(session, veriMap, name);
+					pdksEntityController.execSP(session, veriMap, name);
 				} else {
 					pdksEntityController.hareketSil(kgsId, pdksId, authenticatedUser, neden.getId(), "", kgsHareket.getKgsSirketId(), session);
 					pdksId = pdksEntityController.hareketEkle(terminalKapi, kgsHareket.getPersonel(), kgsHareket.getZaman(), authenticatedUser, neden.getId(), aciklama, session);
@@ -733,6 +736,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 		}
 		Date zaman = zamanGuncelle();
 		try {
+			pdksEntityController.startTransaction(session);
 			if (islemTipi.equals("E") || islemTipi.equals("G")) {
 				Date tarih = Calendar.getInstance().getTime();
 				tarih = PdksUtil.addTarih(tarih, Calendar.MINUTE, -1);
@@ -778,7 +782,7 @@ public class PersonelHareketHome extends EntityHome<HareketKGS> implements Seria
 						parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
 
 				}
-				sessionFlush();
+				pdksEntityController.sessionFlush(session);
 				sessionClear();
 				if (islemVardiyaGun != null)
 					tarih = islemVardiyaGun.getVardiyaDate();

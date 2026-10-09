@@ -8,7 +8,7 @@
 	</context-param>
 	<context-param>
 		<param-name>facelets.REFRESH_PERIOD</param-name>
-		<param-value>-1</param-value>
+		<param-value>0</param-value>
 	</context-param>
 	<context-param>
 		<param-name>javax.faces.DEFAULT_SUFFIX</param-name>
@@ -30,6 +30,24 @@
 	<context-param>
 		<param-name>org.ajax4jsf.handleViewExpiredOnClient</param-name>
 		<param-value>true</param-value>
+	</context-param>
+	<context-param>
+		<param-name>config-file</param-name>
+		<param-value>my-quartz.properties</param-value>
+	</context-param>
+
+	<context-param>
+		<param-name>shutdown-on-unload</param-name>
+		<param-value>true</param-value>
+	</context-param>
+
+	<context-param>
+		<param-name>wait-on-shutdown</param-name>
+		<param-value>true</param-value>
+	</context-param>
+	<context-param>
+		<param-name>start-delay-seconds</param-name>
+		<param-value>10</param-value>
 	</context-param>
 	<error-page>
 		<exception-type>javax.faces.application.ViewExpiredException</exception-type>
@@ -110,6 +128,9 @@
 	</listener>
 	<listener>
 		<listener-class>org.pdks.security.action.SessionListener</listener-class>
+	</listener>
+	<listener>
+		<listener-class>org.quartz.ee.servlet.QuartzInitializerListener</listener-class>
 	</listener>
 	<servlet>
 		<servlet-name>JAX-RS Servlet</servlet-name>

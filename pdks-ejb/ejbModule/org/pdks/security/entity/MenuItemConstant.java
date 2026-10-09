@@ -64,7 +64,6 @@ public class MenuItemConstant implements Serializable {
 	public static String personelHareket = "/puantaj/personelHareket.xhtml";
 	public static String planGuncellemeTalepLinkOnay = "/puantaj/planGuncellemeTalepLinkOnay.xhtml";
 	public static String vardiyaPlani = "/puantaj/vardiyaPlani.xhtml";
-	
 
 	public static String aylikIzinRapor = "/rapor/izin/aylikIzinRapor.xhtml";
 	public static String bakiyeIzin = "/rapor/izin/bakiyeIzin.xhtml";
@@ -118,15 +117,18 @@ public class MenuItemConstant implements Serializable {
 	public static String superVisorDegistir = "/security/superVisorDegistir.xhtml";
 	public static String yoneticiDegistir = "/security/yoneticiDegistir.xhtml";
 
+	public static String cihazTanimlama = "/tanimlama/cihazTanimlama.xhtml";
+	public static String cihazQRGoster = "/tanimlama/cihazQRGoster.xhtml";
 	public static String calismaModeliTanimlama = "/tanimlama/calismaModeliTanimlama.xhtml";
 	public static String departmanMail = "/tanimlama/departmanMail.xhtml";
 	public static String departmanTanimlama = "/tanimlama/departmanTanimlama.xhtml";
+	public static String kgsPersonelTanimlama = "/tanimlama/kgsPersonelTanimlama.xhtml";
 	public static String detaysizPersonelTanimlama = "/tanimlama/detaysizPersonelTanimlama.xhtml";
 	public static String izinHakedisHakkiTanimlama = "/tanimlama/izinHakedisHakkiTanimlama.xhtml";
 	public static String izinTipiTanimlama = "/tanimlama/izinTipiTanimlama.xhtml";
 	public static String fazlaMesaiERPTanimlama = "/tanimlama/fazlaMesaiERPTanimlama.xhtml";
 	public static String katSayiTanimlama = "/tanimlama/katSayiTanimlama.xhtml";
-	
+
 	public static String kapiTanimlama = "/tanimlama/kapiTanimlama.xhtml";
 	public static String personelGeciciYonetici = "/tanimlama/personelGeciciYonetici.xhtml";
 	public static String personelKullaniciExcelGuncelle = "/tanimlama/personelKullaniciExcelGuncelle.xhtml";
@@ -136,7 +138,7 @@ public class MenuItemConstant implements Serializable {
 	public static String sirketTanimlama = "/tanimlama/sirketTanimlama.xhtml";
 	public static String taseronPersonelKopyala = "/tanimlama/taseronPersonelKopyala.xhtml";
 	public static String tatilTanimlama = "/tanimlama/tatilTanimlama.xhtml";
- 	public static String tesisBaglantiTanimlama = "/tanimlama/tesisBaglantiTanimlama.xhtml";
+	public static String tesisBaglantiTanimlama = "/tanimlama/tesisBaglantiTanimlama.xhtml";
 	public static String sablonTanimlama = "/tanimlama/sablonTanimlama.xhtml";
 	public static String vardiyaSablonTanimlama = "/tanimlama/vardiyaSablonTanimlama.xhtml";
 	public static String vekilTanimlama = "/tanimlama/vekilTanimlama.xhtml";
@@ -1063,6 +1065,30 @@ public class MenuItemConstant implements Serializable {
 
 	public static void setKatSayiTanimlama(String katSayiTanimlama) {
 		MenuItemConstant.katSayiTanimlama = katSayiTanimlama;
+	}
+
+	public static String getKgsPersonelTanimlama() {
+		return kgsPersonelTanimlama;
+	}
+
+	public static void setKgsPersonelTanimlama(String kgsPersonelTanimlama) {
+		MenuItemConstant.kgsPersonelTanimlama = kgsPersonelTanimlama;
+	}
+
+	public static String getCihazTanimlama() {
+		return cihazTanimlama;
+	}
+
+	public static void setCihazTanimlama(String cihazTanimlama) {
+		MenuItemConstant.cihazTanimlama = cihazTanimlama;
+	}
+
+	public static String getCihazQRGoster() {
+		return cihazQRGoster;
+	}
+
+	public static void setCihazQRGoster(String cihazQRGoster) {
+		MenuItemConstant.cihazQRGoster = cihazQRGoster;
 	}
 
 }

@@ -68,7 +68,6 @@ public class TesisBaglantiHome extends EntityHome<TesisBaglanti> implements Seri
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -91,7 +90,7 @@ public class TesisBaglantiHome extends EntityHome<TesisBaglanti> implements Seri
 		}
 		if (kayit + sirala > 0)
 			try {
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 				if (sirala > 0)
 					pdksEntityController.savePrepareTableID(true, null, TesisBaglanti.class, session);
 				if (kayit > 0)
@@ -161,13 +160,13 @@ public class TesisBaglantiHome extends EntityHome<TesisBaglanti> implements Seri
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		String sayfa = "";
 		if (ortakIslemler.getTesisDurumu()) {

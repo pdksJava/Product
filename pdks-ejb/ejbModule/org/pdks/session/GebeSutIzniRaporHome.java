@@ -83,7 +83,6 @@ public class GebeSutIzniRaporHome extends EntityHome<PersonelDonemselDurum> impl
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -91,8 +90,8 @@ public class GebeSutIzniRaporHome extends EntityHome<PersonelDonemselDurum> impl
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		bitTarih = PdksUtil.getDate(new Date());
 		basTarih = PdksUtil.tariheAyEkleCikar(bitTarih, -12);
 		sirketId = null;

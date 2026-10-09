@@ -51,6 +51,8 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 
 	@RequestParameter
 	Long personelIzinId;
+	
+	public static String sayfaURL =  "personelIzinKopyala";
 
 	@In(create = true)
 	PdksEntityController pdksEntityController;
@@ -62,6 +64,7 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 	OrtakIslemler ortakIslemler;
 	@In(required = false, create = true)
 	IzinBakiyeGuncelleme izinBakiyeGuncelleme;
+	
 
 	private Dosya izinBakiyeDosya = new Dosya();
 	@In(required = false)
@@ -83,7 +86,6 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -91,7 +93,7 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		session.setFlushMode(FlushMode.MANUAL);
 		session.clear();
 		sayfaGiris(session);
@@ -417,7 +419,7 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 								dataKidemMap.put("gecmis", Boolean.TRUE);
 								dataKidemMap.put("yeniBakiyeOlustur", Boolean.FALSE);
 								ortakIslemler.getKidemHesabi(dataKidemMap, session);
-								session.flush();
+								pdksEntityController.sessionFlush(session);
 							}
 						} catch (Exception re) {
 							veriMap.get(izinSahibiId).setSecim(Boolean.FALSE);
@@ -460,7 +462,7 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 			LinkedHashMap map = new LinkedHashMap();
 			map.put("izinSahibiId", sb.toString());
 			map.put(PdksEntityController.MAP_KEY_SQLPARAMS, params);
- 			pdksEntityController.execSP(session, map, "SP_IZINLERI_SIL");
+			pdksEntityController.execSP(session, map, "SP_IZINLERI_SIL");
 
 		}
 
@@ -555,7 +557,7 @@ public class PersonelIzinKopyalaHome extends EntityHome<PersonelIzin> implements
 						iterator2.remove();
 					}
 				}
-				session.refresh(hakEdisIzinClone);
+				pdksEntityController.sessionRefresh(session, entityManager,hakEdisIzinClone);
 
 			}
 			idler = null;

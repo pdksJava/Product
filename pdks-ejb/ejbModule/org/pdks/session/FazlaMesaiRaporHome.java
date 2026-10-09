@@ -180,14 +180,13 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	private void aylikPuantajListClear() {
@@ -202,14 +201,14 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 	 */
 	private void adminRoleDurum() {
 		adminRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIKAdmin();
-		ikRole = authenticatedUser.isAdmin() || authenticatedUser.isSistemYoneticisi() || authenticatedUser.isIK();
+		ikRole = PdksUtil.getIkRole(authenticatedUser);
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public String sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		aylikPuantajListClear();
 		fazlaMesaiSayfa = false;
 		yasalFazlaCalismaAsanSaat = Boolean.FALSE;
@@ -613,7 +612,7 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 		haftaTatilVar = Boolean.FALSE;
 		mailGonder = !(authenticatedUser.isIK() || authenticatedUser.isAdmin());
 		linkAdres = null;
- 		session.clear();
+		session.clear();
 
 		personelDenklestirmeList.clear();
 		ayrikHareketVar = false;
@@ -1348,6 +1347,8 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 
 		XSSFCellStyle styleOff = (XSSFCellStyle) ExcelUtil.getStyleDataCenter(wb);
 		ExcelUtil.setFontColor(styleOff, Color.WHITE);
+		CellStyle styleIcap = ExcelUtil.getStyleDataCenter(wb);
+		ExcelUtil.setFillForegroundColor(styleIcap, 254, 235, 41);
 		CellStyle styleIzin = ExcelUtil.getStyleDataCenter(wb);
 		CellStyle styleCalisma = ExcelUtil.getStyleDataCenter(wb);
 		int row = 0, col = 0;
@@ -1479,6 +1480,9 @@ public class FazlaMesaiRaporHome extends EntityHome<DepartmanDenklestirmeDonemi>
 							styleGenel = styleEgitim;
 						else if (styleText.equals(VardiyaGun.STYLE_CLASS_OFF))
 							styleGenel = maxSureGecti == false ? styleOff : styleOffRed;
+						else if (styleText.equals(VardiyaGun.STYLE_CLASS_ICAP))
+							styleGenel = styleIcap;
+
 						cell = ExcelUtil.getCell(sheet, row, col++, styleGenel);
 						String aciklama = !help || calisan(vardiyaGun) ? vardiyaGun.getFazlaMesaiOzelAciklama(Boolean.TRUE, authenticatedUser.sayiFormatliGoster(vardiyaGun.getCalismaSuresi())) : "";
 						if (vardiyaGun.getIzin() != null) {

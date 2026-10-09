@@ -37,6 +37,9 @@ public class UserMenuItemTime extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_SESSION = "SESSION_ID";
 	public static final String COLUMN_NAME_MENU_ADI = "MENU_ADI";
 	public static final String COLUMN_NAME_LAST_PARAMETRE = "LAST_PARAMETRE";
+	public static final String COLUMN_NAME_VERSION = "VERSION";
+
+	private Integer version = 0;
 
 	private User user;
 
@@ -99,6 +102,17 @@ public class UserMenuItemTime extends BasePDKSObject implements Serializable {
 		this.firstTime = firstTime;
 	}
 
+	// @Version
+	@Column(name = COLUMN_NAME_VERSION)
+	public Integer getVersion() {
+		return version;
+	}
+
+	public void setVersion(Integer value) {
+
+		this.version = value;
+	}
+
 	@Column(name = COLUMN_NAME_SESSION)
 	public String getSessionId() {
 		return sessionId;
@@ -135,6 +149,15 @@ public class UserMenuItemTime extends BasePDKSObject implements Serializable {
 
 	public void setUseCount(BigDecimal useCount) {
 		this.useCount = useCount;
+	}
+
+	@Transient
+	public void addUseCount() {
+		BigDecimal augend = new BigDecimal(1L);
+		if (useCount == null)
+			this.useCount = augend;
+		else
+			this.useCount = useCount.add(augend);
 	}
 
 	@Transient

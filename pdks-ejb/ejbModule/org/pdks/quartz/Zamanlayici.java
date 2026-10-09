@@ -57,7 +57,7 @@ public class Zamanlayici implements Serializable {
 	@In
 	KapiGirisGuncelleme kapiGirisGuncelleme;
 	@In
-	PlanVardiyaHareketGuncelleme planVardiyaHareketGuncelleme;
+	FazlaMesaiGuncelleme fazlaMesaiGuncelleme;
 	@In(required = false, create = true)
 	OrtakIslemler ortakIslemler;
 	@In(required = false, create = true)
@@ -82,8 +82,8 @@ public class Zamanlayici implements Serializable {
 	public void schedulePersonelERPGuncellemeTimer() {
 		personelERPGuncelleme.personelERPGuncellemeTimer(new Date(), "0 0/5 0-23 ? * *");
 		logger.info("schedulePersonelERPGuncellemeTimer start : " + PdksUtil.getCurrentTimeStampStr());
-		planVardiyaHareketGuncelleme.planVardiyaHareketGuncellemeTimer(new Date(), "0 0/5 0-23 ? * *");
-		logger.info("planVardiyaHareketGuncelleme start : " + PdksUtil.getCurrentTimeStampStr());
+		fazlaMesaiGuncelleme.fazlaMesaiHesaplamaTimer(new Date(), "0 0/5 0-23 ? * *");
+		logger.info("fazlaMesaiHesaplamaTimer start : " + PdksUtil.getCurrentTimeStampStr());
 
 	}
 
@@ -148,7 +148,7 @@ public class Zamanlayici implements Serializable {
 		if (!userList.isEmpty()) {
 			setAdminList(userList);
 			setKonu(xkonu);
- 			setAciklama(xaciklama + (thisIp != null ? " --> Host Name : " + thisIp.getHostName() : ""));
+			setAciklama(xaciklama + (thisIp != null ? " --> Host Name : " + thisIp.getHostName() : ""));
 			MailStatu mailStatu = null;
 			try {
 				// ortakIslemler.mailGonder(renderer, "/email/" + sayfaAdi);
@@ -179,8 +179,8 @@ public class Zamanlayici implements Serializable {
 				logger.error(sayfaAdi + " : " + xkonu + " --> " + e.getMessage() + " " + PdksUtil.getCurrentTimeStampStr());
 			}
 		}
-		if (yeni && session != null)
-			session.close();
+		if (yeni)
+			pdksEntityController.sessionClose(session);
 
 	}
 
@@ -189,7 +189,7 @@ public class Zamanlayici implements Serializable {
 	 * @return
 	 */
 	public boolean getOzelKontrol(Session session) {
-		Parameter parameterOzel = ortakIslemler.getParameter(session, "ozelKontrol");
+		Parameter parameterOzel = ortakIslemler.getParameterAktif(session, "ozelKontrol");
 		String value = (parameterOzel != null) ? parameterOzel.getValue() : "";
 		boolean ozelKontrolDurum = value == null || !value.equals("0");
 		if (ozelKontrolDurum) {

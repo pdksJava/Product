@@ -82,7 +82,6 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -178,7 +177,7 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 				if (pdksVardiyaSablon.getSirket() != null)
 					pdksVardiyaSablon.setDepartman(pdksVardiyaSablon.getSirket().getDepartman());
 				pdksEntityController.saveOrUpdate(session, entityManager, pdksVardiyaSablon);
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 				fillPdksVardiyaSablonList();
 			}
 
@@ -473,14 +472,14 @@ public class VardiyaSablonuHome extends EntityHome<VardiyaSablonu> implements Se
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		pdksSirketList = ortakIslemler.getDepartmanPDKSSirketList(null, session);
 		fillPdksVardiyaSablonList();
 		if (authenticatedUser.isAdmin())

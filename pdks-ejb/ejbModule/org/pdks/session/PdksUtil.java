@@ -139,12 +139,54 @@ public class PdksUtil implements Serializable {
 
 	private static boolean sistemDestekVar = false, puantajSorguAltBolumGir = false;
 
+	public static String adresKontrol(String adres) {
+		String str = null;
+		int responseCode = 0;
+		try {
+			java.net.URL url = new java.net.URL(adres);
+			java.net.HttpURLConnection connjava = (java.net.HttpURLConnection) url.openConnection();
+			connjava.setRequestMethod("GET");
+			connjava.setRequestProperty("Content-Language", "tr-TR");
+			connjava.setDoInput(true);
+			connjava.setDoOutput(true);
+			connjava.setUseCaches(false);
+			int timeOutSaniye = 60 * 60;
+			connjava.setConnectTimeout(timeOutSaniye * 1000); // set timeout to 5 seconds
+			connjava.setAllowUserInteraction(true);
+			responseCode = connjava.getResponseCode();
+			InputStream is = responseCode >= 400 ? connjava.getErrorStream() : connjava.getInputStream();
+			if (responseCode >= 400 && is != null)
+				str = PdksUtil.StringToByInputStream(is);
+		} catch (Exception e) {
+		}
+
+		return str;
+	}
+
+	/**
+	 * @param is
+	 * @return
+	 * @throws IOException
+	 */
+	public static byte[] toByteArray(InputStream is) throws IOException {
+		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+		byte[] data = new byte[1024];
+		int bytesRead;
+		while ((bytesRead = is.read(data, 0, data.length)) != -1) {
+			buffer.write(data, 0, bytesRead);
+		}
+		byte[] byteArray = buffer.toByteArray();
+		return byteArray;
+
+	}
+
 	/**
 	 * @param sessionx
 	 * @return
 	 */
 	public static boolean isSessionKapali(Session sessionx) {
-		boolean kapali = sessionx == null || sessionx.isConnected() == false;
+		boolean kapali = sessionx == null || sessionx.isOpen() == false;
 		return kapali;
 
 	}
@@ -2927,6 +2969,17 @@ public class PdksUtil implements Serializable {
 
 	/**
 	 * @param user
+	 * @return
+	 */
+	public static boolean getIkRole(User user) {
+		boolean ikRole = false;
+		if (user != null)
+			ikRole = user.isAdmin() || user.isSistemYoneticisi() || user.isIK() || user.isIK_Tesis() || user.isIKSirket() || user.isGenelMudur();
+		return ikRole;
+	}
+
+	/**
+	 * @param user
 	 */
 	public static List<Role> setUserYetki(User user) {
 		List<Role> bagliRoller = null;
@@ -2974,7 +3027,7 @@ public class PdksUtil implements Serializable {
 	 */
 	private static List<Role> setUserYetkiler(User user, List<Role> roller) {
 		List<String> yoneticiYetkiliRoller = Arrays.asList(new String[] { Role.TIPI_YONETICI_KONTRATLI, Role.TIPI_SUPER_VISOR, Role.TIPI_DIREKTOR_SUPER_VISOR, Role.TIPI_PROJE_MUDURU, Role.TIPI_MUDUR, Role.TIPI_TESIS_SUPER_VISOR, Role.TIPI_SIRKET_SUPER_VISOR });
-		List<String> ikYetkiliRoller = Arrays.asList(new String[] { Role.TIPI_ANAHTAR_KULLANICI, Role.TIPI_IK_Tesis, Role.TIPI_IK_SIRKET, Role.TIPI_IK_DIREKTOR, Role.TIPI_SISTEM_YONETICI, Role.TIPI_GENEL_MUDUR });
+		List<String> ikYetkiliRoller = Arrays.asList(new String[] { Role.TIPI_ADMIN, Role.TIPI_ANAHTAR_KULLANICI, Role.TIPI_IK_Tesis, Role.TIPI_IK_SIRKET, Role.TIPI_IK_DIREKTOR, Role.TIPI_SISTEM_YONETICI, Role.TIPI_GENEL_MUDUR });
 		List<Role> digerRoller = new ArrayList<Role>();
 		Personel pdksPersonel = user.getPdksPersonel();
 		HashMap<String, Role> roleMap = new HashMap<String, Role>();
@@ -2994,15 +3047,18 @@ public class PdksUtil implements Serializable {
 				user.setAdmin(Boolean.TRUE);
 			else if (rolAdi.equals(Role.TIPI_ANAHTAR_KULLANICI))
 				user.setAnahtarKullanici(Boolean.TRUE);
-			else if (rolAdi.equals(Role.TIPI_SISTEM_YONETICI))
+			else if (rolAdi.equals(Role.TIPI_SISTEM_YONETICI)) {
 				user.setSistemYoneticisi(Boolean.TRUE);
-			else if (rolAdi.equals(Role.TIPI_IK))
 				user.setIK(Boolean.TRUE);
-			else if (rolAdi.equals(Role.TIPI_IK_SIRKET))
+			} else if (rolAdi.equals(Role.TIPI_IK))
+				user.setIK(Boolean.TRUE);
+			else if (rolAdi.equals(Role.TIPI_IK_SIRKET)) {
 				user.setIKSirket(Boolean.TRUE);
-			else if (rolAdi.equals(Role.TIPI_IK_Tesis))
+				user.setIK(Boolean.TRUE);
+			} else if (rolAdi.equals(Role.TIPI_IK_Tesis)) {
 				user.setIK_Tesis(Boolean.TRUE);
-			else if (rolAdi.equals(Role.TIPI_IK_DIREKTOR))
+				user.setIK(Boolean.TRUE);
+			} else if (rolAdi.equals(Role.TIPI_IK_DIREKTOR))
 				user.setIKDirektor(Boolean.TRUE);
 			else if (rolAdi.equals(Role.TIPI_YONETICI))
 				user.setYonetici(Boolean.TRUE);
@@ -3401,21 +3457,87 @@ public class PdksUtil implements Serializable {
 	 * @return
 	 */
 	public static Session getSessionUser(EntityManager em, User user) {
+
 		Session session1 = null;
-		if (user != null) {
+		boolean durum = user == null;
+		if (durum == false) {
+
+			session1 = getSessionUserCalistiSayfa(em, user, null);
+
+		}
+		boolean sessionVar = PdksUtil.isSessionKapali(session1) == false;
+		if (sessionVar)
+			session1.clear();
+		else
+			session1 = getSession(em, durum);
+		if (user != null && sessionVar)
+			user.setSessionSQL(session1);
+		return session1;
+
+	}
+
+	/**
+	 * @param em
+	 * @param user
+	 * @return
+	 */
+	public static Session getSessionUserCalistiSayfa(EntityManager em, User user, String sayfa) {
+		Session session1 = null;
+		boolean durum = user == null;
+		if (durum == false) {
 			try {
-				if (em != null)
-					session1 = getSession(em, Boolean.FALSE);
+				if (PdksUtil.hasStringValue(sayfa) == false)
+					session1 = user.getSessionSQL();
+				if (PdksUtil.isSessionKapali(session1) && em != null)
+					session1 = getSession(em, durum);
 			} catch (Exception e) {
 				logger.error(e);
 			} finally {
-
 			}
 
-		} else
-			session1 = getSession(em, Boolean.FALSE);
+		}
+		boolean sessionVar = PdksUtil.isSessionKapali(session1) == false;
+		if (sessionVar)
+			session1.clear();
+		else
+			session1 = getSession(em, durum);
+		if (user != null && sessionVar)
+			user.setSessionSQL(session1);
 		return session1;
 
+	}
+
+	/**
+	 * @param em
+	 * @param notLogin
+	 * @return
+	 */
+	public static Session getSession(EntityManager em, Boolean notLogin) {
+		Session session1 = null;
+		Object delegate = null;
+		SessionFactory sessionFactory = null;
+		if (notLogin == null)
+			notLogin = Boolean.TRUE;
+		try {
+			delegate = em.getDelegate();
+			if (notLogin.booleanValue() == false)
+				session1 = (Session) delegate;
+		} catch (Exception e) {
+			session1 = null;
+
+		}
+		if (PdksUtil.isSessionKapali(session1) && delegate != null) {
+			try {
+				HibernateSessionProxy hsp = (HibernateSessionProxy) delegate;
+				sessionFactory = hsp.getSessionFactory();
+				if (notLogin)
+					session1 = sessionFactory.openSession();
+				else
+					session1 = sessionFactory.getCurrentSession();
+			} catch (Exception e) {
+			}
+		}
+		return session1;
 	}
 
 	/**
@@ -3423,39 +3545,27 @@ public class PdksUtil implements Serializable {
 	 * @param yeni
 	 * @return
 	 */
-	public static Session getSession(EntityManager em, Boolean yeni) {
-		// Session session1 = (Session) entityManager.getDelegate();
+	public static Session getSessionx(EntityManager em, Boolean yeni) {
 		Session session1 = null;
 		Object delegate = null;
 		SessionFactory sessionFactory = null;
 		try {
 			delegate = em.getDelegate();
-			if (yeni == null) {
-				HibernateSessionProxy hsp = (HibernateSessionProxy) delegate;
-				sessionFactory = hsp.getSessionFactory();
-				session1 = sessionFactory.getCurrentSession();
+			if (yeni == null || yeni.booleanValue() == false) {
+				// session1 = sessionFactory.getCurrentSession();
+				session1 = (Session) delegate;
 			}
 
 		} catch (Exception e) {
-			logger.error("PDKS hata in : \n");
-			e.printStackTrace();
-			logger.error("PDKS hata out : " + e.getMessage());
+			session1 = null;
+
 		}
 
-		try {
-			if (session1 == null)
-				session1 = (Session) delegate;
-		} catch (Exception e) {
-			logger.error("PDKS hata in : \n");
-			e.printStackTrace();
-			logger.error("PDKS hata out : " + e.getMessage());
-		}
-
-		if (yeni != null && yeni && session1 != null) {
-			if (sessionFactory == null)
-				sessionFactory = session1.getSessionFactory();
-			// session1 = sessionFactory.getCurrentSession();
+		if (session1 == null || (yeni != null && yeni)) {
+			HibernateSessionProxy hsp = (HibernateSessionProxy) delegate;
+			sessionFactory = hsp.getSessionFactory();
 			session1 = sessionFactory.openSession();
+
 		}
 
 		return session1;
@@ -4147,6 +4257,30 @@ public class PdksUtil implements Serializable {
 	}
 
 	/**
+	 * @param basTarih
+	 * @param bitTarih
+	 * @param pattern
+	 * @return
+	 */
+	public static String getZamanFarkiString(Date basTarih, Date bitTarih, String pattern) {
+		String str = "";
+		if (basTarih != null && bitTarih != null && PdksUtil.hasStringValue(pattern)) {
+			Long fark = bitTarih.getTime() - basTarih.getTime();
+			if (fark >= 0L) {
+				Calendar cal = Calendar.getInstance();
+				long zoneOffSet = cal.get(Calendar.ZONE_OFFSET);
+				zoneOffSet = 0L;
+				SimpleDateFormat sdf = new SimpleDateFormat(PdksUtil.getSaatLongFormat());
+				sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+				str = sdf.format(new Date(fark - zoneOffSet));
+			}
+		}
+
+		return str;
+
+	}
+
+	/**
 	 * @param content
 	 * @param fileName
 	 * @param ekle
@@ -4280,7 +4414,7 @@ public class PdksUtil implements Serializable {
 
 				}
 			} catch (Exception e) {
-			 
+
 			}
 
 		}
@@ -4378,6 +4512,11 @@ public class PdksUtil implements Serializable {
 
 	public static void setSistemDestekVar(boolean sistemDestekVar) {
 		PdksUtil.sistemDestekVar = sistemDestekVar;
+	}
+
+	public static String getSaatLongFormat() {
+		String format = saatFormat + ":ss";
+		return format;
 	}
 
 	public static String getSaatFormat() {

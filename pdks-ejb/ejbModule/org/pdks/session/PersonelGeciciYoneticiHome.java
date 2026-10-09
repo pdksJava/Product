@@ -332,7 +332,7 @@ public class PersonelGeciciYoneticiHome extends EntityHome<PersonelGeciciYonetic
 				if (mailAciklamaUserList.length() > 0)
 					mailAciklamaUserList.append("-");
 				Personel pdksPersonel = (Personel) iterator.next();
-				// session.refresh(seciliUser);
+				// pdksEntityController.sessionRefresh(session, entityManager,seciliUser);
 				tempGeciciYonetici = new PersonelGeciciYonetici();
 
 				tempGeciciYonetici.setYeniYonetici(yeniYonetici);
@@ -388,7 +388,12 @@ public class PersonelGeciciYoneticiHome extends EntityHome<PersonelGeciciYonetic
 			if (mailStatu != null && mailStatu.getDurum())
 				PdksUtil.addMessageInfo("Mesaj gönderildi");
 
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+ 			}
 			fillMevcutRotasyonList();
 		} else
 			facesMessages.add("Verilen Tarih aralığı ve personel listesi için mevcut rotasyon bulunmaktadir. Lütfen kontrol ettikten sonra tekrar deneyiniz.", "");
@@ -416,14 +421,13 @@ public class PersonelGeciciYoneticiHome extends EntityHome<PersonelGeciciYonetic
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
 
 	public void instanceRefresh() {
 		if (getInstance().getId() != null)
-			session.refresh(getInstance());
+			pdksEntityController.sessionRefresh(session, entityManager, getInstance());
 	}
 
 	public void personelArama(String entityHomereRender) {
@@ -582,8 +586,6 @@ public class PersonelGeciciYoneticiHome extends EntityHome<PersonelGeciciYonetic
 			parametreMap.put("iseBaslamaTarihi <= ", bugun);
 			if (session != null)
 				parametreMap.put(PdksEntityController.MAP_KEY_SESSION, session);
-			// parametreMap.put(PdksEntityController.MAP_KEY_MAP, "getId");
-			// TreeMap<Long, Personel> yoneticiMap = pdksEntityController.getObjectByInnerObjectMapInLogic(parametreMap, Personel.class, false);
 			TreeMap<Long, Personel> yoneticiMap = ortakIslemler.getParamTreeMap(Boolean.TRUE, "getId", Boolean.FALSE, dataIdList, fieldName, parametreMap, Personel.class, session);
 			for (Long ld : yoneticiMap.keySet()) {
 				if (userMap.containsKey(ld))
@@ -615,8 +617,8 @@ public class PersonelGeciciYoneticiHome extends EntityHome<PersonelGeciciYonetic
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
-		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		fillGirisEkSahaTanim();
 		setSeciliPersonel(new Personel());
 		setVisibled(Boolean.TRUE);
@@ -727,7 +729,12 @@ public class PersonelGeciciYoneticiHome extends EntityHome<PersonelGeciciYonetic
 				rotasyon.setDurum(Boolean.FALSE);
 				pdksEntityController.saveOrUpdate(session, entityManager, rotasyon);
 			}
-			session.flush();
+			try {
+				pdksEntityController.sessionFlush(session);
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+ 			}
 			fillMevcutRotasyonList();
 
 		}

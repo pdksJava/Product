@@ -1,21 +1,43 @@
 package com.pdks.webService;
 
+import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.log4j.Logger;
+import org.kgs.entity.MySQLPersonel;
+import org.pdks.dao.PdksDAO;
+import org.pdks.entity.Personel;
+import org.pdks.entity.PersonelKGS;
+import org.pdks.entity.Sirket;
+import org.pdks.entity.Vardiya;
+import org.pdks.entity.VardiyaGun;
+import org.pdks.enums.PuantajKatSayiTipi;
+import org.pdks.genel.model.Constants;
+import org.pdks.genel.model.PdksUtil;
 import org.pdks.kgs.model.Cihaz;
 import org.pdks.kgs.model.CihazGecis;
 import org.pdks.kgs.model.CihazPersonel;
@@ -25,9 +47,15 @@ import org.springframework.stereotype.Service;
 
 import com.google.gson.Gson;
 import com.google.gson.internal.LinkedTreeMap;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
 
 @Service
 @Path("/servicesKGS")
+// @WSDLDocumentation("http://localhost:8080/PdksWebService/rest/servicesKGS")
 public class KgsRestFulVeriAktarService implements Serializable {
 
 	/**
@@ -45,6 +73,46 @@ public class KgsRestFulVeriAktarService implements Serializable {
 	private Gson gson = new Gson();
 
 	private String fonksiyon;
+
+	@GET
+	@Path("/generateQR")
+	@Produces({ MediaType.APPLICATION_OCTET_STREAM })
+ 	public Response generateQR(@QueryParam("text") String text, @QueryParam("height") Integer height, @QueryParam("width") Integer width) throws Exception {
+		Response response = null;
+		try {
+			if (text == null || text.isEmpty())
+				text = "default text";
+
+			if (width == null || width.intValue() <= 0)
+				width = 300;
+			if (height == null || height.intValue() <= 0)
+				height = width;
+			else if (height.equals(width) == false) {
+				if (height.intValue() > width.intValue())
+					width = height;
+				else
+					height = width;
+			}
+
+			Map<EncodeHintType, Object> hints = new HashMap<EncodeHintType, Object>();
+			hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+
+			BitMatrix matrix = new MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, width, height, hints);
+
+			ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+			MatrixToImageWriter.writeToStream(matrix, "PNG", pngOutputStream);
+
+			byte[] pngData = pngOutputStream.toByteArray();
+
+			response = Response.ok(pngData).type(MediaType.APPLICATION_OCTET_STREAM).header("Content-Disposition", "inline; filename=\"qrcode.png\"").build();
+
+		} catch (Exception e) {
+			logger.error(e);
+			response = Response.status(500).entity("QR üretilemedi").build();
+		}
+
+		return response;
+	}
 
 	/**
 	 * @return
@@ -91,7 +159,7 @@ public class KgsRestFulVeriAktarService implements Serializable {
 					sonuc = getKullaniciHatali("Cihaz yok!");
 				dataList = null;
 				CihazVeriOrtakAktar cihazVeriOrtakAktar = new CihazVeriOrtakAktar(fonksiyon);
-				sonuc = getKullaniciHatali(cihazVeriOrtakAktar.saveCihaz(cihazList, cihazUser).getHata());
+				sonuc = getKullaniciHatali((String) cihazVeriOrtakAktar.saveCihaz(cihazList, cihazUser).getBilgi());
 				cihazList = null;
 			} else
 				sonuc = getKullaniciHatali("Kullanıcı bilgileri eksik!");
@@ -148,7 +216,7 @@ public class KgsRestFulVeriAktarService implements Serializable {
 						personelList.add(cihazPersonel);
 					}
 					CihazVeriOrtakAktar cihazVeriOrtakAktar = new CihazVeriOrtakAktar(fonksiyon);
-					sonuc = getKullaniciHatali(cihazVeriOrtakAktar.savePersonel(personelList, cihazUser).getHata());
+					sonuc = getKullaniciHatali((String) cihazVeriOrtakAktar.savePersonel(personelList, cihazUser).getBilgi());
 					personelList = null;
 				} else
 					sonuc = getKullaniciHatali("Personel yok!");
@@ -159,6 +227,348 @@ public class KgsRestFulVeriAktarService implements Serializable {
 			response = Response.ok(sonuc, MediaType.APPLICATION_JSON).build();
 		} catch (Exception e) {
 		}
+		return response;
+	}
+
+	@POST
+	@Path("/postCihaz")
+	@Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8" })
+	@Consumes(MediaType.APPLICATION_JSON + ";charset=utf-8")
+	public Response postCihaz() throws Exception {
+		String sonuc = null;
+		Response response = null;
+		try {
+			String json = PdksRestFulVeriAktarService.getBodyString(request);
+			List<LinkedTreeMap> dataList = null;
+			if (json.startsWith("{")) {
+				dataList = new ArrayList<LinkedTreeMap>();
+				dataList.add(gson.fromJson(json, LinkedTreeMap.class));
+			} else
+				dataList = gson.fromJson(json, List.class);
+			if (!dataList.isEmpty()) {
+				List<CihazGecis> gecisList = new ArrayList<CihazGecis>();
+				for (LinkedTreeMap linkedTreeMap : dataList) {
+					json = gson.toJson(linkedTreeMap);
+					CihazGecis cihazGecis = gson.fromJson(json, CihazGecis.class);
+					gecisList.add(cihazGecis);
+				}
+				CihazVeriOrtakAktar cihazVeriOrtakAktar = new CihazVeriOrtakAktar(fonksiyon);
+				sonuc = gson.toJson(cihazVeriOrtakAktar.saveCihazGecis(gecisList));
+				gecisList = null;
+			} else
+				sonuc = getKullaniciHatali("Cihaz geçiş yok!");
+			dataList = null;
+
+			response = Response.ok(sonuc).type(MediaType.APPLICATION_JSON + ";charset=utf-8").build();
+		} catch (Exception e) {
+		}
+
+		return response;
+	}
+
+	@POST
+	@Path("/getPersonel")
+	@Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8" })
+	@Consumes(MediaType.APPLICATION_JSON + ";charset=utf-8")
+	public Response postPersonel(@QueryParam("sicilNo") String sicilNo, @QueryParam("kimlikNo") String kimlikNo, @QueryParam("tarih") String tarih) throws Exception {
+		String data = PdksRestFulVeriAktarService.getBodyString(request);
+		LinkedTreeMap<String, Object> jsonMap = data != null ? gson.fromJson(data, LinkedTreeMap.class) : new LinkedTreeMap<String, Object>();
+		if (PdksUtil.hasStringValue(sicilNo) == false)
+			sicilNo = jsonMap.containsKey("sicilNo") ? (String) jsonMap.get("sicilNo") : null;
+		if (PdksUtil.hasStringValue(kimlikNo) == false)
+			kimlikNo = jsonMap.containsKey("kimlikNo") ? (String) jsonMap.get("kimlikNo") : null;
+		if (PdksUtil.hasStringValue(tarih) == false)
+			tarih = jsonMap.containsKey("tarih") ? (String) jsonMap.get("tarih") : null;
+		jsonMap = null;
+		Response response = getPersonelResponse(sicilNo, kimlikNo, tarih);
+		return response;
+	}
+
+	@GET
+	@Path("/getAllPersonel")
+	@Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8" })
+	@Consumes(MediaType.APPLICATION_JSON + ";charset=utf-8")
+	public Response getAllPersonel(@QueryParam("tarih") String tarih) throws Exception {
+		Response response = getAllPersonelResponse(tarih);
+		return response;
+	}
+
+	@GET
+	@Path("/getPersonel")
+	@Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8" })
+	@Consumes(MediaType.APPLICATION_JSON + ";charset=utf-8")
+	public Response getPersonel(@QueryParam("sicilNo") String sicilNo, @QueryParam("kimlikNo") String kimlikNo, @QueryParam("tarih") String tarih) throws Exception {
+		Response response = getPersonelResponse(sicilNo, kimlikNo, tarih);
+		return response;
+	}
+
+	/**
+	 * @param tarih
+	 * @return
+	 */
+	private Response getAllPersonelResponse(String tarih) {
+		Date vardiyaTarih = null;
+		try {
+			if (PdksUtil.hasStringValue(tarih))
+				vardiyaTarih = PdksUtil.getDateFromString(tarih);
+		} catch (Exception e) {
+		}
+		if (vardiyaTarih == null) {
+			Calendar cal = Calendar.getInstance();
+			cal.add(Calendar.MONTH, -1);
+			cal.set(Calendar.DATE, 1);
+			vardiyaTarih = PdksUtil.getDate(cal.getTime());
+
+		}
+		Response response;
+		LinkedHashMap<String, Object> dataMap = new LinkedHashMap<String, Object>();
+		try {
+			PdksDAO pdksDAO = Constants.pdksDAO;
+			HashMap fields = new HashMap();
+			StringBuffer sb = new StringBuffer();
+			fields.clear();
+			sb = new StringBuffer();
+			sb.append("select K.* from " + MySQLPersonel.TABLE_NAME + " K " + PdksVeriOrtakAktar.getSelectLOCK());
+			sb.append(" where (K." + MySQLPersonel.COLUMN_NAME_ISTEN_CIKIS_TARIHI + " is null or K." + MySQLPersonel.COLUMN_NAME_ISTEN_CIKIS_TARIHI + " >= :t)");
+			sb.append(" and K." + MySQLPersonel.COLUMN_NAME_ISE_GIRIS_TARIHI + " is not null");
+			sb.append(" order by K." + MySQLPersonel.COLUMN_NAME_ID);
+			fields.put("t", vardiyaTarih);
+			List<MySQLPersonel> personelSQLList = pdksDAO.getNativeSQLList(fields, sb, MySQLPersonel.class);
+			if (personelSQLList != null && personelSQLList.isEmpty() == false) {
+				List<LinkedHashMap<String, Object>> dataList = new ArrayList<LinkedHashMap<String, Object>>();
+				dataMap.put("personeller", dataList);
+				for (MySQLPersonel mySQLPersonel : personelSQLList) {
+					LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+					veriMap.put("personelId", mySQLPersonel.getId());
+					veriMap.put("sicilNo", mySQLPersonel.getSicilNo());
+					if (PdksUtil.hasStringValue(mySQLPersonel.getKimlikNo()))
+						veriMap.put("kimlikNo", mySQLPersonel.getKimlikNo());
+					veriMap.put("adi", mySQLPersonel.getAdi());
+					veriMap.put("soyadi", mySQLPersonel.getSoyadi());
+					if (mySQLPersonel.getIsGirisTarihi() != null)
+						veriMap.put("isGirisTarihi", PdksUtil.convertToDateString(mySQLPersonel.getIsGirisTarihi(), "yyyy-MM-dd"));
+					if (mySQLPersonel.getIsCikisTarihi() != null)
+						veriMap.put("isCikisTarihi", PdksUtil.convertToDateString(mySQLPersonel.getIsCikisTarihi(), "yyyy-MM-dd"));
+					dataList.add(veriMap);
+				}
+
+			}
+		} catch (Exception e) {
+			if (e.getMessage() != null)
+				dataMap.put("hata", e.getMessage());
+		}
+		if (dataMap.isEmpty())
+			dataMap.put("hata", "Personel bilgisi bulanamadı!");
+
+		String sonuc = gson.toJson(dataMap);
+		String mediaType = MediaType.APPLICATION_JSON;
+		response = Response.ok(sonuc).type(mediaType + ";charset=utf-8").build();
+		return response;
+
+	}
+
+	/**
+	 * @param sicilNo
+	 * @param kimlikNo
+	 * @param tarih
+	 * @return
+	 */
+	private Response getPersonelResponse(String sicilNo, String kimlikNo, String tarih) {
+		Response response;
+		PdksDAO pdksDAO = Constants.pdksDAO;
+		Date islemZamani = new Date();
+		LinkedHashMap<String, Object> veriMap = new LinkedHashMap<String, Object>();
+		HashMap fields = new HashMap();
+		StringBuffer sb = new StringBuffer();
+		fields.clear();
+		sb = new StringBuffer();
+		sb.append("select K.* from " + MySQLPersonel.TABLE_NAME + " K " + PdksVeriOrtakAktar.getSelectLOCK());
+		sb.append(" where K." + MySQLPersonel.COLUMN_NAME_SICIL_NO + " = :s ");
+		fields.put("s", sicilNo);
+		if (PdksUtil.hasStringValue(kimlikNo)) {
+			sb.append(" and K." + MySQLPersonel.COLUMN_NAME_KIMLIK_NO + " = :k");
+			fields.put("k", kimlikNo);
+		}
+		String hata = null;
+		List<MySQLPersonel> personelSQLList = pdksDAO.getNativeSQLList(fields, sb, MySQLPersonel.class);
+		MySQLPersonel mySQLPersonel = null;
+		if (personelSQLList != null && personelSQLList.isEmpty() == false) {
+			mySQLPersonel = personelSQLList.get(0);
+			if (mySQLPersonel.getIsCikisTarihi() != null && mySQLPersonel.getIsCikisTarihi().before(PdksUtil.getDate(islemZamani))) {
+				hata = mySQLPersonel.getAdi() + " " + mySQLPersonel.getSoyadi() + " " + PdksUtil.convertToDateString(mySQLPersonel.getIsCikisTarihi(), "yyyy-MM-dd") + " tarihinde işten ayrıldı!";
+				mySQLPersonel = null;
+			}
+		}
+
+		sb = new StringBuffer();
+		sb.append("select P.* from " + PersonelKGS.TABLE_NAME + " K " + PdksVeriOrtakAktar.getSelectLOCK());
+		sb.append(" inner join " + Personel.TABLE_NAME + " P " + PdksVeriOrtakAktar.getJoinLOCK() + " on P." + Personel.COLUMN_NAME_KGS_PERSONEL + " = K." + PersonelKGS.COLUMN_NAME_ID);
+		if (mySQLPersonel == null)
+			sb.append(" where 1 = 2 ");
+		else {
+			sb.append(" where K." + PersonelKGS.COLUMN_NAME_SICIL_NO + " = :s ");
+			fields.put("s", sicilNo);
+			if (PdksUtil.hasStringValue(kimlikNo)) {
+				sb.append(" and K." + PersonelKGS.COLUMN_NAME_KIMLIK_NO + " = :k");
+				fields.put("k", kimlikNo);
+			}
+		}
+
+		Personel personel = null;
+		List<Personel> personelList = pdksDAO.getNativeSQLList(fields, sb, Personel.class);
+		if (personelList != null) {
+			for (Personel per : personelList) {
+				if (per.isCalisiyor())
+					personel = per;
+			}
+		}
+
+		Gson gson = new Gson();
+
+		if (personel != null) {
+			PersonelKGS kgs = personel.getPersonelKGS();
+			veriMap.put("personelId", mySQLPersonel.getId());
+			veriMap.put("sicilNo", sicilNo);
+			if (PdksUtil.hasStringValue(kgs.getKimlikNo()))
+				veriMap.put("kimlikNo", kgs.getKimlikNo());
+			veriMap.put("adi", kgs.getAd());
+			veriMap.put("soyadi", kgs.getSoyad());
+			VardiyaGun vg = null;
+			if (PdksUtil.hasStringValue(tarih)) {
+				Date vardiyaTarih = PdksUtil.getDateFromString(tarih);
+				if (vardiyaTarih != null) {
+					PdksVeriOrtakAktar ortak = new PdksVeriOrtakAktar();
+					List<Long> perIdList = new ArrayList<Long>();
+					perIdList.add(personel.getId());
+					Date basTarih = PdksUtil.tariheGunEkleCikar(vardiyaTarih, -1);
+					List<VardiyaGun> vList = ortak.getVardiyalar(basTarih, vardiyaTarih, perIdList);
+					perIdList = null;
+					Vardiya islemVardiya = null;
+					if (vList != null && vList.isEmpty() == false) {
+
+						if (vList.size() > 1) {
+							boolean calismaVar = false;
+							for (VardiyaGun vardiyaGun : vList) {
+								if (!calismaVar)
+									calismaVar = vardiyaGun.getVardiya().isCalisma();
+
+							}
+							if (calismaVar) {
+								List<Integer> list = Arrays.asList(new Integer[] { PuantajKatSayiTipi.GUN_ERKEN_GIRIS_TIPI.value(), PuantajKatSayiTipi.GUN_GEC_CIKIS_TIPI.value() });
+								HashMap<PuantajKatSayiTipi, TreeMap<String, BigDecimal>> katSayilarMap = ortak.getYuvarlamaKatSayiMap(basTarih, vardiyaTarih, perIdList, list, pdksDAO);
+								if (katSayilarMap != null && katSayilarMap.isEmpty() == false) {
+									Long sirketId = null, tesisId = null;
+									try {
+										Sirket sirket = personel.getSirket();
+										if (sirket != null) {
+											if (sirket.getTesisDurum())
+												tesisId = personel.getTesis() != null ? personel.getTesis().getId() : null;
+											sirketId = sirket.getId();
+										}
+
+									} catch (Exception e) {
+										sirketId = null;
+									}
+									TreeMap<String, BigDecimal> erkenGirisMap = katSayilarMap != null && katSayilarMap.containsKey(PuantajKatSayiTipi.GUN_ERKEN_GIRIS_TIPI) ? katSayilarMap.get(PuantajKatSayiTipi.GUN_ERKEN_GIRIS_TIPI) : null;
+									TreeMap<String, BigDecimal> gecCikisMap = katSayilarMap != null && katSayilarMap.containsKey(PuantajKatSayiTipi.GUN_GEC_CIKIS_TIPI) ? katSayilarMap.get(PuantajKatSayiTipi.GUN_GEC_CIKIS_TIPI) : null;
+									for (Iterator iterator = vList.iterator(); iterator.hasNext();) {
+										VardiyaGun vardiyaGun = (VardiyaGun) iterator.next();
+										Vardiya vardiya = vardiyaGun.getVardiya();
+										if (vardiya.isCalisma()) {
+											HashMap<Integer, BigDecimal> katSayiMap = new HashMap<Integer, BigDecimal>();
+											String str = vardiyaGun.getVardiyaDateStr();
+											Long vardiyaId = null;
+											try {
+												vardiyaId = vardiya != null ? vardiya.getId() : null;
+											} catch (Exception e) {
+												vardiyaId = null;
+											}
+											if (erkenGirisMap != null && ortak.veriKatSayiVar(erkenGirisMap, sirketId, tesisId, vardiyaId, str)) {
+												BigDecimal deger = ortak.getKatSayiVeriMap(erkenGirisMap, sirketId, tesisId, vardiyaId, str);
+												if (deger != null)
+													katSayiMap.put(PuantajKatSayiTipi.GUN_ERKEN_GIRIS_TIPI.value(), deger);
+											}
+											if (gecCikisMap != null && ortak.veriKatSayiVar(gecCikisMap, sirketId, tesisId, vardiyaId, str)) {
+												BigDecimal deger = ortak.getKatSayiVeriMap(gecCikisMap, sirketId, tesisId, vardiyaId, str);
+												if (deger != null)
+													katSayiMap.put(PuantajKatSayiTipi.GUN_ERKEN_GIRIS_TIPI.value(), deger);
+											}
+											if (!katSayiMap.isEmpty()) {
+												vardiya.setKatSayiMap(katSayiMap);
+												vardiya.setIslemVardiyaGun(vardiyaGun);
+												vardiyaGun.setKatSayiMap(katSayiMap);
+											} else
+												katSayiMap = null;
+										}
+										gecCikisMap = null;
+										erkenGirisMap = null;
+									}
+								}
+								katSayilarMap = null;
+							}
+
+							for (Iterator iterator = vList.iterator(); iterator.hasNext();) {
+								VardiyaGun vardiyaGun = (VardiyaGun) iterator.next();
+								Vardiya vardiya = vardiyaGun.getIslemVardiya();
+								if (vardiya.isCalisma() && PdksUtil.tarihKarsilastirNumeric(vardiyaTarih, islemZamani) == 0) {
+									if (vardiya.getKatSayiMap() != null)
+										vardiya.setIslemVardiyaGun(vardiyaGun);
+									if (islemZamani.before(vardiya.getVardiyaTelorans1BasZaman()) == false && islemZamani.after(vardiya.getVardiyaTelorans2BitZaman()) == false)
+										vg = vardiyaGun;
+
+								}
+							}
+						}
+						if (vg == null)
+							vg = vList.get(0);
+						if (vg != null)
+							islemVardiya = vg.getIslemVardiya();
+
+					}
+					if (islemVardiya != null) {
+						LinkedHashMap<String, Object> shiftMap = new LinkedHashMap<String, Object>();
+						veriMap.put("shift", shiftMap);
+						tarih = PdksUtil.convertToDateString(vg.getVardiyaDate(), "yyyy-MM-dd");
+						shiftMap.put("tarih", tarih);
+						if (islemVardiya.isCalisma()) {
+							islemVardiya = vList.get(0).getIslemVardiya();
+							shiftMap.put("adi", islemVardiya.getKisaAdi());
+							shiftMap.put("baslangicSaat", islemVardiya.getBasSaat());
+							shiftMap.put("baslangicDakika", islemVardiya.getBasDakika());
+							shiftMap.put("bitisSaat", islemVardiya.getBitSaat());
+							shiftMap.put("bitisDakika", islemVardiya.getBitDakika());
+						} else
+							shiftMap.put("hata", tarih + " çalışma planlı değildir ");
+						shiftMap.put("durum", islemVardiya.isCalisma());
+					} else
+						veriMap.put("shiftHata", "Shift bilgisi bulunamadı " + tarih);
+
+				} else
+					veriMap.put("shiftHata", "Hatalı tarih format " + tarih);
+			}
+		} else {
+			if (mySQLPersonel != null) {
+				veriMap.put("sicilNo", sicilNo);
+				if (PdksUtil.hasStringValue(mySQLPersonel.getKimlikNo()))
+					veriMap.put("kimlikNo", mySQLPersonel.getKimlikNo());
+				veriMap.put("adi", mySQLPersonel.getAdi());
+				veriMap.put("soyadi", mySQLPersonel.getSoyadi());
+				hata = "Personel tanımı bulunamadı!";
+			} else {
+				veriMap.put("sicilNo", sicilNo);
+				if (PdksUtil.hasStringValue(kimlikNo))
+					veriMap.put("kimlikNo", kimlikNo);
+				if (hata == null)
+					hata = "Kayıt bulunamadı!";
+			}
+
+		}
+		veriMap.put("durum", hata == null);
+		if (hata != null)
+			veriMap.put("hata", hata);
+		String sonuc = gson.toJson(veriMap);
+		String mediaType = MediaType.APPLICATION_JSON;
+		response = Response.ok(sonuc).type(mediaType + ";charset=utf-8").build();
 		return response;
 	}
 
@@ -222,7 +632,7 @@ public class KgsRestFulVeriAktarService implements Serializable {
 						gecisList.add(cihazGecis);
 					}
 					CihazVeriOrtakAktar cihazVeriOrtakAktar = new CihazVeriOrtakAktar(fonksiyon);
-					sonuc = getKullaniciHatali(cihazVeriOrtakAktar.saveCihazGecis(gecisList, cihazUser).getHata());
+					sonuc = getKullaniciHatali((String) cihazVeriOrtakAktar.saveCihazGecis(gecisList, cihazUser).getBilgi());
 					gecisList = null;
 				} else
 					sonuc = getKullaniciHatali("Cihaz geçiş yok!");

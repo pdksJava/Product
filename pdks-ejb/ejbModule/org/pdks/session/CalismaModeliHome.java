@@ -95,7 +95,6 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -339,13 +338,13 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 
 	public void instanceRefresh() {
 		if (calismaModeli.getId() != null)
-			session.refresh(calismaModeli);
+			pdksEntityController.sessionRefresh(session, entityManager, calismaModeli);
 	}
 
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
 		pasifGoster = false;
 		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		pdksSirketList = ortakIslemler.getDepartmanPDKSSirketList(null, session);
@@ -376,6 +375,8 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 					calismaModeli.setHaftaTatilHareketGuncelle(Boolean.FALSE);
 					calismaModeli.setOffHareketGuncelle(Boolean.FALSE);
 				}
+				if (calismaModeli.isFazlaMesaiVarMi())
+					calismaModeli.setFazlaMesaiSureHesapla(false);
 				List<CalismaModeliVardiya> kayitliCalismaModeliVardiyaList = null;
 				if (calismaModeli.getId() != null && calismaModeli.getGenelVardiya().equals(Boolean.FALSE)) {
 					HashMap parametreMap = new HashMap();
@@ -431,17 +432,18 @@ public class CalismaModeliHome extends EntityHome<CalismaModeli> implements Seri
 						}
 					}
 				}
-				session.flush();
+				pdksEntityController.sessionFlush(session);
 				if (sirala) {
 					try {
 						pdksEntityController.savePrepareTableID(true, null, CalismaModeliVardiya.class, session);
 					} catch (Exception e) {
 					}
-					session.flush();
+					pdksEntityController.sessionFlush(session);
 				}
 				fillCalismaModeliList();
 			}
 		} catch (Exception e) {
+			logger.error(e);
 			e.printStackTrace();
 		}
 

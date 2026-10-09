@@ -3,6 +3,7 @@ package org.pdks.entity;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -18,6 +19,7 @@ import javax.persistence.UniqueConstraint;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.pdks.security.entity.MenuItemConstant;
 import org.pdks.security.entity.UserMenuItemTime;
 import org.pdks.session.PdksUtil;
 
@@ -34,7 +36,9 @@ public class MenuItem extends BasePDKSObject implements Serializable {
 	public static final String COLUMN_NAME_MENU_ADI = "MENU_ADI";
 	public static final String COLUMN_NAME_DURUM = "STATUS";
 	public static final String COLUMN_NAME_TOP_MENU = "TOPMENU";
+	public static final String COLUMN_NAME_SIRA = "ORDERNO";
 
+	private static MenuItemConstant mc = new MenuItemConstant();
 	private String name = "", parametre = "";
 	private List<MenuItem> childMenuItemList = new ArrayList<MenuItem>();;
 	private Tanim description;
@@ -180,7 +184,7 @@ public class MenuItem extends BasePDKSObject implements Serializable {
 			return false;
 	}
 
-	@Column(name = "ORDERNO")
+	@Column(name = COLUMN_NAME_SIRA)
 	public int getOrderNo() {
 		return orderNo;
 	}
@@ -196,6 +200,22 @@ public class MenuItem extends BasePDKSObject implements Serializable {
 
 	public void setCheck(Boolean check) {
 		this.check = check;
+	}
+
+	@Transient
+	public boolean istUstMenu() {
+		String adres = this.getMenuAdres();
+		boolean sonuc = (adres != null && adres.indexOf(".") < 0);
+		return sonuc;
+	}
+
+	@Transient
+	public String getMenuAdres() {
+		String adi = this.getName();
+		String method = "get" + adi.substring(0, 1).toUpperCase(Locale.ENGLISH) + adi.substring(1);
+		String adres = (String) PdksUtil.getMethodObject(mc, method, null);
+
+		return adres;
 	}
 
 	@Transient
@@ -227,8 +247,10 @@ public class MenuItem extends BasePDKSObject implements Serializable {
 		return status;
 	}
 
-	public void entityRefresh() {
-
+	@Transient
+	public String getItemAciklama() {
+		String aciklama = description != null ? description.getAciklama() : "";
+		return aciklama;
 	}
 
 	@Transient
@@ -238,6 +260,10 @@ public class MenuItem extends BasePDKSObject implements Serializable {
 
 	public void setParametre(String parametre) {
 		this.parametre = parametre;
+	}
+
+	public void entityRefresh() {
+
 	}
 
 	@Transient

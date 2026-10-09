@@ -58,7 +58,7 @@ public class YemekCiftBasanRaporHome extends EntityHome<VardiyaGun> implements S
 	List<User> userList;
 	@In(required = false)
 	FacesMessages facesMessages;
-	
+
 	public static String sayfaURL = "yemekCiftBasanRapor";
 	private List<HareketKGS> hareketList = new ArrayList<HareketKGS>();
 	private List<HareketKGS> toplamYemekList = new ArrayList<HareketKGS>();
@@ -89,7 +89,6 @@ public class YemekCiftBasanRaporHome extends EntityHome<VardiyaGun> implements S
 	}
 
 	@Override
-	@Begin(join = true)
 	public void create() {
 		super.create();
 	}
@@ -97,8 +96,8 @@ public class YemekCiftBasanRaporHome extends EntityHome<VardiyaGun> implements S
 	@Begin(join = true, flushMode = FlushModeType.MANUAL)
 	public void sayfaGirisAction() {
 		if (PdksUtil.isSessionKapali(session))
-			session = PdksUtil.getSessionUser(entityManager, authenticatedUser);
- 		ortakIslemler.setUserMenuItemTime(entityManager ,session, sayfaURL);
+			session = PdksUtil.getSessionUserCalistiSayfa(entityManager, authenticatedUser, sayfaURL);
+		ortakIslemler.setUserMenuItemTime(entityManager, session, sayfaURL);
 		setHareketList(new ArrayList<HareketKGS>());
 		setCiftYemekList(new ArrayList<HareketKGS>());
 		setToplamYemekList(new ArrayList<HareketKGS>());
